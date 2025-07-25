@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>菜單管理系統 - 泰式餐廳</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .page-header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .page-header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .page-header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        /* 菜單管理容器 */
+        #menu-management-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        /* 菜單標題 */
+        .menu-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 25px 30px;
+            background: linear-gradient(135deg, #FF6B6B, #FF8E53);
+            color: white;
+        }
+
+        .menu-header h2 {
+            font-size: 1.8rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .menu-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #4ECDC4;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #95A5A6;
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        /* 導航 */
+        .menu-nav {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .nav-btn {
+            flex: 1;
+            padding: 15px 20px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .nav-btn:hover {
+            background: #e9ecef;
+            color: #333;
+        }
+
+        .nav-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        /* 內容區域 */
+        .menu-content {
+            padding: 30px;
+            min-height: 600px;
+        }
+
+        /* 菜單項目網格 */
+        .menu-items-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+        }
+
+        .menu-item-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .menu-item-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+
+        .item-header h4 {
+            font-size: 1.3rem;
+            color: #333;
+            margin: 0;
+        }
+
+        .item-price {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #28a745;
+        }
+
+        .item-description {
+            color: #666;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+
+        /* 載入動畫 */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 錯誤訊息 */
+        .error-message {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .error-message i {
+            font-size: 3rem;
+            color: #dc3545;
+            margin-bottom: 20px;
+        }
+
+        .error-message h3 {
+            color: #dc3545;
+            margin-bottom: 15px;
+        }
+
+        .error-message p {
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .refresh-btn {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .refresh-btn:hover {
+            background: #5a6fd8;
+            transform: translateY(-2px);
+        }
+
+        /* 響應式設計 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            .menu-header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+
+            .menu-nav {
+                flex-direction: column;
+            }
+
+            .menu-items-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="page-header">
+            <h1><i class="fas fa-utensils"></i> 泰式餐廳菜單管理系統</h1>
+            <p>完整的菜單管理、庫存監控與獲利分析</p>
+        </div>
+        
+        <div id="menu-management-container">
+            <div class="menu-header">
+                <h2><i class="fas fa-clipboard-list"></i> 菜單管理</h2>
+                <div class="menu-actions">
+                    <button class="btn btn-primary" onclick="refreshMenu()">
+                        <i class="fas fa-sync-alt"></i> 重新載入
+                    </button>
+                    <button class="btn btn-secondary" onclick="addNewItem()">
+                        <i class="fas fa-plus"></i> 新增菜品
+                    </button>
+                </div>
+            </div>
+
+            <div class="menu-nav">
+                <button class="nav-btn active" onclick="switchView('menu-items')">
+                    <i class="fas fa-list"></i> 菜單項目
+                </button>
+                <button class="nav-btn" onclick="switchView('menu-overview')">
+                    <i class="fas fa-chart-pie"></i> 總覽
+                </button>
+                <button class="nav-btn" onclick="switchView('availability')">
+                    <i class="fas fa-exclamation-triangle"></i> 可用性
+                </button>
+                <button class="nav-btn" onclick="switchView('profitability')">
+                    <i class="fas fa-dollar-sign"></i> 獲利分析
+                </button>
+            </div>
+
+            <div class="menu-content">
+                <div id="loading" class="loading">
+                    <div class="spinner"></div>
+                </div>
+                
+                <div id="menu-items" style="display: block !important;">
+                    <h3>菜單項目</h3>
+                    <!-- 緊急測試按鈕 -->
+                    <div style="text-align: center; margin: 20px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                        <h4>🚨 除錯測試區</h4>
+                        <button onclick="emergencyTest()" style="background: #dc3545; color: white; border: none; padding: 10px 20px; border-radius: 5px; margin: 5px; cursor: pointer;">緊急測試</button>
+                        <button onclick="showTestData()" style="background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 5px; margin: 5px; cursor: pointer;">顯示測試資料</button>
+                        <button onclick="testWithNotionData()" style="background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; margin: 5px; cursor: pointer;">測試 Notion 資料</button>
+                        <button onclick="debugInfo()" style="background: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 5px; margin: 5px; cursor: pointer;">顯示除錯資訊</button>
+                        <br>
+                        <button onclick="testAllNotionItems()" style="background: #fd7e14; color: white; border: none; padding: 10px 20px; border-radius: 5px; margin: 5px; cursor: pointer;">🔍 分析所有 Notion 項目</button>
+                        <button onclick="loadMenuItems()" style="background: #6f42c1; color: white; border: none; padding: 10px 20px; border-radius: 5px; margin: 5px; cursor: pointer;">📥 原始載入函數</button>
+                    </div>
+                    <div class="menu-items-grid" id="menu-items-grid" style="display: grid !important;">
+                        <!-- 菜單項目將在這裡動態載入 -->
+                        <div style="background: #fff3cd; padding: 20px; border-radius: 8px; border: 1px solid #ffeaa7;">
+                            <h4>🔧 除錯提示</h4>
+                            <p>如果您看到這個訊息，代表頁面 HTML 結構正常。</p>
+                            <p>請點擊上方的測試按鈕來診斷問題。</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 手動設定配置（備用方案）
+        if (typeof CONFIG === 'undefined') {
+            console.warn('CONFIG 未載入，使用手動配置');
+            window.APP_CONFIG = {
+                notion: {
+                    apiKey: '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',
+                    apiVersion: '2022-06-28',
+                    databaseIds: {
+                        menu: '23afd5adc30b80c58355fd93d05c66d6',
+                        orders: '23afd5adc30b80c39e71d1a640ccfb5d', 
+                        tables: '23afd5adc30b80fe86c9e086a54a0d61',
+                        reservations: '23afd5adc30b802fbe36d69085c495b7',
+                        staff: '23afd5adc30b80b7a8e7dec998bf5aad'
+                    }
+                }
+            };
+        } else {
+            window.APP_CONFIG = CONFIG.production;
+        }
+        
+        console.log('最終配置:', window.APP_CONFIG);
+        
+        // 全域變數
+        let menuItems = [];
+        let currentView = 'menu-items';
+        let notionManager;
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 菜單管理系統初始化...');
+            
+            // 檢查必要元素是否存在
+            const loadingElement = document.getElementById('loading');
+            const menuItemsElement = document.getElementById('menu-items');
+            const gridElement = document.getElementById('menu-items-grid');
+            
+            console.log('🔍 DOM 元素檢查:');
+            console.log('- loading element:', loadingElement);
+            console.log('- menu-items element:', menuItemsElement);
+            console.log('- grid element:', gridElement);
+            
+            // 確保菜單項目視圖初始可見
+            if (menuItemsElement) {
+                menuItemsElement.style.display = 'block';
+                console.log('✅ 設定 menu-items 為可見');
+            }
+            
+            // 確保載入動畫初始可見
+            if (loadingElement) {
+                loadingElement.style.display = 'flex';
+                console.log('✅ 設定 loading 為可見');
+            }
+            
+            // 檢查配置是否載入
+            console.log('⚙️ APP_CONFIG:', window.APP_CONFIG);
+            console.log('⚙️ CONFIG:', typeof CONFIG !== 'undefined' ? CONFIG : 'CONFIG 未定義');
+            
+            // 初始化 Notion 管理器
+            try {
+                console.log('🔧 初始化 Notion 管理器...');
+                console.log('🔍 檢查 NotionDataManager 類別:', typeof NotionDataManager);
+                
+                if (typeof NotionDataManager === 'undefined') {
+                    throw new Error('NotionDataManager 類別未載入');
+                }
+                
+                notionManager = new NotionDataManager();
+                console.log('✅ Notion 管理器初始化成功');
+                console.log('🔍 檢查 queryDatabase 方法:', typeof notionManager.queryDatabase);
+                
+                if (typeof notionManager.queryDatabase !== 'function') {
+                    console.error('❌ queryDatabase 方法不存在');
+                    throw new Error('queryDatabase 方法未定義');
+                }
+                
+                // 載入菜單項目
+                loadMenuItems();
+                
+            } catch (error) {
+                console.error('❌ Notion 管理器初始化失敗:', error);
+                console.error('錯誤詳情:', error.stack);
+                showError('系統初始化失敗: ' + error.message);
+                return;
+            }
+            
+            // 3秒後如果還在載入狀態，顯示除錯資訊
+            setTimeout(() => {
+                if (loadingElement && loadingElement.style.display !== 'none') {
+                    console.warn('⚠️ 載入時間超過 3 秒，可能有問題');
+                    loadingElement.innerHTML = `
+                        <div style="text-align: center;">
+                            <h3>載入中...</h3>
+                            <p>這個載入時間有點長，檢查控制台是否有錯誤</p>
+                            <button onclick="loadMenuItems()" class="btn btn-primary">手動重試</button>
+                            <button onclick="showTestData()" class="btn btn-secondary">顯示測試資料</button>
+                        </div>
+                    `;
+                }
+            }, 3000);
+        });
+
+        // 顯示測試資料（除錯用）
+        function showTestData() {
+            console.log('🧪 顯示測試資料');
+            menuItems = [
+                {
+                    id: 'test1',
+                    name: '地中海鮮蝦沙拉',
+                    price: 250,
+                    cost: 120,
+                    category: '開胃菜',
+                    description: '新鮮蝦仁搭配多種時令蔬菜，淋上特製檸檬油醋醬，清爽開胃。',
+                    available: false,
+                    spiceLevel: '不辣',
+                    stock: 5
+                },
+                {
+                    id: 'test2',
+                    name: '草莓巧克力慕斯',
+                    price: 180,
+                    cost: 60,
+                    category: '甜點',
+                    description: '層次豐富的巧克力慕斯，搭配季節限定草莓醬，口感細膩綿密。',
+                    available: true,
+                    spiceLevel: '不辣',
+                    stock: 8
+                },
+                {
+                    id: 'test3',
+                    name: '義式松露奶油燉飯',
+                    price: 320,
+                    cost: 150,
+                    category: '主食',
+                    description: '精選義大利進口米製作，搭配頂級松露與新鮮奶油，濃郁香氣令人難以抗拒。',
+                    available: true,
+                    spiceLevel: '不辣',
+                    stock: 3
+                }
+            ];
+            
+            console.log('📋 測試菜單資料:', menuItems);
+            renderMenuItems();
+            showContent();
+        }
+        
+        // 緊急測試函數
+        function emergencyTest() {
+            console.log('🚨 緊急測試開始');
+            
+            // 強制顯示菜單項目視圖
+            const menuItemsElement = document.getElementById('menu-items');
+            const gridElement = document.getElementById('menu-items-grid');
+            const loadingElement = document.getElementById('loading');
+            
+            if (menuItemsElement) {
+                menuItemsElement.style.display = 'block';
+                console.log('✅ 強制顯示 menu-items');
+            }
+            
+            if (loadingElement) {
+                loadingElement.style.display = 'none';
+                console.log('✅ 隱藏 loading');
+            }
+            
+            // 直接插入測試 HTML
+            if (gridElement) {
+                gridElement.innerHTML = `
+                    <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin: 10px;">
+                        <h4>緊急測試項目</h4>
+                        <p><strong>名稱:</strong> 測試菜品</p>
+                        <p><strong>價格:</strong> NT$ 100</p>
+                        <p><strong>分類:</strong> 測試</p>
+                        <p><strong>描述:</strong> 這是緊急測試資料，如果您看到這個，代表頁面結構正常</p>
+                        <p style="color: green;"><strong>狀態:</strong> 測試成功 ✅</p>
+                    </div>
+                `;
+                gridElement.style.display = 'grid';
+                console.log('✅ 插入緊急測試 HTML');
+            }
+            
+            console.log('🎉 緊急測試完成');
+            alert('緊急測試完成！如果您看到測試項目，代表頁面結構正常。');
+        }
+        
+        // 顯示除錯資訊
+        function debugInfo() {
+            console.log('🔍 除錯資訊收集');
+            
+            const info = {
+                'menuItems 數量': menuItems ? menuItems.length : 'menuItems 未定義',
+                'notionManager 狀態': notionManager ? '已初始化' : '未初始化',
+                'APP_CONFIG': window.APP_CONFIG || '未定義',
+                'DOM 元素檢查': {
+                    'menu-items': !!document.getElementById('menu-items'),
+                    'menu-items-grid': !!document.getElementById('menu-items-grid'),
+                    'loading': !!document.getElementById('loading')
+                },
+                'NotionDataManager 類別': typeof NotionDataManager,
+                'queryDatabase 方法': notionManager && typeof notionManager.queryDatabase
+            };
+            
+            console.table(info);
+            
+            // 在頁面上顯示資訊
+            const gridElement = document.getElementById('menu-items-grid');
+            if (gridElement) {
+                gridElement.innerHTML = `
+                    <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; font-family: monospace; white-space: pre-wrap;">
+                        <h4>🔍 除錯資訊</h4>
+                        ${JSON.stringify(info, null, 2)}
+                        
+                        <h4 style="margin-top: 20px;">📋 當前菜單項目 (${menuItems ? menuItems.length : 0} 項):</h4>
+                        ${menuItems ? JSON.stringify(menuItems, null, 2) : '無菜單資料'}
+                    </div>
+                `;
+            }
+        }
+        
+        // 完整測試所有 Notion 項目
+        async function testAllNotionItems() {
+            console.log('🧪 完整測試所有 Notion 項目');
+            
+            try {
+                const response = await fetch('/api/notion/databases/23afd5adc30b80c58355fd93d05c66d6/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ page_size: 20 })
+                });
+                
+                const data = await response.json();
+                console.log('📡 完整 API 回應:', data);
+                
+                if (data.results && data.results.length > 0) {
+                    console.log(`📊 API 返回 ${data.results.length} 個項目`);
+                    
+                    // 詳細檢查每個項目
+                    data.results.forEach((item, index) => {
+                        console.log(`\n🔍 項目 ${index + 1} 詳細分析:`);
+                        console.log('ID:', item.id);
+                        console.log('名稱:', item.properties['名稱']?.title?.[0]?.text?.content);
+                        console.log('價格:', item.properties['價格']?.number);
+                        console.log('供應狀態:', item.properties['供應狀態']?.checkbox);
+                        console.log('分類:', item.properties['分類']?.select?.name);
+                        console.log('描述:', item.properties['描述']?.rich_text?.[0]?.text?.content);
+                        console.log('---');
+                    });
+                    
+                    // 在頁面上顯示原始資料
+                    const gridElement = document.getElementById('menu-items-grid');
+                    if (gridElement) {
+                        let html = '<div style="background: #fff; padding: 20px; border-radius: 8px;"><h4>📡 Notion 原始資料分析</h4>';
+                        
+                        data.results.forEach((item, index) => {
+                            const props = item.properties;
+                            html += `
+                                <div style="border: 1px solid #ddd; margin: 10px 0; padding: 15px; border-radius: 8px;">
+                                    <h5>項目 ${index + 1}</h5>
+                                    <p><strong>ID:</strong> ${item.id}</p>
+                                    <p><strong>名稱:</strong> ${props['名稱']?.title?.[0]?.text?.content || '無'}</p>
+                                    <p><strong>價格:</strong> ${props['價格']?.number || '無'}</p>
+                                    <p><strong>供應狀態:</strong> ${props['供應狀態']?.checkbox} (型別: ${typeof props['供應狀態']?.checkbox})</p>
+                                    <p><strong>分類:</strong> ${props['分類']?.select?.name || '無'}</p>
+                                    <p><strong>描述:</strong> ${props['描述']?.rich_text?.[0]?.text?.content || '無'}</p>
+                                </div>
+                            `;
+                        });
+                        
+                        html += '</div>';
+                        gridElement.innerHTML = html;
+                    }
+                } else {
+                    console.error('❌ 沒有資料');
+                }
+                
+            } catch (error) {
+                console.error('❌ 測試失敗:', error);
+            }
+        }
+        
+        // 使用 Notion 實際資料測試
+        async function testWithNotionData() {
+            console.log('🧪 使用 Notion 實際資料測試');
+            
+            try {
+                // 直接從 API 取得資料
+                const response = await fetch('/api/notion/databases/23afd5adc30b80c58355fd93d05c66d6/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ page_size: 10 })
+                });
+                
+                const data = await response.json();
+                console.log('📡 Notion API 回應:', data);
+                
+                if (data.results && data.results.length > 0) {
+                    console.log(`🔢 找到 ${data.results.length} 個項目，開始轉換全部項目`);
+                    
+                    // 轉換所有項目，不只是第一個
+                    menuItems = data.results.map((item, index) => {
+                        console.log(`🔄 轉換第 ${index + 1} 項:`, item.properties);
+                        const properties = item.properties;
+                        
+                        const name = properties['名稱']?.title?.[0]?.text?.content || `測試項目 ${index + 1}`;
+                        const price = properties['價格']?.number || 100;
+                        const cost = properties['成本']?.number || 50;
+                        const category = properties['分類']?.select?.name || '測試分類';
+                        const description = properties['描述']?.rich_text?.[0]?.text?.content || '測試描述';
+                        const available = properties['供應狀態']?.checkbox === true; // 明確檢查 true
+                        
+                        const convertedItem = {
+                            id: item.id,
+                            name: name,
+                            price: price,
+                            cost: cost,
+                            category: category,
+                            description: description,
+                            available: available,
+                            spiceLevel: '不辣',
+                            stock: 5
+                        };
+                        
+                        console.log(`✅ 轉換完成第 ${index + 1} 項:`, convertedItem);
+                        console.log(`  - 名稱: ${name}`);
+                        console.log(`  - 價格: ${price}`);
+                        console.log(`  - 供應狀態原始值: ${properties['供應狀態']?.checkbox}`);
+                        console.log(`  - 供應狀態轉換後: ${available}`);
+                        
+                        return convertedItem;
+                    });
+                    
+                    console.log('📊 轉換後的所有菜單資料:', menuItems);
+                    console.log(`✨ 總共轉換了 ${menuItems.length} 項菜單`);
+                    
+                    renderMenuItems();
+                    showContent();
+                } else {
+                    console.error('❌ 沒有取得到 Notion 資料');
+                    showTestData(); // 如果沒有資料，顯示測試資料
+                }
+                
+            } catch (error) {
+                console.error('❌ Notion 測試失敗:', error);
+                showTestData(); // 如果失敗，顯示測試資料
+            }
+        }
+
+        // 載入菜單項目
+        async function loadMenuItems() {
+            try {
+                console.log('🚀 開始載入菜單項目...');
+                
+                // 強制顯示載入狀態
+                showLoading();
+                
+                // 檢查 notionManager 是否已初始化
+                if (!notionManager) {
+                    console.error('❌ notionManager 未初始化');
+                    throw new Error('Notion 管理器未初始化');
+                }
+
+                // 檢查 queryDatabase 方法是否存在
+                if (typeof notionManager.queryDatabase !== 'function') {
+                    console.error('❌ queryDatabase 方法不存在');
+                    console.log('🔍 notionManager 可用方法:', Object.getOwnPropertyNames(Object.getPrototypeOf(notionManager)));
+                    throw new Error('queryDatabase 方法未定義');
+                }
+
+                // 從 Notion 載入菜單資料
+                console.log('📡 正在從 Notion 查詢菜單資料...');
+                const menuData = await notionManager.queryDatabase('menu');
+                console.log('📋 從 Notion 載入的原始資料:', menuData);
+                
+                if (!menuData || !menuData.results) {
+                    throw new Error('無效的 Notion 回應資料');
+                }
+                
+                // 轉換 Notion 資料格式
+                console.log('🔄 開始轉換資料格式...');
+                menuItems = menuData.results.map((item, index) => {
+                    console.log(`轉換第 ${index + 1} 項:`, item);
+                    const properties = item.properties;
+                    
+                    // 安全地取得每個屬性值
+                    const name = properties['名稱']?.title?.[0]?.text?.content || `未命名菜品 ${index + 1}`;
+                    const price = properties['價格']?.number || 0;
+                    const cost = properties['成本']?.number || 0;
+                    const category = properties['分類']?.select?.name || '其他';
+                    const description = properties['描述']?.rich_text?.[0]?.text?.content || '';
+                    const available = properties['供應狀態']?.checkbox === true; // 明確檢查 true
+                    const spiceLevel = properties['辣度']?.select?.name || '不辣';
+                    const allergens = properties['過敏原']?.rich_text?.[0]?.text?.content || '';
+                    const preparationMethod = properties['製作方法']?.select?.name || '';
+                    const location = properties['製作地點']?.select?.name || '廚房';
+                    const stock = properties['庫存']?.number || 0;
+                    const recommended = properties['推薦']?.checkbox || false;
+                    
+                    console.log(`🔍 第 ${index + 1} 項詳細檢查:`);
+                    console.log(`  - 原始供應狀態: ${properties['供應狀態']?.checkbox}`);
+                    console.log(`  - 轉換後供應狀態: ${available}`);
+                    console.log(`  - 名稱: ${name}`);
+                    console.log(`  - 價格: ${price}`);
+                    console.log(`  - 分類: ${category}`);
+                    
+                    const menuItem = {
+                        id: item.id,
+                        name: name,
+                        price: price,
+                        cost: cost,
+                        category: category,
+                        description: description,
+                        available: available,
+                        spiceLevel: spiceLevel,
+                        allergens: allergens,
+                        preparationMethod: preparationMethod,
+                        location: location,
+                        stock: stock,
+                        recommended: recommended
+                    };
+                    
+                    console.log(`✅ 轉換完成:`, menuItem);
+                    return menuItem;
+                });
+
+                console.log('📊 轉換後的菜單資料:', menuItems);
+                console.log(`✨ 總共載入 ${menuItems.length} 項菜單`);
+                
+                // 渲染菜單
+                console.log('🎨 開始渲染菜單...');
+                renderMenuItems();
+                
+                // 隱藏載入動畫，顯示內容
+                showContent();
+                
+                console.log('🎉 菜單項目載入完成！');
+
+            } catch (error) {
+                console.error('💥 載入菜單項目失敗:', error);
+                console.error('錯誤堆疊:', error.stack);
+                showError('載入菜單項目失敗: ' + error.message);
+            }
+        }
+        
+        // 顯示載入狀態
+        function showLoading() {
+            const loadingElement = document.getElementById('loading');
+            const menuItemsElement = document.getElementById('menu-items');
+            
+            console.log('📱 顯示載入狀態');
+            if (loadingElement) {
+                loadingElement.style.display = 'flex';
+                console.log('✅ loading element 已顯示');
+            } else {
+                console.error('❌ 找不到 loading element');
+            }
+            
+            if (menuItemsElement) {
+                menuItemsElement.style.display = 'none';
+                console.log('✅ menu-items element 已隱藏');
+            } else {
+                console.error('❌ 找不到 menu-items element');
+            }
+        }
+        
+        // 顯示內容
+        function showContent() {
+            const loadingElement = document.getElementById('loading');
+            const menuItemsElement = document.getElementById('menu-items');
+            const gridElement = document.getElementById('menu-items-grid');
+            
+            console.log('📱 顯示菜單內容');
+            
+            // 隱藏載入動畫
+            if (loadingElement) {
+                loadingElement.style.display = 'none';
+                console.log('✅ loading element 已隱藏');
+            }
+            
+            // 顯示菜單項目視圖
+            if (menuItemsElement) {
+                menuItemsElement.style.display = 'block';
+                console.log('✅ menu-items element 已顯示');
+            }
+            
+            // 確保 grid 容器可見
+            if (gridElement) {
+                gridElement.style.display = 'grid';
+                console.log('✅ menu-items-grid element 已顯示');
+            }
+        }
+        
+        // 顯示錯誤
+        function showError(message) {
+            const loadingElement = document.getElementById('loading');
+            console.log('💥 顯示錯誤:', message);
+            
+            if (loadingElement) {
+                loadingElement.innerHTML = `
+                    <div style="text-align: center; color: red; padding: 2rem;">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 3rem; margin-bottom: 1rem;"></i>
+                        <h3>載入失敗</h3>
+                        <p>${message}</p>
+                        <div style="margin-top: 20px;">
+                            <button onclick="loadMenuItems()" class="btn btn-primary" style="margin: 5px;">重新載入</button>
+                            <button onclick="showTestData()" class="btn btn-secondary" style="margin: 5px;">顯示測試資料</button>
+                            <button onclick="testWithNotionData()" class="btn btn-info" style="margin: 5px;">測試 Notion 資料</button>
+                        </div>
+                    </div>
+                `;
+                loadingElement.style.display = 'flex';
+            }
+        }
+
+        // 渲染菜單項目
+        function renderMenuItems() {
+            console.log('🎨 開始渲染菜單項目...');
+            console.log('📋 要渲染的菜單資料:', menuItems);
+            
+            // 尋找正確的容器
+            let container = document.getElementById('menu-items-grid');
+            if (!container) {
+                container = document.getElementById('menu-items');
+                console.log('使用 menu-items 容器');
+            } else {
+                console.log('使用 menu-items-grid 容器');
+            }
+            
+            if (!container) {
+                console.error('❌ 找不到菜單容器');
+                alert('錯誤：找不到菜單容器！請檢查 HTML 結構。');
+                return;
+            }
+
+            console.log('📦 找到容器:', container.id, container);
+
+            // 如果沒有菜單項目
+            if (!menuItems || menuItems.length === 0) {
+                console.log('📭 沒有菜單項目需要顯示');
+                container.innerHTML = `
+                    <div style="grid-column: 1/-1; text-align: center; padding: 60px; color: #666; background: #f8f9fa; border-radius: 8px;">
+                        <i class="fas fa-utensils" style="font-size: 3rem; margin-bottom: 20px; opacity: 0.5;"></i>
+                        <h3>還沒有菜單項目</h3>
+                        <p>點擊上方的「新增菜品」按鈕開始建立您的菜單</p>
+                        <button onclick="showTestData()" style="background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 5px; margin: 10px; cursor: pointer;">
+                            <i class="fas fa-plus"></i> 載入測試資料
+                        </button>
+                    </div>
+                `;
+                container.style.display = 'grid';
+                console.log('✅ 顯示空狀態');
+                return;
+            }
+
+            console.log(`🔢 總共要渲染 ${menuItems.length} 個菜單項目`);
+            
+            // 生成菜單項目 HTML
+            const html = menuItems.map((item, index) => {
+                console.log(`🍽️ 渲染第 ${index + 1} 項: ${item.name}`);
+                
+                const profit = (item.price || 0) - (item.cost || 0);
+                const profitMargin = item.price > 0 ? ((profit / item.price) * 100).toFixed(1) : 0;
+                
+                return `
+                    <div class="menu-item-card ${!item.available ? 'unavailable' : ''}" data-id="${item.id}" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin: 10px; position: relative;">
+                        <div class="item-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <h4 style="margin: 0; color: #333;">${item.name}</h4>
+                            <span class="item-price" style="font-size: 1.2rem; font-weight: bold; color: #667eea;">NT$ ${item.price}</span>
+                        </div>
+                        <div class="item-description" style="color: #666; margin-bottom: 10px; line-height: 1.4;">${item.description || '無描述'}</div>
+                        <div class="item-details" style="margin: 10px 0; font-size: 0.9rem; color: #666;">
+                            <div>成本: NT$ ${item.cost || 0} | 毛利: NT$ ${profit} (${profitMargin}%)</div>
+                            ${item.stock !== undefined ? `<div>庫存: ${item.stock}</div>` : ''}
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
+                            <div>
+                                <span style="background: #667eea; color: white; padding: 4px 8px; border-radius: 12px; font-size: 0.8rem;">${item.category}</span>
+                                <span style="background: ${getSpiceLevelColor(item.spiceLevel)}; padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; margin-left: 5px;">${item.spiceLevel}</span>
+                            </div>
+                            <div>
+                                <button onclick="editMenuItem('${item.id}')" style="background: #4ECDC4; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; margin-right: 5px;">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button onclick="toggleAvailability('${item.id}')" style="background: ${item.available ? '#28a745' : '#dc3545'}; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer;">
+                                    <i class="fas fa-${item.available ? 'check' : 'times'}"></i>
+                                </button>
+                            </div>
+                        </div>
+                        ${!item.available ? '<div style="position: absolute; top: 10px; right: 10px; background: #dc3545; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">暫停供應</div>' : ''}
+                    </div>
+                `;
+            }).join('');
+
+            console.log('📝 產生的 HTML 長度:', html.length);
+            console.log('📝 HTML 預覽:', html.substring(0, 200) + '...');
+            
+            // 設置 HTML 內容
+            container.innerHTML = html;
+            
+            console.log('✅ 菜單項目渲染完成');
+            
+            // 確保容器可見
+            container.style.display = 'grid';
+            
+            // 更新統計資料
+            if (typeof updateStats === 'function') {
+                updateStats();
+            }
+            
+            console.log('🎉 渲染流程完全完成');
+        }
+
+        // 取得辣度顏色
+        function getSpiceLevelColor(spiceLevel) {
+            const colors = {
+                '不辣': '#e9ecef; color: #333',
+                '微辣': '#fff3cd; color: #856404',
+                '小辣': '#f8d7da; color: #721c24',
+                '中辣': '#f5c6cb; color: #721c24',
+                '大辣': '#f1b0b7; color: #721c24'
+            };
+            return colors[spiceLevel] || '#e9ecef; color: #333';
+        }
+
+        // 切換視圖
+        function switchView(viewName) {
+            // 更新導航按鈕
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            currentView = viewName;
+            console.log('🔄 切換到視圖:', viewName);
+            
+            // 隱藏所有視圖
+            const views = ['menu-items', 'statistics', 'settings'];
+            views.forEach(view => {
+                const element = document.getElementById(view);
+                if (element) {
+                    element.style.display = 'none';
+                }
+            });
+            
+            // 顯示選中的視圖
+            const targetView = document.getElementById(viewName);
+            if (targetView) {
+                targetView.style.display = 'block';
+                console.log(`✅ 顯示視圖: ${viewName}`);
+                
+                // 如果是菜單項目視圖，確保載入菜單資料
+                if (viewName === 'menu-items') {
+                    if (!menuItems || menuItems.length === 0) {
+                        console.log('🔄 重新載入菜單資料...');
+                        loadMenuItems();
+                    }
+                }
+            } else {
+                console.error(`❌ 找不到視圖: ${viewName}`);
+            }
+        }
+
+        // 重新載入菜單
+        function refreshMenu() {
+            console.log('重新載入菜單...');
+            loadMenuItems();
+        }
+
+        // 新增菜品
+        function addNewItem() {
+            console.log('新增菜品...');
+            alert('新增菜品功能開發中...\n\n您可以直接在 Notion 中新增菜品，系統會自動同步。');
+        }
+
+        // 編輯項目
+        function editItem(itemName) {
+            console.log('編輯項目:', itemName);
+            alert(`編輯 "${itemName}" 功能開發中...\n\n您可以直接在 Notion 中編輯，系統會自動同步。`);
+        }
+
+        // 切換可用性
+        async function toggleAvailability(itemName) {
+            console.log('切換可用性:', itemName);
+            
+            const item = menuItems.find(item => item.name === itemName);
+            if (item) {
+                const wasAvailable = item.available;
+                item.available = !item.available;
+                
+                try {
+                    // 同步到 Notion
+                    if (item.id) {
+                        await notionManager.updateRecord('menu', item.id, {
+                            '供應狀態': { checkbox: item.available }
+                        });
+                        console.log('已同步可用性到 Notion');
+                    }
+                    
+                    renderMenuItems();
+                    
+                    showNotification(
+                        `${itemName} 已${item.available ? '恢復' : '暫停'}供應`,
+                        item.available ? 'success' : 'warning'
+                    );
+                } catch (error) {
+                    console.error('同步到 Notion 失敗:', error);
+                    // 還原變更
+                    item.available = wasAvailable;
+                    renderMenuItems();
+                    showNotification('同步失敗，請稍後再試', 'error');
+                }
+            }
+        }
+
+        // 顯示錯誤
+        function showError(message) {
+            const content = document.querySelector('.menu-content');
+            content.innerHTML = `
+                <div class="error-message">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h3>載入失敗</h3>
+                    <p>${message}</p>
+                    <button class="refresh-btn" onclick="location.reload()">
+                        <i class="fas fa-sync-alt"></i> 重新載入
+                    </button>
+                </div>
+            `;
+        }
+
+        // 顯示通知
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 15px 20px;
+                border-radius: 8px;
+                color: white;
+                font-weight: 500;
+                z-index: 1000;
+                transform: translateX(100%);
+                transition: transform 0.3s ease;
+                ${type === 'success' ? 'background: #28a745;' : 
+                  type === 'warning' ? 'background: #ffc107; color: #333;' : 
+                  type === 'error' ? 'background: #dc3545;' : 'background: #17a2b8;'}
+            `;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            // 顯示通知
+            setTimeout(() => {
+                notification.style.transform = 'translateX(0)';
+            }, 100);
+            
+            // 3秒後隱藏
+            setTimeout(() => {
+                notification.style.transform = 'translateX(100%)';
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 300);
+            }, 3000);
+        }
+
+        // 鍵盤快捷鍵
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key) {
+                    case 'r':
+                        e.preventDefault();
+                        refreshMenu();
+                        break;
+                    case 'n':
+                        e.preventDefault();
+                        addNewItem();
+                        break;
+                }
+            }
+        });
+    </script>
+    
+    <!-- 引入外部 JavaScript 文件 -->
+    <script src="../../config/config.js"></script>
+    <script src="../../assets/js/notion-manager.js"></script>
+    <script src="../../assets/js/menu-manager.js"></script>
+    <script src="../../assets/js/menu-ui.js"></script>
+</body>
+</html>

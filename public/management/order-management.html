@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>訂單管理系統 - Tanawat Restaurant</title>
+    <meta name="description" content="Tanawat Restaurant 訂單管理系統">
+    
+    <!-- 統一設計系統樣式 -->
+    <link rel="stylesheet" href="../../assets/css/unified-design.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        .order-grid {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: var(--space-6);
+        }
+        
+        .order-list-container {
+            max-height: calc(100vh - 250px);
+            overflow-y: auto;
+        }
+        
+        .order-item {
+            margin-bottom: var(--space-4);
+            border-radius: var(--radius-lg);
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .order-item:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        .order-summary {
+            position: sticky;
+            top: var(--space-6);
+        }
+        
+        .status-filter {
+            display: flex;
+            gap: var(--space-2);
+            margin-bottom: var(--space-6);
+            flex-wrap: wrap;
+        }
+        
+        .filter-btn {
+            padding: var(--space-2) var(--space-4);
+            border-radius: var(--radius-full);
+            border: 2px solid var(--gray-300);
+            background: var(--white);
+            color: var(--gray-700);
+            font-size: var(--text-sm);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .filter-btn:hover {
+            border-color: var(--primary-400);
+            color: var(--primary-600);
+        }
+        
+        .filter-btn.active {
+            background: var(--primary-500);
+            border-color: var(--primary-500);
+            color: var(--white);
+        }
+        
+        @media (max-width: 768px) {
+            .order-grid {
+                grid-template-columns: 1fr;
+                gap: var(--space-4);
+            }
+            
+            .order-summary {
+                position: static;
+                order: -1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 統一導航欄 -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="dashboard.html" class="nav-brand">
+                <i class="fas fa-utensils"></i>
+                <span>Tanawat Restaurant</span>
+            </a>
+            
+            <div class="nav-menu">
+                <a href="../../index.html" class="nav-link">
+                    <i class="fas fa-home"></i>
+                    <span>首頁</span>
+                </a>
+                <a href="dashboard.html" class="nav-link">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>主控台</span>
+                </a>
+                <a href="order-management.html" class="nav-link active">
+                    <i class="fas fa-receipt"></i>
+                    <span>訂單管理</span>
+                </a>
+                <a href="reservation-management.html" class="nav-link">
+                    <i class="fas fa-calendar-check"></i>
+                    <span>訂位管理</span>
+                </a>
+                <a href="menu-management.html" class="nav-link">
+                    <i class="fas fa-utensils"></i>
+                    <span>菜單管理</span>
+                </a>
+                <a href="table-management.html" class="nav-link">
+                    <i class="fas fa-table"></i>
+                    <span>桌況管理</span>
+                </a>
+                <a href="purchase-management.html" class="nav-link">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span>採購管理</span>
+                </a>
+                <a href="recipe-management.html" class="nav-link">
+                    <i class="fas fa-book"></i>
+                    <span>食譜管理</span>
+                </a>
+                <a href="inventory-management.html" class="nav-link">
+                    <i class="fas fa-warehouse"></i>
+                    <span>庫存管理</span>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要內容區域 -->
+    <main class="main-content">
+        <div class="container">
+            <!-- 頁面標題 -->
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">
+                        <i class="fas fa-receipt text-primary-500"></i>
+                        訂單管理系統
+                    </h1>
+                    <p class="page-description">管理餐廳所有訂單，追蹤訂單狀態和進度</p>
+                </div>
+                <div class="page-actions">
+                    <button id="refresh-orders" class="btn btn-secondary">
+                        <i class="fas fa-sync"></i>
+                        <span>刷新訂單</span>
+                    </button>
+                    <button id="create-order" class="btn btn-primary">
+                        <i class="fas fa-plus"></i>
+                        <span>新增訂單</span>
+                    </button>
+                </div>
+            <!-- 狀態過濾器 -->
+            <div class="status-filter">
+                <button class="filter-btn active" data-status="all">
+                    <i class="fas fa-list"></i>
+                    全部訂單
+                </button>
+                <button class="filter-btn" data-status="進行中">
+                    <i class="fas fa-clock"></i>
+                    進行中
+                </button>
+                <button class="filter-btn" data-status="準備中">
+                    <i class="fas fa-utensils"></i>
+                    準備中
+                </button>
+                <button class="filter-btn" data-status="已完成">
+                    <i class="fas fa-check-circle"></i>
+                    已完成
+                </button>
+                <button class="filter-btn" data-status="已取消">
+                    <i class="fas fa-times-circle"></i>
+                    已取消
+                </button>
+            </div>
+
+            <!-- 主要訂單管理區域 -->
+            <div class="order-grid">
+                <!-- 訂單列表 -->
+                <div>
+                    <!-- 搜尋和操作區 -->
+                    <div class="card mb-6">
+                        <div class="card-body">
+                            <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+                                <div class="flex-1 relative">
+                                    <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                                    <input 
+                                        type="text" 
+                                        id="search-orders" 
+                                        class="input pl-10 w-full" 
+                                        placeholder="搜尋訂單ID、桌號..."
+                                    >
+                                </div>
+                                <div class="flex gap-2">
+                                    <select id="table-filter" class="select">
+                                        <option value="">所有桌號</option>
+                                    </select>
+                                    <button id="export-orders" class="btn btn-secondary">
+                                        <i class="fas fa-download"></i>
+                                        <span>匯出</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 訂單列表容器 -->
+                    <div id="orders-container" class="order-list-container">
+                        <div class="flex justify-center items-center py-16">
+                            <div class="loading-spinner mr-4"></div>
+                            <span class="text-muted">載入訂單中...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 右側統計面板 -->
+                <div class="order-summary">
+                    <!-- 今日統計 -->
+                    <div class="card mb-6">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-chart-bar text-primary-500"></i>
+                                今日統計
+                            </h3>
+                        </div>
+                        <div class="card-body space-y-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="text-center">
+                                    <div id="today-orders-count" class="text-2xl font-bold text-primary-600">0</div>
+                                    <div class="text-sm text-muted">總訂單</div>
+                                </div>
+                                <div class="text-center">
+                                    <div id="today-revenue" class="text-2xl font-bold text-success-600">NT$ 0</div>
+                                    <div class="text-sm text-muted">營收</div>
+                                </div>
+                            </div>
+                            <hr>
+                            <div class="space-y-3">
+                                <div class="flex justify-between">
+                                    <span class="text-muted">進行中</span>
+                                    <span id="active-count" class="font-semibold text-warning-600">0</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-muted">已完成</span>
+                                    <span id="completed-count" class="font-semibold text-success-600">0</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-muted">已取消</span>
+                                    <span id="cancelled-count" class="font-semibold text-error-600">0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 快速操作 -->
+                    <div class="card mb-6">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-bolt text-warning-500"></i>
+                                快速操作
+                            </h3>
+                        </div>
+                        <div class="card-body space-y-3">
+                            <button id="new-order-btn" class="btn btn-primary w-full">
+                                <i class="fas fa-plus"></i>
+                                <span>新增訂單</span>
+                            </button>
+                            <button id="batch-update-btn" class="btn btn-secondary w-full">
+                                <i class="fas fa-edit"></i>
+                                <span>批量更新</span>
+                            </button>
+                            <button id="print-orders-btn" class="btn btn-info w-full">
+                                <i class="fas fa-print"></i>
+                                <span>列印訂單</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 熱門商品 -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-fire text-error-500"></i>
+                                今日熱門
+                            </h3>
+                        </div>
+                        <div class="card-body">
+                            <div id="popular-items" class="space-y-3">
+                                <div class="text-center py-4 text-muted">
+                                    <i class="fas fa-chart-line text-2xl mb-2 opacity-50"></i>
+                                    <p class="text-sm">尚無統計資料</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .table-selector label {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .table-selector select,
+        .search-box input {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .search-box {
+            position: relative;
+        }
+
+        .search-box button {
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            border: none;
+            background: #2563eb;
+            color: white;
+            padding: 0.4rem;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .status-filters {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.85rem;
+        }
+
+        .filter-btn:hover {
+            border-color: #2563eb;
+            color: #2563eb;
+        }
+
+        .filter-btn.active {
+            background: #2563eb;
+            color: white;
+            border-color: #2563eb;
+        }
+
+        .order-content {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            min-height: 400px;
+        }
+
+        .view-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            border-bottom: 1px solid #eee;
+        }
+
+        .view-header h3 {
+            margin: 0;
+            color: #333;
+            font-size: 1.4rem;
+        }
+
+        /* 訂單網格 */
+        .orders-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            gap: 1.5rem;
+            padding: 1.5rem;
+        }
+
+        /* 訂單卡片 */
+        .order-card {
+            border: 1px solid #eee;
+            border-radius: 12px;
+            padding: 1.5rem;
+            background: white;
+            transition: all 0.3s ease;
+            position: relative;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .order-card:hover {
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .order-card.ordering {
+            border-left: 4px solid #f59e0b;
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.05), rgba(255, 255, 255, 1));
+        }
+
+        .order-card.confirmed {
+            border-left: 4px solid #3b82f6;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(255, 255, 255, 1));
+        }
+
+        .order-card.cooking {
+            border-left: 4px solid #ef4444;
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.05), rgba(255, 255, 255, 1));
+        }
+
+        .order-card.ready {
+            border-left: 4px solid #10b981;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.05), rgba(255, 255, 255, 1));
+        }
+
+        .order-card.served {
+            border-left: 4px solid #8b5cf6;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.05), rgba(255, 255, 255, 1));
+        }
+
+        .order-card.paid {
+            border-left: 4px solid #6b7280;
+            background: linear-gradient(135deg, rgba(107, 114, 128, 0.05), rgba(255, 255, 255, 1));
+            opacity: 0.8;
+        }
+
+        .order-card.cancelled {
+            border-left: 4px solid #dc2626;
+            background: #fef2f2;
+            opacity: 0.7;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .order-info h4 {
+            margin: 0 0 0.5rem 0;
+            color: #333;
+            font-size: 1rem;
+            font-family: 'Courier New', monospace;
+        }
+
+        .order-info p {
+            margin: 0.25rem 0;
+            color: #666;
+            font-size: 0.85rem;
+        }
+
+        .table-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .customer-count {
+            background: #f3f4f6;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+        }
+
+        .order-status {
+            text-align: right;
+        }
+
+        .status-badge {
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: white;
+            display: inline-block;
+            margin-bottom: 0.5rem;
+        }
+
+        .status-badge.ordering { background: #f59e0b; }
+        .status-badge.confirmed { background: #3b82f6; }
+        .status-badge.cooking { background: #ef4444; }
+        .status-badge.ready { background: #10b981; }
+        .status-badge.served { background: #8b5cf6; }
+        .status-badge.paid { background: #6b7280; }
+        .status-badge.cancelled { background: #dc2626; }
+
+        .total-amount {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .order-items {
+            margin: 1rem 0;
+            border-top: 1px solid #f3f4f6;
+            padding-top: 1rem;
+        }
+
+        .order-items h5 {
+            margin: 0 0 0.75rem 0;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .item-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #f9fafb;
+        }
+
+        .item-name {
+            flex: 1;
+            font-size: 0.85rem;
+            color: #333;
+        }
+
+        .item-quantity {
+            margin: 0 1rem;
+            color: #666;
+            font-size: 0.8rem;
+        }
+
+        .item-price {
+            font-weight: 500;
+            color: #333;
+            font-size: 0.85rem;
+        }
+
+        .more-items {
+            text-align: center;
+            color: #666;
+            font-size: 0.8rem;
+            font-style: italic;
+            padding: 0.5rem;
+        }
+
+        .order-notes {
+            margin: 1rem 0;
+            padding: 0.75rem;
+            background: #fef3c7;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            color: #92400e;
+            border-left: 3px solid #f59e0b;
+        }
+
+        .kitchen-info {
+            margin: 1rem 0;
+            padding: 0.75rem;
+            background: #ede9fe;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            color: #5b21b6;
+            border-left: 3px solid #8b5cf6;
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 1.5rem;
+            padding-top: 1rem;
+            border-top: 1px solid #f3f4f6;
+        }
+
+        .card-actions .btn {
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            flex: 1;
+            min-width: 100px;
+        }
+
+        /* 廚房檢視 */
+        .kitchen-orders {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1rem;
+            padding: 1.5rem;
+        }
+
+        .kitchen-order-card {
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            padding: 1rem;
+            background: white;
+            transition: all 0.3s ease;
+        }
+
+        .kitchen-order-card.priority-high {
+            border-color: #dc2626;
+            background: linear-gradient(135deg, rgba(220, 38, 38, 0.1), rgba(255, 255, 255, 1));
+        }
+
+        .kitchen-order-card.priority-medium {
+            border-color: #f59e0b;
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(255, 255, 255, 1));
+        }
+
+        .kitchen-order-card.priority-low {
+            border-color: #10b981;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(255, 255, 255, 1));
+        }
+
+        .kitchen-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid #eee;
+        }
+
+        .order-basic {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .order-basic h4 {
+            margin: 0;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .order-number {
+            background: #3b82f6;
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .kitchen-timing {
+            text-align: right;
+            font-size: 0.8rem;
+        }
+
+        .elapsed-time {
+            color: #dc2626;
+            font-weight: 600;
+        }
+
+        .estimated-time {
+            color: #666;
+        }
+
+        .kitchen-items {
+            margin-bottom: 1rem;
+        }
+
+        .kitchen-item {
+            padding: 0.75rem;
+            border: 1px solid #f3f4f6;
+            border-radius: 6px;
+            margin-bottom: 0.5rem;
+            background: #fafafa;
+        }
+
+        .item-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        .customizations {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.25rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .custom-tag {
+            background: #dbeafe;
+            color: #1d4ed8;
+            padding: 0.2rem 0.5rem;
+            border-radius: 10px;
+            font-size: 0.7rem;
+        }
+
+        .item-notes {
+            background: #fef3c7;
+            padding: 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            color: #92400e;
+        }
+
+        .kitchen-notes {
+            background: #fee2e2;
+            border: 1px solid #fecaca;
+            padding: 0.75rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            font-size: 0.85rem;
+            color: #dc2626;
+        }
+
+        .kitchen-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .kitchen-actions .btn {
+            flex: 1;
+            padding: 0.75rem;
+            font-size: 0.9rem;
+        }
+
+        /* 彈窗樣式 */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            transform: scale(1);
+            transition: transform 0.3s ease;
+        }
+
+        .modal-content.large {
+            max-width: 700px;
+        }
+
+        .modal.hidden .modal-content {
+            transform: scale(0.9);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            border-bottom: 1px solid #eee;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            color: #333;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #666;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .close-modal:hover {
+            background: #f1f1f1;
+            color: #333;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            padding: 1.5rem;
+            border-top: 1px solid #eee;
+        }
+
+        /* 付款摘要 */
+        .payment-summary {
+            background: #f9fafb;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+
+        .payment-summary h4 {
+            margin: 0 0 1rem 0;
+            color: #333;
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .summary-row.total {
+            font-weight: 700;
+            font-size: 1.1rem;
+            border-bottom: none;
+            border-top: 2px solid #333;
+            margin-top: 0.5rem;
+            padding-top: 1rem;
+        }
+
+        .change-amount {
+            background: #d1fae5;
+            padding: 1rem;
+            border-radius: 6px;
+            text-align: center;
+            color: #065f46;
+            font-size: 1.1rem;
+            margin-top: 1rem;
+        }
+
+        /* 通知樣式 */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 2000;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            min-width: 250px;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success { background: #10b981; }
+        .notification.warning { background: #f59e0b; color: #333; }
+        .notification.error { background: #ef4444; }
+        .notification.info { background: #3b82f6; }
+
+        /* 無訂單狀態 */
+        .no-orders {
+            text-align: center;
+            padding: 4rem;
+            color: #666;
+        }
+
+        .no-orders i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            color: #ddd;
+        }
+
+        .no-orders h4 {
+            margin: 1rem 0;
+            color: #333;
+        }
+
+        /* 響應式設計 */
+        @media (max-width: 768px) {
+            .order-header {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+
+            .order-actions {
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+
+            .order-stats {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .order-nav {
+                flex-wrap: wrap;
+            }
+
+            .quick-actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .status-filters {
+                justify-content: center;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .orders-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .kitchen-orders {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .order-stats {
+                grid-template-columns: 1fr;
+            }
+
+            .nav-btn {
+                font-size: 0.8rem;
+                padding: 0.75rem 0.5rem;
+            }
+
+            .stat-card {
+                padding: 1rem;
+            }
+
+            .stat-icon {
+                width: 40px;
+                height: 40px;
+                font-size: 1.2rem;
+            }
+
+            .stat-info h3 {
+                font-size: 1.5rem;
+            }
+
+            .card-actions .btn {
+                min-width: auto;
+                flex: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <h1><i class="fas fa-utensils"></i> Tanawat Restaurant</h1>
+        </div>
+        <div class="nav-menu">
+            <a href="dashboard.html" class="nav-link">
+                <i class="fas fa-tachometer-alt"></i> 主控台
+            </a>
+            <a href="order-management.html" class="nav-link active">
+                <i class="fas fa-receipt"></i> 訂單管理
+            </a>
+            <a href="reservation-management.html" class="nav-link">
+                <i class="fas fa-calendar-check"></i> 訂位管理
+            </a>
+            <a href="customer-view.html" class="nav-link">
+                <i class="fas fa-eye"></i> 客戶視圖
+            </a>
+            <a href="kds.html" class="nav-link">
+                <i class="fas fa-kitchen-set"></i> 廚房顯示
+            </a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- 訂單管理內容將在這裡載入 -->
+    </div>
+
+    <!-- 載入所有必要的腳本 -->
+    <script src="../../config/config.js"></script>
+    <script src="../../assets/js/pos-utils.js"></script>
+    <script src="../../assets/js/notion-manager.js"></script>
+    <script src="../../assets/js/recipe-manager.js"></script>
+    <script src="../../assets/js/menu-manager.js"></script>
+    <script src="../../assets/js/table-manager.js"></script>
+    <script src="../../assets/js/purchase-manager.js"></script>
+    <script src="../../assets/js/reservation-manager.js"></script>
+    <script src="../../assets/js/order-manager.js"></script>
+    <script src="../../assets/js/order-ui.js"></script>
+
+    <script>
+        // 設定全域配置
+        window.APP_CONFIG = CONFIG.production;
+        
+        // 確保在所有腳本載入完成後初始化訂單系統
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('訂單管理系統正在載入...');
+            
+            // 檢查所有必要的類別是否已載入
+            if (typeof OrderManager === 'undefined') {
+                console.error('OrderManager 未載入');
+                return;
+            }
+            
+            if (typeof OrderUI === 'undefined') {
+                console.error('OrderUI 未載入');
+                return;
+            }
+            
+            try {
+                // 初始化訂單管理系統
+                window.orderUI = new OrderUI();
+                console.log('訂單管理系統載入成功');
+                
+                // 載入測試資料（如果需要）
+                loadSampleData();
+            } catch (error) {
+                console.error('訂單管理系統載入失敗:', error);
+            }
+        });
+
+        // 載入測試資料
+        function loadSampleData() {
+            // 根據提供的 CSV 檔案建立測試訂單
+            if (window.orderUI && window.orderUI.orderManager.orders.size === 0) {
+                try {
+                    // 建立示例訂單
+                    const sampleOrder = window.orderUI.orderManager.createOrder('圓3', 1);
+                    if (sampleOrder.success) {
+                        // 添加冰淇淋到訂單
+                        window.orderUI.orderManager.addItemToOrder(sampleOrder.orderId, {
+                            name: '冰淇淋',
+                            price: 30,
+                            quantity: 1,
+                            category: '甜點',
+                            itemType: '單點'
+                        });
+                        
+                        console.log('示例訂單已建立:', sampleOrder.orderId);
+                    }
+                } catch (error) {
+                    console.error('建立示例訂單失敗:', error);
+                }
+            }
+        }
+
+        // 頁面可見性變化時重新整理資料
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden && window.orderUI) {
+                window.orderUI.refreshData();
+            }
+        });
+
+        // 整合菜單選擇功能
+        function showMenuForOrder(orderId) {
+            // 這裡可以整合菜單管理系統
+            if (typeof MenuManager !== 'undefined' && window.menuManager) {
+                const menuItems = window.menuManager.getAllMenuItems();
+                // 顯示菜單選擇介面
+                showMenuSelectionModal(orderId, menuItems);
+            }
+        }
+
+        function showMenuSelectionModal(orderId, menuItems) {
+            // 簡化的菜單選擇介面
+            const modalHTML = `
+                <div class="modal" id="menu-selection-modal">
+                    <div class="modal-content large">
+                        <div class="modal-header">
+                            <h3>選擇菜品 - 訂單 ${orderId}</h3>
+                            <button class="close-modal" onclick="orderUI.closeModal('menu-selection-modal')">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="menu-grid">
+                                ${menuItems.map(item => `
+                                    <div class="menu-item-card" data-item='${JSON.stringify(item)}'>
+                                        <h4>${item.name}</h4>
+                                        <p class="price">NT$ ${item.price}</p>
+                                        <p class="category">${item.category}</p>
+                                        <button class="btn btn-sm btn-primary" onclick="addItemToOrder('${orderId}', this)">
+                                            <i class="fas fa-plus"></i> 加入
+                                        </button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('order-modals').innerHTML = modalHTML;
+            document.getElementById('menu-selection-modal').classList.remove('hidden');
+        }
+
+        function addItemToOrder(orderId, button) {
+            const itemData = JSON.parse(button.closest('.menu-item-card').dataset.item);
+            try {
+                window.orderUI.orderManager.addItemToOrder(orderId, itemData);
+                window.orderUI.showNotification('success', `已添加 ${itemData.name}`);
+                window.orderUI.renderInterface();
+            } catch (error) {
+                window.orderUI.showNotification('error', error.message);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV 到 Notion 同步工具</title>
+    <link rel="stylesheet" href="../assets/css/unified-design.css">
+    <style>
+        .sync-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .sync-header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .sync-header h1 {
+            color: #2c3e50;
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .sync-header p {
+            color: #7f8c8d;
+            font-size: 1.1rem;
+        }
+        
+        .csv-preview {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 1rem;
+            margin: 1rem 0;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .csv-preview h3 {
+            margin-top: 0;
+            color: #495057;
+        }
+        
+        .csv-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        
+        .csv-table th,
+        .csv-table td {
+            border: 1px solid #dee2e6;
+            padding: 0.5rem;
+            text-align: left;
+        }
+        
+        .csv-table th {
+            background: #e9ecef;
+            font-weight: bold;
+        }
+        
+        .csv-table td {
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .sync-controls {
+            text-align: center;
+            margin: 2rem 0;
+        }
+        
+        .sync-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 0 0.5rem;
+        }
+        
+        .sync-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .sync-btn:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .progress-container {
+            margin: 2rem 0;
+            display: none;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #28a745, #20c997);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .progress-text {
+            text-align: center;
+            margin-top: 0.5rem;
+            color: #495057;
+        }
+        
+        .log-container {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 6px;
+            max-height: 400px;
+            overflow-y: auto;
+            display: none;
+        }
+        
+        .log-entry {
+            padding: 0.25rem 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+        
+        .log-success {
+            color: #28a745;
+        }
+        
+        .log-error {
+            color: #dc3545;
+        }
+        
+        .log-info {
+            color: #007bff;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+        
+        .stat-card {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 1rem;
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .stat-label {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+        
+        .alert {
+            padding: 1rem;
+            border-radius: 6px;
+            margin: 1rem 0;
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        
+        .alert-warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        
+        .alert-error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="sync-container">
+        <div class="sync-header">
+            <h1>🔄 CSV 到 Notion 同步工具</h1>
+            <p>將最終菜色.csv 資料同步到 Notion 菜單資料庫</p>
+        </div>
+        
+        <!-- CSV 預覽區 -->
+        <div class="csv-preview" id="csvPreview">
+            <h3>📄 CSV 資料預覽</h3>
+            <div id="csvContent">
+                <p>載入中...</p>
+            </div>
+        </div>
+        
+        <!-- 統計資訊 -->
+        <div class="stats-grid" id="statsGrid" style="display: none;">
+            <div class="stat-card">
+                <div class="stat-number" id="totalItems">0</div>
+                <div class="stat-label">總計項目</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="availableItems">0</div>
+                <div class="stat-label">可供應項目</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="averagePrice">$0</div>
+                <div class="stat-label">平均價格</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="syncedItems">0</div>
+                <div class="stat-label">已同步項目</div>
+            </div>
+        </div>
+        
+        <!-- 同步控制區 -->
+        <div class="sync-controls">
+            <button class="sync-btn" id="previewBtn" onclick="loadCSVPreview()">
+                📋 預覽 CSV 資料
+            </button>
+            <button class="sync-btn" id="testBtn" onclick="testFunction()" style="background: #17a2b8;">
+                🧪 測試連線
+            </button>
+            <button class="sync-btn" id="syncBtn" onclick="startSync()">
+                🚀 開始同步到 Notion
+            </button>
+            <button class="sync-btn" id="clearBtn" onclick="clearNotionData()" style="background: #e74c3c;">
+                🗑️ 清空 Notion 資料庫
+            </button>
+        </div>
+        
+        <!-- 進度條 -->
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-text" id="progressText">準備中...</div>
+        </div>
+        
+        <!-- 訊息區 -->
+        <div id="messageContainer"></div>
+        
+        <!-- 日誌區 -->
+        <div class="log-container" id="logContainer">
+            <h4>📋 同步日誌</h4>
+            <div id="logContent"></div>
+        </div>
+    </div>
+
+    <script>
+        let csvData = [];
+        let syncInProgress = false;
+        
+        // 在頁面載入時進行調試
+        window.addEventListener('load', () => {
+            console.log('🔧 頁面載入完成，開始初始化...');
+            console.log('📊 初始 csvData:', csvData);
+            console.log('🔄 初始 syncInProgress:', syncInProgress);
+            
+            // 自動載入CSV預覽
+            loadCSVPreview();
+        });
+        
+        // 載入 CSV 預覽
+        async function loadCSVPreview() {
+            console.log('📄 開始載入 CSV 預覽...');
+            try {
+                showMessage('正在載入 CSV 資料...', 'info');
+                
+                console.log('🌐 發送請求到 /api/csv-preview');
+                const response = await fetch('/api/csv-preview');
+                console.log('📡 收到回應:', response.status, response.statusText);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('📊 解析的資料:', data);
+                
+                // 直接處理陣列回應
+                if (Array.isArray(data)) {
+                    csvData = data;
+                    console.log('✅ CSV 資料載入成功:', csvData.length, '筆');
+                    displayCSVPreview(data);
+                    updateStats(data);
+                    showMessage(`成功載入 ${data.length} 筆菜單資料`, 'success');
+                } else if (data.success) {
+                    // 備用：處理包裝格式
+                    csvData = data.data;
+                    console.log('✅ CSV 資料載入成功:', csvData.length, '筆');
+                    displayCSVPreview(data.data);
+                    updateStats(data.data);
+                    showMessage(`成功載入 ${data.data.length} 筆菜單資料`, 'success');
+                } else {
+                    console.error('❌ CSV 載入失敗:', data.error || '未知錯誤');
+                    showMessage(`載入失敗: ${data.error || '未知錯誤'}`, 'error');
+                }
+            } catch (error) {
+                console.error('❌ CSV 載入錯誤:', error);
+                showMessage(`載入錯誤: ${error.message}`, 'error');
+            }
+        }
+        
+        // 顯示 CSV 預覽
+        function displayCSVPreview(data) {
+            console.log('🎨 開始顯示 CSV 預覽，資料筆數:', data.length);
+            
+            if (data.length === 0) {
+                document.getElementById('csvContent').innerHTML = '<p>沒有資料</p>';
+                return;
+            }
+            
+            const headers = Object.keys(data[0]);
+            const previewData = data.slice(0, 10); // 只顯示前10筆
+            
+            let html = `
+                <table class="csv-table">
+                    <thead>
+                        <tr>
+                            ${headers.map(h => `<th>${h}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${previewData.map(row => `
+                            <tr>
+                                ${headers.map(h => `<td title="${row[h] || ''}">${row[h] || ''}</td>`).join('')}
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            
+            if (data.length > 10) {
+                html += `<p style="text-align: center; margin-top: 1rem; color: #7f8c8d;">... 還有 ${data.length - 10} 筆資料</p>`;
+            }
+            
+            document.getElementById('csvContent').innerHTML = html;
+            document.getElementById('statsGrid').style.display = 'grid';
+            console.log('✅ CSV 預覽顯示完成');
+        }
+        
+        // 更新統計資訊
+        function updateStats(data) {
+            console.log('📊 更新統計資訊...');
+            const totalItems = data.length;
+            const availableItems = data.filter(item => item['無法供應'] !== 'Yes').length;
+            const prices = data.map(item => parseFloat(item['價格']) || 0).filter(p => p > 0);
+            const averagePrice = prices.length > 0 ? Math.round(prices.reduce((a, b) => a + b, 0) / prices.length) : 0;
+            
+            document.getElementById('totalItems').textContent = totalItems;
+            document.getElementById('availableItems').textContent = availableItems;
+            document.getElementById('averagePrice').textContent = `$${averagePrice}`;
+            
+            console.log('📈 統計更新完成:', { totalItems, availableItems, averagePrice });
+        }
+        
+        // 開始同步
+        async function startSync() {
+            alert('🚀 同步按鈕被點擊！startSync 函數正在執行');
+            console.log('🚀 startSync 函數被調用');
+            console.log('🔄 syncInProgress:', syncInProgress);
+            console.log('📊 csvData.length:', csvData.length);
+            
+            if (syncInProgress) {
+                console.log('⚠️ 同步正在進行中，忽略此次調用');
+                return;
+            }
+            
+            if (csvData.length === 0) {
+                console.log('⚠️ CSV 資料為空，先載入資料');
+                showMessage('請先載入 CSV 資料', 'warning');
+                await loadCSVPreview();
+                if (csvData.length === 0) {
+                    return;
+                }
+            }
+            
+            const confirmMessage = `確定要同步 ${csvData.length} 筆資料到 Notion 嗎？`;
+            console.log('❓ 顯示確認對話框:', confirmMessage);
+            
+            if (!confirm(confirmMessage)) {
+                console.log('❌ 用戶取消同步');
+                return;
+            }
+            
+            console.log('✅ 用戶確認同步，開始執行...');
+            
+            syncInProgress = true;
+            document.getElementById('syncBtn').disabled = true;
+            document.getElementById('progressContainer').style.display = 'block';
+            document.getElementById('logContainer').style.display = 'block';
+            
+            clearLog();
+            logMessage('🚀 開始同步程序...', 'info');
+            
+            try {
+                let successCount = 0;
+                let errorCount = 0;
+                
+                for (let i = 0; i < csvData.length; i++) {
+                    const item = csvData[i];
+                    const progress = ((i + 1) / csvData.length) * 100;
+                    
+                    updateProgress(progress, `同步中... ${i + 1}/${csvData.length}`);
+                    logMessage(`處理: ${item['餐點名稱']}`, 'info');
+                    console.log(`🔄 處理第 ${i + 1} 項:`, item['餐點名稱']);
+                    
+                    try {
+                        const response = await fetch('/api/sync-menu-item', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(item)
+                        });
+                        
+                        console.log(`📡 API 回應狀態:`, response.status);
+                        const result = await response.json();
+                        console.log(`📊 API 回應結果:`, result);
+                        
+                        if (result.success) {
+                            successCount++;
+                            logMessage(`✅ ${item['餐點名稱']} 同步成功`, 'success');
+                        } else {
+                            errorCount++;
+                            logMessage(`❌ ${item['餐點名稱']} 同步失敗: ${result.error}`, 'error');
+                        }
+                    } catch (error) {
+                        errorCount++;
+                        console.error(`❌ 處理錯誤:`, error);
+                        logMessage(`❌ ${item['餐點名稱']} 處理錯誤: ${error.message}`, 'error');
+                    }
+                    
+                    // 避免 API 限制
+                    if (i < csvData.length - 1) {
+                        await new Promise(resolve => setTimeout(resolve, 300));
+                    }
+                }
+                
+                updateProgress(100, '同步完成！');
+                document.getElementById('syncedItems').textContent = successCount;
+                
+                const finalMessage = `🎉 同步完成！成功: ${successCount}, 失敗: ${errorCount}`;
+                logMessage(finalMessage, successCount > errorCount ? 'success' : 'error');
+                showMessage(`同步完成！成功同步 ${successCount} 筆資料，${errorCount} 筆失敗`, 'success');
+                
+                console.log('✅ 同步流程全部完成');
+                
+            } catch (error) {
+                console.error('❌ 同步過程發生嚴重錯誤:', error);
+                logMessage(`❌ 同步過程發生錯誤: ${error.message}`, 'error');
+                showMessage(`同步失敗: ${error.message}`, 'error');
+            } finally {
+                syncInProgress = false;
+                document.getElementById('syncBtn').disabled = false;
+                console.log('🔄 重置同步狀態');
+            }
+        }
+        
+        // 測試函數
+        async function testFunction() {
+            alert('🧪 測試按鈕被點擊！testFunction 函數正在執行');
+            console.log('🧪 測試函數被調用');
+            showMessage('測試連線中...', 'info');
+            
+            try {
+                // 測試健康檢查
+                const healthResponse = await fetch('/api/health');
+                const healthData = await healthResponse.json();
+                console.log('🏥 健康檢查結果:', healthData);
+                
+                if (healthData.status === 'ok') {
+                    showMessage('✅ 伺服器連線正常', 'success');
+                    logMessage(`✅ 伺服器狀態: ${healthData.status}`, 'success');
+                    logMessage(`🔑 Notion API 設定: ${healthData.notion_api_configured ? '已設定' : '未設定'}`, 'info');
+                } else {
+                    showMessage('❌ 伺服器連線異常', 'error');
+                }
+                
+                // 測試CSV端點
+                const csvResponse = await fetch('/api/csv-preview');
+                if (csvResponse.ok) {
+                    logMessage('✅ CSV 端點正常', 'success');
+                } else {
+                    logMessage('❌ CSV 端點異常', 'error');
+                }
+                
+            } catch (error) {
+                console.error('❌ 測試錯誤:', error);
+                showMessage(`測試失敗: ${error.message}`, 'error');
+                logMessage(`❌ 測試錯誤: ${error.message}`, 'error');
+            }
+        }
+        
+        // 清空 Notion 資料庫
+        async function clearNotionData() {
+            alert('🗑️ 清空按鈕被點擊！clearNotionData 函數正在執行');
+            if (!confirm('⚠️ 確定要清空 Notion 菜單資料庫嗎？此操作無法復原！')) {
+                return;
+            }
+            
+            try {
+                const clearBtn = document.getElementById('clearBtn');
+                clearBtn.disabled = true;
+                clearBtn.textContent = '🗑️ 清空中...';
+                
+                showMessage('正在清空 Notion 資料庫...', 'info');
+                logMessage('開始清空 Notion 資料庫...', 'info');
+                
+                const response = await fetch('/api/clear-notion-menu', { 
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    const message = result.failedCount > 0 
+                        ? `成功清空 ${result.deletedCount} 筆資料，${result.failedCount} 筆失敗`
+                        : `成功清空 ${result.deletedCount} 筆資料`;
+                    
+                    showMessage(message, 'success');
+                    logMessage(`✅ ${message}`, 'success');
+                    document.getElementById('syncedItems').textContent = '0';
+                } else {
+                    showMessage(`清空失敗: ${result.error}`, 'error');
+                    logMessage(`❌ 清空失敗: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('Clear error:', error);
+                showMessage(`清空錯誤: ${error.message}`, 'error');
+                logMessage(`❌ 清空錯誤: ${error.message}`, 'error');
+            } finally {
+                const clearBtn = document.getElementById('clearBtn');
+                clearBtn.disabled = false;
+                clearBtn.textContent = '🗑️ 清空 Notion 資料庫';
+            }
+        }
+        
+        // 更新進度條
+        function updateProgress(percent, text) {
+            document.getElementById('progressFill').style.width = `${percent}%`;
+            document.getElementById('progressText').textContent = text;
+        }
+        
+        // 顯示訊息
+        function showMessage(message, type) {
+            const container = document.getElementById('messageContainer');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            
+            container.innerHTML = '';
+            container.appendChild(alert);
+            
+            // 自動清除成功訊息
+            if (type === 'success') {
+                setTimeout(() => {
+                    if (container.contains(alert)) {
+                        container.removeChild(alert);
+                    }
+                }, 5000);
+            }
+        }
+        
+        // 日誌相關函數
+        function logMessage(message, type) {
+            const logContent = document.getElementById('logContent');
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            
+            logContent.appendChild(entry);
+            logContent.scrollTop = logContent.scrollHeight;
+        }
+        
+        function clearLog() {
+            document.getElementById('logContent').innerHTML = '';
+        }
+    </script>
+</body>
+</html>

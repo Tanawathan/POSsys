@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{PAGE_TITLE}} - Tanawat Restaurant</title>
+    <meta name="description" content="Tanawat Restaurant 餐廳管理系統">
+    
+    <!-- 統一設計系統樣式 -->
+    <link rel="stylesheet" href="assets/css/unified-design.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- 頁面特定樣式 -->
+    {{ADDITIONAL_STYLES}}
+</head>
+<body>
+    <!-- 統一導航欄 -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="dashboard.html" class="nav-brand">
+                <i class="fas fa-utensils"></i>
+                <span>Tanawat Restaurant</span>
+            </a>
+            
+            <div class="nav-menu">
+                <a href="dashboard.html" class="nav-link {{DASHBOARD_ACTIVE}}">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>主控台</span>
+                </a>
+                <a href="order-management.html" class="nav-link {{ORDER_ACTIVE}}">
+                    <i class="fas fa-receipt"></i>
+                    <span>訂單管理</span>
+                </a>
+                <a href="reservation-management.html" class="nav-link {{RESERVATION_ACTIVE}}">
+                    <i class="fas fa-calendar-check"></i>
+                    <span>訂位管理</span>
+                </a>
+                <a href="menu-management.html" class="nav-link {{MENU_ACTIVE}}">
+                    <i class="fas fa-utensils"></i>
+                    <span>菜單管理</span>
+                </a>
+                <a href="table-management.html" class="nav-link {{TABLE_ACTIVE}}">
+                    <i class="fas fa-table"></i>
+                    <span>桌況管理</span>
+                </a>
+                <a href="purchase-management.html" class="nav-link {{PURCHASE_ACTIVE}}">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span>採購管理</span>
+                </a>
+                <a href="recipe-management.html" class="nav-link {{RECIPE_ACTIVE}}">
+                    <i class="fas fa-book"></i>
+                    <span>食譜管理</span>
+                </a>
+                <a href="inventory-management.html" class="nav-link {{INVENTORY_ACTIVE}}">
+                    <i class="fas fa-warehouse"></i>
+                    <span>庫存管理</span>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要內容區域 -->
+    <main class="main-content">
+        <div class="container">
+            {{PAGE_CONTENT}}
+        </div>
+    </main>
+
+    <!-- 載入指示器 -->
+    <div id="loading-overlay" class="loading-overlay hidden">
+        <div class="loading"></div>
+    </div>
+
+    <!-- 通知容器 -->
+    <div id="notification-container"></div>
+
+    <!-- 彈窗容器 -->
+    <div id="modal-container"></div>
+
+    <!-- 基礎 JavaScript -->
+    <script src="assets/js/pos-utils.js"></script>
+    
+    <!-- 頁面特定腳本 -->
+    {{ADDITIONAL_SCRIPTS}}
+
+    <!-- 統一初始化腳本 -->
+    <script>
+        // 統一的通知系統
+        window.showNotification = function(type, message, duration = 3000) {
+            const container = document.getElementById('notification-container');
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = `
+                <i class="fas ${getNotificationIcon(type)}"></i>
+                <span>${message}</span>
+            `;
+            
+            container.appendChild(notification);
+            
+            // 顯示動畫
+            setTimeout(() => notification.classList.add('show'), 100);
+            
+            // 自動隱藏
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => notification.remove(), 300);
+            }, duration);
+        };
+
+        function getNotificationIcon(type) {
+            const icons = {
+                success: 'fa-check-circle',
+                warning: 'fa-exclamation-triangle',
+                error: 'fa-times-circle',
+                info: 'fa-info-circle'
+            };
+            return icons[type] || 'fa-info-circle';
+        }
+
+        // 統一的載入指示器
+        window.showLoading = function() {
+            document.getElementById('loading-overlay').classList.remove('hidden');
+        };
+
+        window.hideLoading = function() {
+            document.getElementById('loading-overlay').classList.add('hidden');
+        };
+
+        // 統一的彈窗系統
+        window.showModal = function(content, options = {}) {
+            const container = document.getElementById('modal-container');
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.innerHTML = `
+                <div class="modal-content ${options.size || 'size-md'}">
+                    <div class="modal-header">
+                        <h3>${options.title || '提示'}</h3>
+                        <button class="modal-close" onclick="closeModal(this)">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        ${content}
+                    </div>
+                    ${options.footer ? `<div class="modal-footer">${options.footer}</div>` : ''}
+                </div>
+            `;
+            
+            container.appendChild(modal);
+            
+            // 點擊背景關閉
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closeModal(modal.querySelector('.modal-close'));
+                }
+            });
+            
+            return modal;
+        };
+
+        window.closeModal = function(element) {
+            const modal = element.closest('.modal');
+            if (modal) {
+                modal.classList.add('hidden');
+                setTimeout(() => modal.remove(), 300);
+            }
+        };
+
+        // 頁面載入完成處理
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Tanawat Restaurant 系統載入完成');
+            
+            // 初始化頁面特定功能
+            if (typeof initializePage === 'function') {
+                initializePage();
+            }
+        });
+
+        // 全域錯誤處理
+        window.addEventListener('error', function(e) {
+            console.error('系統錯誤:', e.error);
+            showNotification('error', '系統發生錯誤，請重新整理頁面');
+        });
+    </script>
+</body>
+</html>

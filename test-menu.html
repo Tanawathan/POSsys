@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>測試菜單載入</title>
+</head>
+<body>
+    <h1>菜單載入測試</h1>
+    <div id="status">初始化中...</div>
+    <div id="menu-data"></div>
+
+    <script src="config/config.js"></script>
+    <script src="assets/js/notion-manager.js"></script>
+    <script>
+        // 設定全域配置
+        window.APP_CONFIG = CONFIG.production;
+        
+        async function testMenuLoad() {
+            try {
+                document.getElementById('status').textContent = '正在連接 Notion...';
+                console.log('開始測試菜單載入');
+                
+                // 初始化 Notion 管理器
+                const notionManager = new NotionDataManager();
+                console.log('Notion 管理器已初始化');
+                
+                document.getElementById('status').textContent = '正在查詢菜單資料庫...';
+                
+                // 查詢菜單資料庫
+                const menuData = await notionManager.queryDatabase('menu');
+                console.log('菜單資料:', menuData);
+                
+                document.getElementById('status').textContent = '載入成功！';
+                document.getElementById('menu-data').innerHTML = `
+                    <h3>找到 ${menuData.results.length} 筆菜單資料：</h3>
+                    <ul>
+                        ${menuData.results.map(item => {
+                            const name = item.properties['名稱']?.title?.[0]?.text?.content || '未命名';
+                            const price = item.properties['價格']?.number || 0;
+                            const category = item.properties['分類']?.select?.name || '其他';
+                            return `<li>${name} - NT$${price} (${category})</li>`;
+                        }).join('')}
+                    </ul>
+                `;
+                
+            } catch (error) {
+                console.error('載入失敗:', error);
+                document.getElementById('status').textContent = '載入失敗: ' + error.message;
+                document.getElementById('menu-data').innerHTML = `<pre>${JSON.stringify(error, null, 2)}</pre>`;
+            }
+        }
+        
+        // 頁面載入後執行測試
+        document.addEventListener('DOMContentLoaded', testMenuLoad);
+    </script>
+</body>
+</html>

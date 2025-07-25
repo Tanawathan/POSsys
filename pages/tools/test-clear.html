@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>清空功能測試</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .btn:hover {
+            background: #c0392b;
+        }
+        .btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+        #output {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>🗑️ Notion 資料庫清空功能測試</h1>
+    
+    <button class="btn" onclick="testClearFunction()">測試清空功能</button>
+    <button class="btn" onclick="clearOutput()">清除輸出</button>
+    
+    <div id="output"></div>
+
+    <script>
+        function log(message) {
+            const output = document.getElementById('output');
+            const timestamp = new Date().toLocaleTimeString();
+            output.textContent += `[${timestamp}] ${message}\n`;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function clearOutput() {
+            document.getElementById('output').textContent = '';
+        }
+
+        async function testClearFunction() {
+            log('🚀 開始測試清空功能...');
+            
+            try {
+                // 測試伺服器連線
+                log('🔍 檢查伺服器狀態...');
+                const pingResponse = await fetch('/api/preview-csv-menu');
+                if (pingResponse.ok) {
+                    log('✅ 伺服器運行正常');
+                } else {
+                    log('❌ 伺服器連線失敗');
+                    return;
+                }
+
+                // 執行清空
+                if (confirm('⚠️ 確定要清空 Notion 菜單資料庫嗎？此操作無法復原！')) {
+                    log('🗑️ 開始清空 Notion 資料庫...');
+                    
+                    const clearResponse = await fetch('/api/clear-notion-menu', { 
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    if (!clearResponse.ok) {
+                        throw new Error(`HTTP ${clearResponse.status}: ${clearResponse.statusText}`);
+                    }
+                    
+                    const result = await clearResponse.json();
+                    
+                    if (result.success) {
+                        const message = result.failedCount > 0 
+                            ? `✅ 成功清空 ${result.deletedCount} 筆資料，${result.failedCount} 筆失敗`
+                            : `✅ 成功清空 ${result.deletedCount} 筆資料`;
+                        log(message);
+                    } else {
+                        log(`❌ 清空失敗: ${result.error}`);
+                    }
+                } else {
+                    log('🚫 使用者取消清空操作');
+                }
+                
+            } catch (error) {
+                log(`❌ 錯誤: ${error.message}`);
+                console.error('Error:', error);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>訂位管理系統 - Tanawat Restaurant</title>
+    <link rel="stylesheet" href="assets/css/pos-enhanced.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* 訂位管理專用樣式 */
+        .reservation-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding: 1rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+        }
+
+        .reservation-header h2 {
+            margin: 0;
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+
+        .reservation-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .reservation-actions .btn {
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .reservation-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+        }
+
+        .today-total .stat-icon { background: linear-gradient(135deg, #667eea, #764ba2); }
+        .confirmed-count .stat-icon { background: linear-gradient(135deg, #f093fb, #f5576c); }
+        .waiting-count .stat-icon { background: linear-gradient(135deg, #4facfe, #00f2fe); }
+        .customer-count .stat-icon { background: linear-gradient(135deg, #43e97b, #38f9d7); }
+
+        .stat-info h3 {
+            margin: 0;
+            font-size: 2rem;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .stat-info p {
+            margin: 0;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .reservation-nav {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+            background: white;
+            padding: 0.5rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .nav-btn {
+            flex: 1;
+            padding: 1rem;
+            border: none;
+            background: transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .nav-btn:hover {
+            background: rgba(102, 126, 234, 0.1);
+            color: #667eea;
+        }
+
+        .nav-btn.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            box-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);
+        }
+
+        .quick-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding: 1rem;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .date-selector {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .date-selector label {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .date-selector input {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .status-filters {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .filter-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid #ddd;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.85rem;
+        }
+
+        .filter-btn:hover {
+            border-color: #667eea;
+            color: #667eea;
+        }
+
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .reservation-content {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            min-height: 400px;
+        }
+
+        .view-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            border-bottom: 1px solid #eee;
+        }
+
+        .view-header h3 {
+            margin: 0;
+            color: #333;
+            font-size: 1.4rem;
+        }
+
+        /* 訂位時間軸 */
+        .reservations-timeline {
+            padding: 1rem;
+        }
+
+        .time-slot {
+            margin-bottom: 2rem;
+            border: 1px solid #eee;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .time-slot.has-reservations {
+            border-color: #667eea;
+        }
+
+        .time-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-bottom: 1px solid #eee;
+        }
+
+        .time-label .time {
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: #333;
+        }
+
+        .time-label .count {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .slot-reservations {
+            padding: 1rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1rem;
+        }
+
+        /* 訂位卡片 */
+        .reservation-card {
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 1rem;
+            background: white;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .reservation-card:hover {
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .reservation-card.pending {
+            border-left: 4px solid #ffc107;
+        }
+
+        .reservation-card.confirmed {
+            border-left: 4px solid #28a745;
+        }
+
+        .reservation-card.arrived {
+            border-left: 4px solid #17a2b8;
+        }
+
+        .reservation-card.no-show {
+            border-left: 4px solid #dc3545;
+            background: #fff5f5;
+        }
+
+        .reservation-card.cancelled {
+            border-left: 4px solid #6c757d;
+            background: #f8f9fa;
+            opacity: 0.7;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .customer-info h4 {
+            margin: 0 0 0.5rem 0;
+            color: #333;
+            font-size: 1.1rem;
+        }
+
+        .customer-info p {
+            margin: 0.25rem 0;
+            color: #666;
+            font-size: 0.85rem;
+        }
+
+        .reservation-status {
+            text-align: right;
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: white;
+            display: inline-block;
+            margin-bottom: 0.5rem;
+        }
+
+        .status-badge.pending { background: #ffc107; }
+        .status-badge.confirmed { background: #28a745; }
+        .status-badge.arrived { background: #17a2b8; }
+        .status-badge.no-show { background: #dc3545; }
+        .status-badge.cancelled { background: #6c757d; }
+
+        .table-assignment {
+            background: #e9ecef;
+            color: #495057;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+
+        .vip-indicator {
+            background: linear-gradient(135deg, #ffd700, #ff6b6b);
+            color: white;
+            padding: 0.5rem;
+            border-radius: 6px;
+            text-align: center;
+            margin: 0.5rem 0;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .special-requests {
+            margin: 0.75rem 0;
+        }
+
+        .special-requests h5 {
+            margin: 0 0 0.5rem 0;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .request-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.25rem;
+        }
+
+        .request-tag {
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+        }
+
+        .reservation-notes {
+            margin: 0.75rem 0;
+            padding: 0.5rem;
+            background: #f8f9fa;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #eee;
+        }
+
+        .card-actions .btn {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        /* 彈窗樣式 */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            transform: scale(1);
+            transition: transform 0.3s ease;
+        }
+
+        .modal.hidden .modal-content {
+            transform: scale(0.9);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem;
+            border-bottom: 1px solid #eee;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            color: #333;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #666;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .close-modal:hover {
+            background: #f1f1f1;
+            color: #333;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .special-requests {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 0.5rem;
+        }
+
+        .special-requests label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: normal;
+            cursor: pointer;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            padding: 1.5rem;
+            border-top: 1px solid #eee;
+        }
+
+        /* 通知樣式 */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 2000;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            min-width: 250px;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success { background: #28a745; }
+        .notification.warning { background: #ffc107; color: #333; }
+        .notification.error { background: #dc3545; }
+        .notification.info { background: #17a2b8; }
+
+        /* 無訂位狀態 */
+        .no-reservations {
+            text-align: center;
+            padding: 3rem;
+            color: #666;
+        }
+
+        .no-reservations i {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            color: #ddd;
+        }
+
+        .no-reservations h4 {
+            margin: 1rem 0;
+            color: #333;
+        }
+
+        /* 客戶管理 */
+        .customers-filters {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem 1.5rem;
+            background: #f8f9fa;
+            border-bottom: 1px solid #eee;
+        }
+
+        .customers-filters input,
+        .customers-filters select {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .customers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1rem;
+            padding: 1.5rem;
+        }
+
+        .customer-card {
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 1rem;
+            background: white;
+            transition: all 0.3s ease;
+        }
+
+        .customer-card:hover {
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .customer-card.vip {
+            border-color: #ffd700;
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 107, 107, 0.1));
+        }
+
+        .customer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .vip-badge {
+            background: linear-gradient(135deg, #ffd700, #ff6b6b);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .customer-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .stat-item .label {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .stat-item .value {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .customer-preferences,
+        .customer-allergies {
+            margin-bottom: 1rem;
+        }
+
+        .customer-preferences h5,
+        .customer-allergies h5 {
+            margin: 0 0 0.5rem 0;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .preference-tags,
+        .allergy-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.25rem;
+        }
+
+        .pref-tag {
+            background: #e8f5e8;
+            color: #2e7d32;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+        }
+
+        .allergy-tag {
+            background: #ffebee;
+            color: #c62828;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+        }
+
+        .customer-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #eee;
+        }
+
+        /* 分析報表 */
+        .analytics-grid {
+            padding: 1.5rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .analytics-section {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid #eee;
+        }
+
+        .analytics-section h4 {
+            margin: 0 0 1rem 0;
+            color: #333;
+            font-size: 1.2rem;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 0.5rem;
+        }
+
+        .today-overview,
+        .month-stats,
+        .customer-analytics {
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .overview-item,
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #eee;
+        }
+
+        .overview-item .label,
+        .stat-item .label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .overview-item .value,
+        .stat-item .value {
+            font-weight: 600;
+            color: #333;
+            font-size: 1.1rem;
+        }
+
+        .overview-item .value.alert,
+        .stat-item .value.alert {
+            color: #dc3545;
+        }
+
+        /* 響應式設計 */
+        @media (max-width: 768px) {
+            .reservation-header {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+
+            .reservation-actions {
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+
+            .reservation-stats {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .reservation-nav {
+                flex-wrap: wrap;
+            }
+
+            .quick-actions {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .customers-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .analytics-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .slot-reservations {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .reservation-stats {
+                grid-template-columns: 1fr;
+            }
+
+            .nav-btn {
+                font-size: 0.8rem;
+                padding: 0.75rem 0.5rem;
+            }
+
+            .stat-card {
+                padding: 1rem;
+            }
+
+            .stat-icon {
+                width: 40px;
+                height: 40px;
+                font-size: 1.2rem;
+            }
+
+            .stat-info h3 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <h1><i class="fas fa-utensils"></i> Tanawat Restaurant</h1>
+        </div>
+        <div class="nav-menu">
+            <a href="dashboard.html" class="nav-link">
+                <i class="fas fa-tachometer-alt"></i> 主控台
+            </a>
+            <a href="reservation-management.html" class="nav-link active">
+                <i class="fas fa-calendar-check"></i> 訂位管理
+            </a>
+            <a href="customer-view.html" class="nav-link">
+                <i class="fas fa-eye"></i> 客戶視圖
+            </a>
+            <a href="kds.html" class="nav-link">
+                <i class="fas fa-kitchen-set"></i> 廚房顯示
+            </a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- 訂位管理內容將在這裡載入 -->
+    </div>
+
+    <!-- 載入所有必要的腳本 -->
+    <script src="../../config/config.js"></script>
+    <script src="../../assets/js/pos-utils.js"></script>
+    <script src="../../assets/js/notion-manager.js"></script>
+    <script src="../../assets/js/recipe-manager.js"></script>
+    <script src="../../assets/js/menu-manager.js"></script>
+    <script src="../../assets/js/table-manager.js"></script>
+    <script src="../../assets/js/purchase-manager.js"></script>
+    <script src="../../assets/js/reservation-manager.js"></script>
+    <script src="../../assets/js/reservation-ui.js"></script>
+
+    <script>
+        // 設定全域配置
+        window.APP_CONFIG = CONFIG.production;
+        
+        // 確保在所有腳本載入完成後初始化訂位系統
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('訂位管理系統正在載入...');
+            
+            // 檢查所有必要的類別是否已載入
+            if (typeof ReservationManager === 'undefined') {
+                console.error('ReservationManager 未載入');
+                return;
+            }
+            
+            if (typeof ReservationUI === 'undefined') {
+                console.error('ReservationUI 未載入');
+                return;
+            }
+            
+            try {
+                // 初始化訂位管理系統
+                window.reservationUI = new ReservationUI();
+                console.log('訂位管理系統載入成功');
+            } catch (error) {
+                console.error('訂位管理系統載入失敗:', error);
+            }
+        });
+
+        // 頁面可見性變化時重新整理資料
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden && window.reservationUI) {
+                window.reservationUI.refreshData();
+            }
+        });
+    </script>
+</body>
+</html>

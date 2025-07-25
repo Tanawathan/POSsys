@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NotionDataManager 測試</title>
+</head>
+<body>
+    <h1>NotionDataManager 測試</h1>
+    <button onclick="testQuery()">測試查詢菜單</button>
+    <div id="result"></div>
+
+    <script>
+        // 手動設定配置
+        window.APP_CONFIG = {
+            notion: {
+                apiKey: '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',
+                apiVersion: '2022-06-28',
+                databaseIds: {
+                    menu: '23afd5adc30b80c58355fd93d05c66d6'
+                }
+            }
+        };
+        
+        // 簡化版的 NotionDataManager（僅用於測試）
+        class TestNotionManager {
+            constructor() {
+                this.baseUrl = '/api/notion';
+                this.databaseIds = window.APP_CONFIG.notion.databaseIds;
+            }
+            
+            async queryDatabase(dbName) {
+                const dbId = this.databaseIds[dbName];
+                if (!dbId) {
+                    throw new Error(`Database ${dbName} not found`);
+                }
+                
+                const url = `${this.baseUrl}/databases/${dbId}/query`;
+                console.log('查詢 URL:', url);
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({})
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                return await response.json();
+            }
+        }
+        
+        async function testQuery() {
+            const resultDiv = document.getElementById('result');
+            try {
+                resultDiv.innerHTML = '查詢中...';
+                
+                const manager = new TestNotionManager();
+                const data = await manager.queryDatabase('menu');
+                
+                console.log('查詢結果:', data);
+                
+                // 轉換資料
+                const menuItems = data.results.map(item => {
+                    const properties = item.properties;
+                    return {
+                        id: item.id,
+                        name: properties['名稱']?.title?.[0]?.text?.content || '未命名',
+                        price: properties['價格']?.number || 0,
+                        category: properties['分類']?.select?.name || '其他',
+                        description: properties['描述']?.rich_text?.[0]?.text?.content || '',
+                        available: properties['供應狀態']?.checkbox !== false
+                    };
+                });
+                
+                console.log('轉換後的菜單:', menuItems);
+                
+                resultDiv.innerHTML = `
+                    <h3>查詢成功！找到 ${menuItems.length} 筆資料：</h3>
+                    <ul>
+                        ${menuItems.map(item => `
+                            <li>
+                                <strong>${item.name}</strong> - NT$${item.price} (${item.category})
+                                <br>${item.description}
+                                <br>狀態: ${item.available ? '可供應' : '暫停供應'}
+                            </li>
+                        `).join('')}
+                    </ul>
+                    <h4>原始資料:</h4>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+                
+            } catch (error) {
+                console.error('查詢失敗:', error);
+                resultDiv.innerHTML = `
+                    <h3 style="color: red;">查詢失敗</h3>
+                    <p>${error.message}</p>
+                    <pre>${JSON.stringify(error, null, 2)}</pre>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

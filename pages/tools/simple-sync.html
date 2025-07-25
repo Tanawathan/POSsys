@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>簡化同步頁面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        .sync-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background-color 0.3s;
+            min-width: 200px;
+        }
+        .sync-btn:hover {
+            background: #218838;
+        }
+        .sync-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .clear-btn {
+            background: #dc3545;
+        }
+        .clear-btn:hover {
+            background: #c82333;
+        }
+        .test-btn {
+            background: #17a2b8;
+        }
+        .test-btn:hover {
+            background: #138496;
+        }
+        #status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        #log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            min-height: 200px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .progress-container {
+            margin: 20px 0;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            display: none;
+        }
+        .progress-bar {
+            height: 30px;
+            background: #28a745;
+            width: 0%;
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 CSV 到 Notion 同步工具（簡化版）</h1>
+        
+        <div class="btn-group">
+            <button class="sync-btn test-btn" onclick="testConnection()">
+                🧪 測試連線
+            </button>
+            <button class="sync-btn" id="syncBtn" onclick="startSync()">
+                🚀 開始同步到 Notion
+            </button>
+            <button class="sync-btn clear-btn" id="clearBtn" onclick="clearNotionData()">
+                🗑️ 清空 Notion 資料庫
+            </button>
+            <button class="sync-btn test-btn" onclick="loadCSVPreview()">
+                📋 載入 CSV 預覽
+            </button>
+        </div>
+
+        <div id="status"></div>
+        
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar" id="progressBar">0%</div>
+        </div>
+
+        <div id="log"></div>
+    </div>
+
+    <script>
+        let csvData = [];
+        let syncInProgress = false;
+
+        // 日誌函數
+        function log(message, type = 'info') {
+            const logElement = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logElement.textContent += `[${timestamp}] ${message}\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+            console.log(message);
+        }
+
+        // 狀態顯示函數
+        function showStatus(message, type) {
+            const statusElement = document.getElementById('status');
+            statusElement.textContent = message;
+            statusElement.className = `status-${type}`;
+            statusElement.style.display = 'block';
+        }
+
+        // 進度更新函數
+        function updateProgress(percent, text) {
+            const progressContainer = document.getElementById('progressContainer');
+            const progressBar = document.getElementById('progressBar');
+            
+            progressContainer.style.display = 'block';
+            progressBar.style.width = `${percent}%`;
+            progressBar.textContent = text || `${percent}%`;
+        }
+
+        // 測試連線函數
+        async function testConnection() {
+            log('🧪 測試連線開始...');
+            showStatus('正在測試連線...', 'info');
+            
+            try {
+                const response = await fetch('/api/test-notion');
+                if (response.ok) {
+                    const result = await response.json();
+                    log('✅ Notion 連線測試成功');
+                    showStatus('Notion 連線正常！', 'success');
+                } else {
+                    log(`❌ Notion 連線測試失敗: ${response.status}`);
+                    showStatus(`連線失敗: HTTP ${response.status}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ 連線錯誤: ${error.message}`);
+                showStatus(`連線錯誤: ${error.message}`, 'error');
+            }
+        }
+
+        // 載入 CSV 預覽函數
+        async function loadCSVPreview() {
+            log('📋 載入 CSV 預覽...');
+            showStatus('正在載入 CSV 資料...', 'info');
+            
+            try {
+                const response = await fetch('/api/preview-csv-menu');
+                if (response.ok) {
+                    csvData = await response.json();
+                    log(`✅ 成功載入 ${csvData.length} 筆 CSV 資料`);
+                    showStatus(`已載入 ${csvData.length} 筆菜單資料`, 'success');
+                    
+                    // 顯示前3筆資料作為預覽
+                    if (csvData.length > 0) {
+                        log('📋 資料預覽:');
+                        csvData.slice(0, 3).forEach((item, index) => {
+                            log(`  ${index + 1}. ${item['餐點名稱']} - $${item['價格']}`);
+                        });
+                    }
+                } else {
+                    log(`❌ 載入 CSV 失敗: ${response.status}`);
+                    showStatus(`載入失敗: HTTP ${response.status}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ 載入錯誤: ${error.message}`);
+                showStatus(`載入錯誤: ${error.message}`, 'error');
+            }
+        }
+
+        // 同步函數
+        async function startSync() {
+            log('🚀 startSync 函數被調用');
+            
+            if (syncInProgress) {
+                log('⚠️ 同步正在進行中');
+                showStatus('同步正在進行中，請稍候...', 'info');
+                return;
+            }
+
+            if (csvData.length === 0) {
+                log('📋 CSV 資料為空，先載入資料');
+                await loadCSVPreview();
+                if (csvData.length === 0) {
+                    showStatus('沒有可同步的資料', 'error');
+                    return;
+                }
+            }
+
+            if (!confirm(`確定要同步 ${csvData.length} 筆資料到 Notion 嗎？`)) {
+                log('❌ 使用者取消同步');
+                return;
+            }
+
+            log('✅ 開始同步程序');
+            syncInProgress = true;
+            document.getElementById('syncBtn').disabled = true;
+            showStatus('正在同步...', 'info');
+
+            try {
+                let successCount = 0;
+                let errorCount = 0;
+
+                for (let i = 0; i < csvData.length; i++) {
+                    const item = csvData[i];
+                    const progress = ((i + 1) / csvData.length) * 100;
+                    
+                    updateProgress(progress, `同步中... ${i + 1}/${csvData.length}`);
+                    log(`🔄 處理: ${item['餐點名稱']}`);
+
+                    try {
+                        const response = await fetch('/api/sync-menu-item', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(item)
+                        });
+
+                        const result = await response.json();
+                        
+                        if (result.success) {
+                            successCount++;
+                            log(`✅ ${item['餐點名稱']} 同步成功`);
+                        } else {
+                            errorCount++;
+                            log(`❌ ${item['餐點名稱']} 同步失敗: ${result.error}`);
+                        }
+                    } catch (error) {
+                        errorCount++;
+                        log(`❌ ${item['餐點名稱']} 處理錯誤: ${error.message}`);
+                    }
+
+                    // 避免 API 限制
+                    if (i < csvData.length - 1) {
+                        await new Promise(resolve => setTimeout(resolve, 300));
+                    }
+                }
+
+                updateProgress(100, '同步完成！');
+                const message = `同步完成！成功: ${successCount}, 失敗: ${errorCount}`;
+                log(`🎉 ${message}`);
+                showStatus(message, successCount > errorCount ? 'success' : 'error');
+
+            } catch (error) {
+                log(`❌ 同步過程發生錯誤: ${error.message}`);
+                showStatus(`同步失敗: ${error.message}`, 'error');
+            } finally {
+                syncInProgress = false;
+                document.getElementById('syncBtn').disabled = false;
+            }
+        }
+
+        // 清空函數
+        async function clearNotionData() {
+            log('🗑️ clearNotionData 函數被調用');
+            
+            if (!confirm('⚠️ 確定要清空 Notion 菜單資料庫嗎？此操作無法復原！')) {
+                log('❌ 使用者取消清空');
+                return;
+            }
+
+            log('✅ 開始清空程序');
+            showStatus('正在清空 Notion 資料庫...', 'info');
+            document.getElementById('clearBtn').disabled = true;
+
+            try {
+                const response = await fetch('/api/clear-notion-menu', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+
+                if (result.success) {
+                    const message = result.failedCount > 0 
+                        ? `成功清空 ${result.deletedCount} 筆資料，${result.failedCount} 筆失敗`
+                        : `成功清空 ${result.deletedCount} 筆資料`;
+                    
+                    log(`✅ ${message}`);
+                    showStatus(message, 'success');
+                } else {
+                    log(`❌ 清空失敗: ${result.error}`);
+                    showStatus(`清空失敗: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ 清空錯誤: ${error.message}`);
+                showStatus(`清空錯誤: ${error.message}`, 'error');
+            } finally {
+                document.getElementById('clearBtn').disabled = false;
+            }
+        }
+
+        // 頁面載入時自動執行
+        window.addEventListener('DOMContentLoaded', function() {
+            log('📄 頁面載入完成');
+            log('🔧 所有按鈕事件已綁定');
+            
+            // 自動載入 CSV 預覽
+            setTimeout(loadCSVPreview, 1000);
+        });
+
+        // 全域錯誤處理
+        window.addEventListener('error', function(e) {
+            log(`JavaScript 錯誤: ${e.message}`, 'error');
+            showStatus(`JavaScript 錯誤: ${e.message}`, 'error');
+        });
+    </script>
+</body>
+</html>

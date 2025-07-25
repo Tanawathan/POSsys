@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TANAWAT 餐廳管理系統</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .dashboard-card {
+            transition: all 0.3s ease;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        .dashboard-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+        .dashboard-card:hover::before {
+            left: 100%;
+        }
+        .dashboard-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+        .stats-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .alert-pulse {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        .notification {
+            transition: all 0.3s ease;
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- 載入指示器 -->
+    <div id="loading-indicator" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+        <div class="bg-white rounded-xl p-8 text-center">
+            <div class="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <h3 class="text-lg font-semibold text-gray-800">載入中...</h3>
+            <p class="text-gray-600">正在初始化系統</p>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-white shadow-lg">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 bg-gradient-to-r from-purple-500 to-blue-600 rounded-lg flex items-center justify-center mr-3">
+                        <i class="fas fa-utensils text-white text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-800">TANAWAT 餐廳管理系統</h1>
+                        <p class="text-sm text-gray-600">智能化餐廳營運解決方案</p>
+                    </div>
+                </div>
+                
+                <!-- 實時狀態指示器 -->
+                <div class="flex items-center space-x-4">
+                    <div class="stats-card rounded-lg px-4 py-2" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        <div class="flex items-center">
+                            <div class="w-3 h-3 bg-green-400 rounded-full mr-2 animate-pulse"></div>
+                            <span class="text-white text-sm">系統正常</span>
+                        </div>
+                        <div class="text-white text-xs mt-1" id="current-time"></div>
+                    </div>
+                    
+                    <!-- 警報按鈕 -->
+                    <button id="alert-btn" class="relative bg-red-500 text-white p-3 rounded-full hover:bg-red-600 transition-colors alert-pulse">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span id="alert-count" class="absolute -top-2 -right-2 bg-yellow-500 text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold">3</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主要內容區域 -->
+    <main class="container mx-auto px-6 py-8">
+        <!-- 系統總覽儀表板 -->
+        <section class="mb-8 fade-in">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">
+                <i class="fas fa-tachometer-alt mr-2 text-blue-600"></i>
+                系統總覽
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                <!-- 庫存狀態 -->
+                <div class="stats-card rounded-xl p-6 text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm opacity-80">總庫存項目</p>
+                            <p class="text-3xl font-bold" id="total-inventory">163</p>
+                            <p class="text-xs opacity-70 mt-1">9 個供應商</p>
+                        </div>
+                        <div class="bg-white bg-opacity-20 p-3 rounded-full">
+                            <i class="fas fa-boxes text-2xl"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-white border-opacity-20">
+                        <div class="flex justify-between text-sm">
+                            <span>低庫存警報</span>
+                            <span id="low-stock-count" class="font-bold">3</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 配方狀態 -->
+                <div class="stats-card rounded-xl p-6 text-white" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm opacity-80">配方總數</p>
+                            <p class="text-3xl font-bold" id="total-recipes">20</p>
+                            <p class="text-xs opacity-70 mt-1">半成品配方</p>
+                        </div>
+                        <div class="bg-white bg-opacity-20 p-3 rounded-full">
+                            <i class="fas fa-book-open text-2xl"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-white border-opacity-20">
+                        <div class="flex justify-between text-sm">
+                            <span>可生產配方</span>
+                            <span id="producible-recipes" class="font-bold">17</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 生產計畫 -->
+                <div class="stats-card rounded-xl p-6 text-white" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm opacity-80">今日生產</p>
+                            <p class="text-3xl font-bold" id="today-production">85</p>
+                            <p class="text-xs opacity-70 mt-1">份半成品</p>
+                        </div>
+                        <div class="bg-white bg-opacity-20 p-3 rounded-full">
+                            <i class="fas fa-industry text-2xl"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-white border-opacity-20">
+                        <div class="flex justify-between text-sm">
+                            <span>生產效率</span>
+                            <span id="production-efficiency" class="font-bold">95%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 成本控制 -->
+                <div class="stats-card rounded-xl p-6 text-white" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm opacity-80">平均成本</p>
+                            <p class="text-3xl font-bold">$<span id="avg-cost">12.50</span></p>
+                            <p class="text-xs opacity-70 mt-1">每100g</p>
+                        </div>
+                        <div class="bg-white bg-opacity-20 p-3 rounded-full">
+                            <i class="fas fa-chart-line text-2xl"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-white border-opacity-20">
+                        <div class="flex justify-between text-sm">
+                            <span>本月節省</span>
+                            <span id="monthly-savings" class="font-bold">$1,250</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 快速操作面板 -->
+        <section class="mb-8 fade-in">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">
+                <i class="fas fa-bolt mr-2 text-yellow-500"></i>
+                快速操作
+            </h2>
+            
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <button onclick="openModule('menu')" class="dashboard-card text-white p-6 rounded-xl text-center hover:shadow-lg transition-all">
+                    <i class="fas fa-utensils text-3xl mb-3"></i>
+                    <h3 class="text-lg font-semibold">菜單管理</h3>
+                    <p class="text-sm opacity-80">菜單與供應狀況</p>
+                </button>
+
+                <button onclick="openModule('inventory')" class="dashboard-card text-white p-6 rounded-xl text-center hover:shadow-lg transition-all">
+                    <i class="fas fa-warehouse text-3xl mb-3"></i>
+                    <h3 class="text-lg font-semibold">庫存管理</h3>
+                    <p class="text-sm opacity-80">查看和更新庫存</p>
+                </button>
+
+                <button onclick="openModule('recipe')" class="dashboard-card text-white p-6 rounded-xl text-center hover:shadow-lg transition-all">
+                    <i class="fas fa-clipboard-list text-3xl mb-3"></i>
+                    <h3 class="text-lg font-semibold">配方管理</h3>
+                    <p class="text-sm opacity-80">配方和生產計畫</p>
+                </button>
+
+                <button onclick="openModule('supplier')" class="dashboard-card text-white p-6 rounded-xl text-center hover:shadow-lg transition-all">
+                    <i class="fas fa-truck text-3xl mb-3"></i>
+                    <h3 class="text-lg font-semibold">供應商</h3>
+                    <p class="text-sm opacity-80">供應商管理</p>
+                </button>
+
+                <button onclick="openModule('cost')" class="dashboard-card text-white p-6 rounded-xl text-center hover:shadow-lg transition-all">
+                    <i class="fas fa-calculator text-3xl mb-3"></i>
+                    <h3 class="text-lg font-semibold">成本分析</h3>
+                    <p class="text-sm opacity-80">成本控制分析</p>
+                </button>
+
+                <button onclick="openModule('pos')" class="dashboard-card text-white p-6 rounded-xl text-center hover:shadow-lg transition-all">
+                    <i class="fas fa-cash-register text-3xl mb-3"></i>
+                    <h3 class="text-lg font-semibold">POS 系統</h3>
+                    <p class="text-sm opacity-80">點餐和結帳</p>
+                </button>
+            </div>
+        </section>
+
+        <!-- 重要通知和警報 -->
+        <section class="mb-8 fade-in">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">
+                <i class="fas fa-bell mr-2 text-orange-500"></i>
+                重要通知
+            </h2>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- 庫存警報 -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-800">
+                            <i class="fas fa-exclamation-triangle text-yellow-500 mr-2"></i>
+                            庫存警報
+                        </h3>
+                        <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">3 項</span>
+                    </div>
+                    <div class="space-y-3 max-h-48 overflow-y-auto">
+                        <div class="flex items-center p-3 bg-red-50 border border-red-200 rounded-lg">
+                            <i class="fas fa-times-circle text-red-500 mr-3"></i>
+                            <div class="flex-1">
+                                <p class="font-medium text-red-800">南薑</p>
+                                <p class="text-sm text-red-600">缺貨 - 供應商: 泓潔</p>
+                            </div>
+                            <button onclick="openModule('inventory')" class="text-red-600 hover:text-red-700">
+                                <i class="fas fa-arrow-right"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="flex items-center p-3 bg-red-50 border border-red-200 rounded-lg">
+                            <i class="fas fa-times-circle text-red-500 mr-3"></i>
+                            <div class="flex-1">
+                                <p class="font-medium text-red-800">檸檬葉</p>
+                                <p class="text-sm text-red-600">缺貨 - 供應商: 泓潔</p>
+                            </div>
+                            <button onclick="openModule('inventory')" class="text-red-600 hover:text-red-700">
+                                <i class="fas fa-arrow-right"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="flex items-center p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                            <i class="fas fa-exclamation-triangle text-yellow-500 mr-3"></i>
+                            <div class="flex-1">
+                                <p class="font-medium text-yellow-800">透抽</p>
+                                <p class="text-sm text-yellow-600">低庫存: 0 (安全庫存: 300)</p>
+                            </div>
+                            <button onclick="openModule('inventory')" class="text-yellow-600 hover:text-yellow-700">
+                                <i class="fas fa-arrow-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 配方生產建議 -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-800">
+                            <i class="fas fa-lightbulb text-blue-500 mr-2"></i>
+                            生產建議
+                        </h3>
+                        <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">2 項</span>
+                    </div>
+                    <div class="space-y-3 max-h-48 overflow-y-auto">
+                        <div class="flex items-center p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <i class="fas fa-arrow-up text-blue-500 mr-3"></i>
+                            <div class="flex-1">
+                                <p class="font-medium text-blue-800">舒肥海南雞</p>
+                                <p class="text-sm text-blue-600">建議增產 20 份，預計需求增加</p>
+                            </div>
+                            <button onclick="openModule('recipe')" class="text-blue-600 hover:text-blue-700">
+                                <i class="fas fa-arrow-right"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="flex items-center p-3 bg-green-50 border border-green-200 rounded-lg">
+                            <i class="fas fa-check-circle text-green-500 mr-3"></i>
+                            <div class="flex-1">
+                                <p class="font-medium text-green-800">椒麻雞醬</p>
+                                <p class="text-sm text-green-600">庫存充足，可生產 15 份</p>
+                            </div>
+                            <button onclick="openModule('recipe')" class="text-green-600 hover:text-green-700">
+                                <i class="fas fa-arrow-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 最近活動 -->
+        <section class="fade-in">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">
+                <i class="fas fa-history mr-2 text-green-500"></i>
+                最近活動
+            </h2>
+            
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <div class="space-y-4">
+                    <div class="flex items-center p-3 bg-gray-50 rounded-lg">
+                        <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-4">
+                            <i class="fas fa-check text-green-600"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="font-medium text-gray-800">生產完成：舒肥海南雞 x10</p>
+                            <p class="text-sm text-gray-600">成本控制良好，比預期節省 5%</p>
+                        </div>
+                        <span class="text-sm text-gray-500">2分鐘前</span>
+                    </div>
+                    
+                    <div class="flex items-center p-3 bg-gray-50 rounded-lg">
+                        <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-4">
+                            <i class="fas fa-truck text-blue-600"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="font-medium text-gray-800">進貨完成：東莉供應商</p>
+                            <p class="text-sm text-gray-600">二節翅 6kg、雞胸肉 6kg</p>
+                        </div>
+                        <span class="text-sm text-gray-500">30分鐘前</span>
+                    </div>
+                    
+                    <div class="flex items-center p-3 bg-gray-50 rounded-lg">
+                        <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center mr-4">
+                            <i class="fas fa-clipboard-list text-purple-600"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="font-medium text-gray-800">配方更新：泰式酸辣醬</p>
+                            <p class="text-sm text-gray-600">調整食材比例，降低成本 8%</p>
+                        </div>
+                        <span class="text-sm text-gray-500">1小時前</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 浮動操作按鈕 -->
+    <div class="fixed bottom-6 right-6 z-50">
+        <button id="quick-add-btn" class="bg-gradient-to-r from-purple-500 to-blue-600 text-white p-4 rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-110">
+            <i class="fas fa-plus text-xl"></i>
+        </button>
+    </div>
+
+    <!-- 快速添加 Modal -->
+    <div id="quick-add-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl shadow-2xl max-w-md w-full">
+                <div class="p-6 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-800">快速操作</h3>
+                </div>
+                <div class="p-6 space-y-4">
+                    <button onclick="openModule('inventory')" class="w-full p-4 text-left bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                        <i class="fas fa-plus-circle text-blue-600 mr-3"></i>
+                        添加庫存項目
+                    </button>
+                    <button onclick="openModule('recipe')" class="w-full p-4 text-left bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                        <i class="fas fa-clipboard-list text-green-600 mr-3"></i>
+                        創建新配方
+                    </button>
+                    <button onclick="openModule('supplier')" class="w-full p-4 text-left bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                        <i class="fas fa-truck text-purple-600 mr-3"></i>
+                        添加供應商
+                    </button>
+                    <button onclick="openModule('production')" class="w-full p-4 text-left bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                        <i class="fas fa-industry text-orange-600 mr-3"></i>
+                        開始生產
+                    </button>
+                </div>
+                <div class="p-4 border-t border-gray-200">
+                    <button onclick="closeQuickAddModal()" class="w-full py-2 px-4 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors">
+                        取消
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 頁面載入完成後初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            // 隱藏載入指示器
+            setTimeout(() => {
+                document.getElementById('loading-indicator').style.display = 'none';
+                showNotification('系統載入完成！', 'success');
+            }, 1500);
+            
+            // 更新時間顯示
+            updateTimeDisplay();
+            setInterval(updateTimeDisplay, 1000);
+            
+            // 添加淡入動畫
+            setTimeout(() => {
+                const sections = document.querySelectorAll('.fade-in');
+                sections.forEach((section, index) => {
+                    setTimeout(() => {
+                        section.style.opacity = '1';
+                        section.style.transform = 'translateY(0)';
+                    }, index * 200);
+                });
+            }, 100);
+        });
+
+        // 更新時間顯示
+        function updateTimeDisplay() {
+            const now = new Date();
+            const timeString = now.toLocaleString('zh-TW', {
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            const timeElement = document.getElementById('current-time');
+            if (timeElement) {
+                timeElement.textContent = timeString;
+            }
+        }
+
+        // 打開模組
+        function openModule(moduleName) {
+            const moduleUrls = {
+                menu: 'menu-management.html',
+                inventory: 'inventory-management.html',
+                recipe: 'recipe-management.html',
+                supplier: 'supplier-management.html',
+                cost: 'cost-analysis.html',
+                production: 'recipe-management.html',
+                pos: 'index.html'
+            };
+            
+            const url = moduleUrls[moduleName];
+            if (url) {
+                window.open(url, '_blank');
+                showNotification(`正在打開${getModuleName(moduleName)}...`, 'info');
+            }
+            
+            // 關閉快速添加 modal
+            closeQuickAddModal();
+        }
+
+        // 獲取模組名稱
+        function getModuleName(moduleName) {
+            const names = {
+                menu: '菜單管理',
+                inventory: '庫存管理',
+                recipe: '配方管理',
+                supplier: '供應商管理',
+                cost: '成本分析',
+                production: '生產計畫',
+                pos: 'POS系統'
+            };
+            return names[moduleName] || moduleName;
+        }
+
+        // 快速添加模態框控制
+        document.getElementById('quick-add-btn').addEventListener('click', () => {
+            document.getElementById('quick-add-modal').classList.remove('hidden');
+        });
+
+        function closeQuickAddModal() {
+            document.getElementById('quick-add-modal').classList.add('hidden');
+        }
+
+        // 點擊背景關閉 modal
+        document.getElementById('quick-add-modal').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) {
+                closeQuickAddModal();
+            }
+        });
+
+        // 警報按鈕點擊事件
+        document.getElementById('alert-btn').addEventListener('click', () => {
+            openModule('inventory');
+        });
+
+        // 顯示通知
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg max-w-sm transform translate-x-full opacity-0`;
+            
+            const colors = {
+                success: 'bg-green-500 text-white',
+                error: 'bg-red-500 text-white',
+                warning: 'bg-yellow-500 text-white',
+                info: 'bg-blue-500 text-white'
+            };
+            
+            notification.className += ` ${colors[type] || colors.info}`;
+            notification.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-times-circle' : type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle'} mr-2"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // 動畫顯示
+            setTimeout(() => {
+                notification.classList.remove('translate-x-full', 'opacity-0');
+            }, 100);
+            
+            // 自動移除
+            setTimeout(() => {
+                notification.classList.add('translate-x-full', 'opacity-0');
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }, 3000);
+        }
+
+        // 初始化樣式
+        document.addEventListener('DOMContentLoaded', () => {
+            const sections = document.querySelectorAll('.fade-in');
+            sections.forEach(section => {
+                section.style.opacity = '0';
+                section.style.transform = 'translateY(20px)';
+                section.style.transition = 'all 0.5s ease';
+            });
+        });
+    </script>
+</body>
+</html>
