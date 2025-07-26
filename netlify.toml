@@ -9,8 +9,8 @@
   NODE_VERSION = "18"
   # 配置秘密掃描
   SECRETS_SCAN_ENABLED = "false"
-  # Notion API 密鑰
-  NOTION_API_KEY = "secret_iSDhSCT8HPZMjPsX8YuMdhfzPJ2EYJrfXLdE17L88cV"
+  # Notion API 密鑰 - 在 Netlify 後台設定環境變數
+  # NOTION_API_KEY 應該在 Netlify 後台的 Environment Variables 中設定
 
 # 秘密掃描配置
 [build.secrets_scan]

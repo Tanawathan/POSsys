@@ -1,4 +1,10 @@
-const fetch = require('node-fetch');
+// 使用內建的 fetch API (Node.js 18+) 或動態 import node-fetch
+let fetch;
+if (typeof globalThis.fetch === 'undefined') {
+    fetch = require('node-fetch');
+} else {
+    fetch = globalThis.fetch;
+}
 
 exports.handler = async (event, context) => {
     // 設定 CORS 標頭
