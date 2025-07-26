@@ -7,7 +7,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- 環境配置 (必須在其他腳本之前載入) -->
+    <script src="../env-config.js"></script>
     <style>
         body {
             font-family: 'Noto Sans TC', sans-serif;
@@ -137,8 +138,9 @@
     <script>
         // --- CONFIGURATION ---
         const CONFIG = {
-            notionApiEndpoint: 'http://localhost:3000/api/notion/databases',
-            ordersDatabase: '23afd5adc30b80c39e71d1a640ccfb5d',
+            notionApiKey: window.ENV_CONFIG?.NOTION_API_KEY || 'secret_iSDhSCT8HPZMjPsX8YuMdhfzPJ2EYJrfXLdE17L88cV',
+            netlifyFunctionBase: `${window.location.origin}/.netlify/functions`,
+            ordersDatabase: window.ENV_CONFIG?.ORDERS_DATABASE_ID || '23afd5adc30b80c39e71d1a640ccfb5d',
             autoRefreshInterval: 30000, // 30秒
             soundEnabled: true
         };
@@ -214,33 +216,37 @@
             updateRefreshButton(true);
 
             try {
-                const response = await fetch(`${CONFIG.notionApiEndpoint}/${CONFIG.ordersDatabase}/query`, {
+                const response = await fetch(`${CONFIG.netlifyFunctionBase}/notion-api`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        sorts: [
-                            {
-                                property: '建立時間',
-                                direction: 'descending'
-                            }
-                        ],
-                        filter: {
-                            or: [
+                        path: `/databases/${CONFIG.ordersDatabase}/query`,
+                        method: 'POST',
+                        body: {
+                            sorts: [
                                 {
-                                    property: '狀態',
-                                    select: {
-                                        equals: '準備中'
-                                    }
-                                },
-                                {
-                                    property: '狀態',
-                                    select: {
-                                        equals: '進行中'
-                                    }
+                                    property: '建立時間',
+                                    direction: 'descending'
                                 }
-                            ]
+                            ],
+                            filter: {
+                                or: [
+                                    {
+                                        property: '狀態',
+                                        select: {
+                                            equals: '準備中'
+                                        }
+                                    },
+                                    {
+                                        property: '狀態',
+                                        select: {
+                                            equals: '進行中'
+                                        }
+                                    }
+                                ]
+                            }
                         }
                     })
                 });
@@ -571,17 +577,21 @@
                     throw new Error('找不到訂單或 Notion 頁面 ID');
                 }
 
-                // 使用 Notion API 更新狀態
-                const response = await fetch(`http://localhost:3000/api/notion/pages/${order.notionPageId}`, {
-                    method: 'PATCH',
+                // 使用 Netlify Functions 調用 Notion API
+                const response = await fetch(`${CONFIG.netlifyFunctionBase}/notion-api`, {
+                    method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        properties: {
-                            '狀態': {
-                                select: {
-                                    name: newStatus
+                        path: `/pages/${order.notionPageId}`,
+                        method: 'PATCH',
+                        body: {
+                            properties: {
+                                '狀態': {
+                                    select: {
+                                        name: newStatus
+                                    }
                                 }
                             }
                         }

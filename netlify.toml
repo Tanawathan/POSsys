@@ -2,12 +2,15 @@
   # 構建設定
   publish = "."
   command = "node build-for-netlify.js"
+  functions = "netlify/functions"
 
 [build.environment]
   # 環境變數
   NODE_VERSION = "18"
   # 配置秘密掃描
   SECRETS_SCAN_ENABLED = "false"
+  # Notion API 密鑰
+  NOTION_API_KEY = "secret_iSDhSCT8HPZMjPsX8YuMdhfzPJ2EYJrfXLdE17L88cV"
 
 # 秘密掃描配置
 [build.secrets_scan]
@@ -77,5 +80,11 @@
 # 函數設定（如果使用 Netlify Functions）
 [functions]
   directory = "netlify/functions"
+
+# API 重定向配置
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
 
 # 注意：邊緣函數設定已移除，因為目前不使用 edge functions
