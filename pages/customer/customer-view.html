@@ -554,7 +554,7 @@
                 
                 // 使用 Netlify Functions 調用 Notion API
                 console.log('📡 查詢桌位資料庫 ID:', config.notion.databaseIds.tables);
-                const response = await fetch('/.netlify/functions/notion-api', {
+                const response = await fetch(`${config.netlifyFunctionBase}/notion-api`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -690,26 +690,6 @@
             });
             
             console.log(`🎯 總共載入 ${tables.length} 個桌位選項`);
-        }
-                
-                // 為不同狀態添加視覺標識和詳細資訊
-                let statusIcon = '🟡';
-                if (status === '使用中') {
-                    statusIcon = '🔴';
-                } else if (status === '空閒中') {
-                    statusIcon = '🟢';
-                } else if (status === '清潔中') {
-                    statusIcon = '�';
-                } else if (status === '維修中') {
-                    statusIcon = '⚫';
-                }
-                
-                option.textContent = `${statusIcon} ${tableNumber} (${status})${capacity}`;
-                
-                // 如果桌位正在使用中，可以選擇是否禁用該選項
-                if (status === '維修中') {
-                    option.disabled = true;
-                    option.textContent += ' - 不可用';
         }
 
         function renderDefaultTables() {
