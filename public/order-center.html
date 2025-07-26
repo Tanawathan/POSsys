@@ -242,6 +242,43 @@
         let selectedOrderId = null;
         let currentFilter = 'all';
 
+        // API 調用輔助函數 - 自動檢測環境
+        async function callNotionAPI(path, method = 'GET', body = null) {
+            // 檢測是否為 Netlify 環境
+            const isNetlify = window.location.hostname.includes('netlify.app') || 
+                             window.location.hostname.includes('netlify.com') ||
+                             !window.location.hostname.includes('localhost');
+            
+            if (isNetlify) {
+                // Netlify 環境：使用 Netlify Functions
+                return await fetch('/.netlify/functions/notion-api', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        path: path,
+                        method: method,
+                        body: body
+                    })
+                });
+            } else {
+                // 本地環境：使用 proxy-server
+                const fetchOptions = {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                };
+                
+                if (body && (method === 'POST' || method === 'PATCH')) {
+                    fetchOptions.body = JSON.stringify(body);
+                }
+                
+                return await fetch(`/api/notion${path}`, fetchOptions);
+            }
+        }
+
         // DOM 元素
         const dom = {
             ordersLoading: document.getElementById('orders-loading'),
@@ -261,6 +298,14 @@
 
         // 初始化
         document.addEventListener('DOMContentLoaded', function() {
+            // 顯示當前環境信息
+            const isNetlify = window.location.hostname.includes('netlify.app') || 
+                             window.location.hostname.includes('netlify.com') ||
+                             !window.location.hostname.includes('localhost');
+            
+            console.log(`🌐 當前環境: ${isNetlify ? 'Netlify' : '本地開發'}`);
+            console.log(`📍 主機名: ${window.location.hostname}`);
+            
             loadOrders();
             loadTables();
             setupEventListeners();
@@ -296,20 +341,14 @@
                 console.log('📡 載入訂單資料...');
                 
                 // 嘗試從 Notion API 載入真實訂單資料
-                const response = await fetch('/api/notion/databases/23afd5adc30b80c39e71d1a640ccfb5d/query', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        page_size: 100,
-                        sorts: [
-                            {
-                                property: '建立時間',
-                                direction: 'descending'
-                            }
-                        ]
-                    })
+                const response = await callNotionAPI('/databases/23afd5adc30b80c39e71d1a640ccfb5d/query', 'POST', {
+                    page_size: 100,
+                    sorts: [
+                        {
+                            property: '建立時間',
+                            direction: 'descending'
+                        }
+                    ]
                 });
                 
                 if (response.ok) {
@@ -458,20 +497,14 @@
             try {
                 console.log('🪑 載入桌位資料...');
                 
-                const response = await fetch('/api/notion/databases/23afd5adc30b80fe86c9e086a54a0d61/query', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        page_size: 100,
-                        sorts: [
-                            {
-                                property: '桌號',
-                                direction: 'ascending'
-                            }
-                        ]
-                    })
+                const response = await callNotionAPI('/databases/23afd5adc30b80fe86c9e086a54a0d61/query', 'POST', {
+                    page_size: 100,
+                    sorts: [
+                        {
+                            property: '桌號',
+                            direction: 'ascending'
+                        }
+                    ]
                 });
                 
                 if (response.ok) {
@@ -844,20 +877,14 @@
                 if (order.notionPageId) {
                     console.log(`📡 更新 Notion 訂單記錄: ${order.notionPageId}`);
                     
-                    const updateResponse = await fetch(`/api/notion/pages/${order.notionPageId}`, {
-                        method: 'PATCH',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            properties: {
-                                狀態: {
-                                    select: {
-                                        name: newStatus
-                                    }
+                    const updateResponse = await callNotionAPI(`/pages/${order.notionPageId}`, 'PATCH', {
+                        properties: {
+                            狀態: {
+                                select: {
+                                    name: newStatus
                                 }
                             }
-                        })
+                        }
                     });
                     
                     if (updateResponse.ok) {
