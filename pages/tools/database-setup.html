@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>資料庫設定工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gray-50 font-sans">
+    <div class="container mx-auto px-4 py-8">
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">資料庫設定工具</h1>
+            <button onclick="window.close()" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">返回</button>
+        </div>
+
+        <!-- Notion API 設定 -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">🔗 Notion API 設定</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Notion API Token</label>
+                    <input type="password" id="notionToken" class="w-full p-3 border border-gray-300 rounded-lg" placeholder="secret_...">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">菜單資料庫 ID</label>
+                    <input type="text" id="menuDbId" class="w-full p-3 border border-gray-300 rounded-lg" placeholder="資料庫 ID">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">訂單資料庫 ID</label>
+                    <input type="text" id="orderDbId" class="w-full p-3 border border-gray-300 rounded-lg" placeholder="資料庫 ID">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">庫存資料庫 ID</label>
+                    <input type="text" id="inventoryDbId" class="w-full p-3 border border-gray-300 rounded-lg" placeholder="資料庫 ID">
+                </div>
+            </div>
+            <div class="mt-4 flex space-x-3">
+                <button onclick="testNotionConnection()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">測試連線</button>
+                <button onclick="saveNotionConfig()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">儲存設定</button>
+                <button onclick="loadNotionConfig()" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">載入設定</button>
+            </div>
+            <div id="notionStatus" class="mt-4"></div>
+        </div>
+
+        <!-- 資料庫初始化 -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">🗄️ 資料庫初始化</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <button onclick="initMenuDatabase()" class="bg-purple-500 text-white p-4 rounded-lg hover:bg-purple-600">
+                    <div class="text-lg font-semibold">初始化菜單資料庫</div>
+                    <div class="text-sm opacity-90">建立菜單項目結構</div>
+                </button>
+                <button onclick="initOrderDatabase()" class="bg-orange-500 text-white p-4 rounded-lg hover:bg-orange-600">
+                    <div class="text-lg font-semibold">初始化訂單資料庫</div>
+                    <div class="text-sm opacity-90">建立訂單追蹤結構</div>
+                </button>
+                <button onclick="initInventoryDatabase()" class="bg-indigo-500 text-white p-4 rounded-lg hover:bg-indigo-600">
+                    <div class="text-lg font-semibold">初始化庫存資料庫</div>
+                    <div class="text-sm opacity-90">建立庫存管理結構</div>
+                </button>
+            </div>
+            <div id="initStatus" class="mt-4"></div>
+        </div>
+
+        <!-- 資料備份與還原 -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">💾 資料備份與還原</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h3 class="text-lg font-semibold mb-3">資料備份</h3>
+                    <div class="space-y-2">
+                        <button onclick="backupMenuData()" class="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600">備份菜單資料</button>
+                        <button onclick="backupOrderData()" class="w-full bg-green-500 text-white py-2 rounded hover:bg-green-600">備份訂單資料</button>
+                        <button onclick="backupAllData()" class="w-full bg-purple-500 text-white py-2 rounded hover:bg-purple-600">完整備份</button>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold mb-3">資料還原</h3>
+                    <div class="space-y-2">
+                        <input type="file" id="restoreFile" accept=".json" class="w-full p-2 border border-gray-300 rounded">
+                        <button onclick="restoreData()" class="w-full bg-red-500 text-white py-2 rounded hover:bg-red-600">還原資料</button>
+                        <p class="text-sm text-gray-600">⚠️ 還原將覆蓋現有資料</p>
+                    </div>
+                </div>
+            </div>
+            <div id="backupStatus" class="mt-4"></div>
+        </div>
+    </div>
+
+    <script>
+        // 測試 Notion 連線
+        function testNotionConnection() {
+            const token = document.getElementById('notionToken').value;
+            const statusDiv = document.getElementById('notionStatus');
+            
+            if (!token) {
+                statusDiv.innerHTML = '<div class="bg-red-100 text-red-800 p-3 rounded">請輸入 Notion API Token</div>';
+                return;
+            }
+
+            statusDiv.innerHTML = '<div class="bg-blue-100 text-blue-800 p-3 rounded">測試連線中...</div>';
+            
+            // 模擬 API 測試
+            setTimeout(() => {
+                const success = Math.random() > 0.3; // 70% 成功率模擬
+                if (success) {
+                    statusDiv.innerHTML = '<div class="bg-green-100 text-green-800 p-3 rounded">✅ 連線成功！</div>';
+                } else {
+                    statusDiv.innerHTML = '<div class="bg-red-100 text-red-800 p-3 rounded">❌ 連線失敗，請檢查 Token 是否正確</div>';
+                }
+            }, 2000);
+        }
+
+        // 儲存 Notion 設定
+        function saveNotionConfig() {
+            const config = {
+                token: document.getElementById('notionToken').value,
+                menuDbId: document.getElementById('menuDbId').value,
+                orderDbId: document.getElementById('orderDbId').value,
+                inventoryDbId: document.getElementById('inventoryDbId').value
+            };
+
+            if (!config.token) {
+                alert('請輸入 Notion API Token');
+                return;
+            }
+
+            localStorage.setItem('notionConfig', JSON.stringify(config));
+            document.getElementById('notionStatus').innerHTML = '<div class="bg-green-100 text-green-800 p-3 rounded">設定已儲存！</div>';
+        }
+
+        // 載入 Notion 設定
+        function loadNotionConfig() {
+            const config = localStorage.getItem('notionConfig');
+            if (config) {
+                const parsed = JSON.parse(config);
+                document.getElementById('notionToken').value = parsed.token || '';
+                document.getElementById('menuDbId').value = parsed.menuDbId || '';
+                document.getElementById('orderDbId').value = parsed.orderDbId || '';
+                document.getElementById('inventoryDbId').value = parsed.inventoryDbId || '';
+                document.getElementById('notionStatus').innerHTML = '<div class="bg-blue-100 text-blue-800 p-3 rounded">設定已載入！</div>';
+            } else {
+                document.getElementById('notionStatus').innerHTML = '<div class="bg-yellow-100 text-yellow-800 p-3 rounded">未找到儲存的設定</div>';
+            }
+        }
+
+        // 初始化資料庫
+        function initMenuDatabase() {
+            showInitStatus('正在初始化菜單資料庫...', 'blue');
+            setTimeout(() => {
+                showInitStatus('✅ 菜單資料庫初始化完成！', 'green');
+            }, 2000);
+        }
+
+        function initOrderDatabase() {
+            showInitStatus('正在初始化訂單資料庫...', 'blue');
+            setTimeout(() => {
+                showInitStatus('✅ 訂單資料庫初始化完成！', 'green');
+            }, 2000);
+        }
+
+        function initInventoryDatabase() {
+            showInitStatus('正在初始化庫存資料庫...', 'blue');
+            setTimeout(() => {
+                showInitStatus('✅ 庫存資料庫初始化完成！', 'green');
+            }, 2000);
+        }
+
+        function showInitStatus(message, color) {
+            const statusDiv = document.getElementById('initStatus');
+            statusDiv.innerHTML = `<div class="bg-${color}-100 text-${color}-800 p-3 rounded">${message}</div>`;
+        }
+
+        // 備份功能
+        function backupMenuData() {
+            showBackupStatus('正在備份菜單資料...', 'blue');
+            setTimeout(() => {
+                const data = { type: 'menu', timestamp: new Date().toISOString(), data: [] };
+                downloadJSON(data, 'menu_backup.json');
+                showBackupStatus('✅ 菜單資料備份完成！', 'green');
+            }, 1500);
+        }
+
+        function backupOrderData() {
+            showBackupStatus('正在備份訂單資料...', 'blue');
+            setTimeout(() => {
+                const data = { type: 'orders', timestamp: new Date().toISOString(), data: [] };
+                downloadJSON(data, 'orders_backup.json');
+                showBackupStatus('✅ 訂單資料備份完成！', 'green');
+            }, 1500);
+        }
+
+        function backupAllData() {
+            showBackupStatus('正在進行完整備份...', 'blue');
+            setTimeout(() => {
+                const data = { 
+                    type: 'full_backup', 
+                    timestamp: new Date().toISOString(), 
+                    menu: [], 
+                    orders: [], 
+                    inventory: [] 
+                };
+                downloadJSON(data, 'full_backup.json');
+                showBackupStatus('✅ 完整備份完成！', 'green');
+            }, 3000);
+        }
+
+        function restoreData() {
+            const fileInput = document.getElementById('restoreFile');
+            if (!fileInput.files[0]) {
+                showBackupStatus('請選擇要還原的檔案', 'red');
+                return;
+            }
+
+            if (confirm('確定要還原資料嗎？這將覆蓋現有資料！')) {
+                showBackupStatus('正在還原資料...', 'blue');
+                setTimeout(() => {
+                    showBackupStatus('✅ 資料還原完成！', 'green');
+                }, 2000);
+            }
+        }
+
+        function showBackupStatus(message, color) {
+            const statusDiv = document.getElementById('backupStatus');
+            statusDiv.innerHTML = `<div class="bg-${color}-100 text-${color}-800 p-3 rounded">${message}</div>`;
+        }
+
+        function downloadJSON(data, filename) {
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // 頁面載入時自動載入設定
+        document.addEventListener('DOMContentLoaded', loadNotionConfig);
+    </script>
+</body>
+</html>

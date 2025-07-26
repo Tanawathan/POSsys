@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>廚房顯示系統 (KDS)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gray-900 text-white font-sans">
+    <div class="container mx-auto px-4 py-8">
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-4xl font-bold">廚房顯示系統 (KDS)</h1>
+            <div class="flex items-center space-x-4">
+                <div class="text-right">
+                    <div id="currentTime" class="text-2xl font-bold"></div>
+                    <div id="currentDate" class="text-sm text-gray-300"></div>
+                </div>
+                <button onclick="window.close()" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700">返回</button>
+            </div>
+        </div>
+
+        <!-- 訂單統計 -->
+        <div class="grid grid-cols-4 gap-4 mb-8">
+            <div class="bg-yellow-600 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold" id="pendingCount">0</div>
+                <div class="text-sm">等待中</div>
+            </div>
+            <div class="bg-blue-600 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold" id="preparingCount">0</div>
+                <div class="text-sm">準備中</div>
+            </div>
+            <div class="bg-green-600 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold" id="readyCount">0</div>
+                <div class="text-sm">已完成</div>
+            </div>
+            <div class="bg-red-600 rounded-lg p-4 text-center">
+                <div class="text-2xl font-bold" id="overdueCount">0</div>
+                <div class="text-sm">逾時</div>
+            </div>
+        </div>
+
+        <!-- 訂單列表 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="ordersContainer">
+            <!-- 動態載入訂單卡片 -->
+        </div>
+    </div>
+
+    <script>
+        // 模擬訂單資料
+        let orders = [
+            {
+                id: 'ORD001',
+                table: 5,
+                items: [
+                    { name: '牛排', quantity: 1, notes: '七分熟' },
+                    { name: '義大利麵', quantity: 1, notes: '' }
+                ],
+                status: 'pending',
+                orderTime: new Date(Date.now() - 10 * 60000), // 10分鐘前
+                estimatedTime: 20
+            },
+            {
+                id: 'ORD002',
+                table: 3,
+                items: [
+                    { name: '凱薩沙拉', quantity: 2, notes: '' },
+                    { name: '可樂', quantity: 2, notes: '少冰' }
+                ],
+                status: 'preparing',
+                orderTime: new Date(Date.now() - 5 * 60000), // 5分鐘前
+                estimatedTime: 15
+            },
+            {
+                id: 'ORD003',
+                table: 8,
+                items: [
+                    { name: '提拉米蘇', quantity: 1, notes: '' },
+                    { name: '柳橙汁', quantity: 1, notes: '現榨' }
+                ],
+                status: 'ready',
+                orderTime: new Date(Date.now() - 25 * 60000), // 25分鐘前
+                estimatedTime: 10
+            }
+        ];
+
+        // 更新時間顯示
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('currentTime').textContent = now.toLocaleTimeString('zh-TW');
+            document.getElementById('currentDate').textContent = now.toLocaleDateString('zh-TW');
+        }
+
+        // 計算經過時間
+        function getElapsedTime(orderTime) {
+            const elapsed = Math.floor((Date.now() - orderTime.getTime()) / 60000);
+            return elapsed;
+        }
+
+        // 獲取狀態顏色
+        function getStatusColor(status, elapsed, estimatedTime) {
+            if (status === 'pending') {
+                return elapsed > estimatedTime ? 'bg-red-600' : 'bg-yellow-600';
+            } else if (status === 'preparing') {
+                return elapsed > estimatedTime ? 'bg-red-600' : 'bg-blue-600';
+            } else if (status === 'ready') {
+                return 'bg-green-600';
+            }
+            return 'bg-gray-600';
+        }
+
+        // 獲取狀態文字
+        function getStatusText(status) {
+            const statusMap = {
+                'pending': '等待中',
+                'preparing': '準備中',
+                'ready': '已完成',
+                'completed': '已送出'
+            };
+            return statusMap[status] || status;
+        }
+
+        // 渲染訂單卡片
+        function renderOrders() {
+            const container = document.getElementById('ordersContainer');
+            container.innerHTML = '';
+
+            // 統計各狀態數量
+            let pendingCount = 0, preparingCount = 0, readyCount = 0, overdueCount = 0;
+
+            orders.forEach(order => {
+                const elapsed = getElapsedTime(order.orderTime);
+                const isOverdue = elapsed > order.estimatedTime && order.status !== 'ready' && order.status !== 'completed';
+                
+                if (order.status === 'pending') pendingCount++;
+                else if (order.status === 'preparing') preparingCount++;
+                else if (order.status === 'ready') readyCount++;
+                if (isOverdue) overdueCount++;
+
+                const statusColor = getStatusColor(order.status, elapsed, order.estimatedTime);
+                
+                const orderCard = document.createElement('div');
+                orderCard.className = `${statusColor} rounded-lg p-4 shadow-lg`;
+                orderCard.innerHTML = `
+                    <div class="flex justify-between items-center mb-3">
+                        <div>
+                            <h3 class="text-xl font-bold">${order.id}</h3>
+                            <p class="text-sm opacity-90">桌號：${order.table}</p>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-lg font-bold">${elapsed}分鐘</div>
+                            <div class="text-xs opacity-75">預估：${order.estimatedTime}分</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        ${order.items.map(item => `
+                            <div class="flex justify-between items-center py-1">
+                                <span>${item.name} x${item.quantity}</span>
+                                ${item.notes ? `<span class="text-xs bg-black bg-opacity-30 px-2 py-1 rounded">${item.notes}</span>` : ''}
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    <div class="flex space-x-2">
+                        ${order.status === 'pending' ? `
+                            <button onclick="updateOrderStatus('${order.id}', 'preparing')" class="flex-1 bg-blue-500 hover:bg-blue-600 py-2 rounded font-semibold">
+                                開始準備
+                            </button>
+                        ` : ''}
+                        ${order.status === 'preparing' ? `
+                            <button onclick="updateOrderStatus('${order.id}', 'ready')" class="flex-1 bg-green-500 hover:bg-green-600 py-2 rounded font-semibold">
+                                完成
+                            </button>
+                        ` : ''}
+                        ${order.status === 'ready' ? `
+                            <button onclick="updateOrderStatus('${order.id}', 'completed')" class="flex-1 bg-gray-500 hover:bg-gray-600 py-2 rounded font-semibold">
+                                已送出
+                            </button>
+                        ` : ''}
+                        <button onclick="deleteOrder('${order.id}')" class="bg-red-500 hover:bg-red-600 px-3 py-2 rounded">
+                            ❌
+                        </button>
+                    </div>
+                `;
+                container.appendChild(orderCard);
+            });
+
+            // 更新統計數字
+            document.getElementById('pendingCount').textContent = pendingCount;
+            document.getElementById('preparingCount').textContent = preparingCount;
+            document.getElementById('readyCount').textContent = readyCount;
+            document.getElementById('overdueCount').textContent = overdueCount;
+        }
+
+        // 更新訂單狀態
+        function updateOrderStatus(orderId, newStatus) {
+            const order = orders.find(o => o.id === orderId);
+            if (order) {
+                order.status = newStatus;
+                if (newStatus === 'completed') {
+                    // 3秒後移除已完成的訂單
+                    setTimeout(() => {
+                        deleteOrder(orderId);
+                    }, 3000);
+                }
+                renderOrders();
+            }
+        }
+
+        // 刪除訂單
+        function deleteOrder(orderId) {
+            orders = orders.filter(o => o.id !== orderId);
+            renderOrders();
+        }
+
+        // 模擬新訂單到達
+        function simulateNewOrder() {
+            const newOrder = {
+                id: 'ORD' + String(Date.now()).slice(-3),
+                table: Math.floor(Math.random() * 20) + 1,
+                items: [
+                    { name: '隨機餐點', quantity: Math.floor(Math.random() * 3) + 1, notes: '' }
+                ],
+                status: 'pending',
+                orderTime: new Date(),
+                estimatedTime: Math.floor(Math.random() * 20) + 10
+            };
+            orders.push(newOrder);
+            renderOrders();
+        }
+
+        // 頁面載入時執行
+        document.addEventListener('DOMContentLoaded', function() {
+            updateTime();
+            renderOrders();
+            
+            // 每秒更新時間
+            setInterval(updateTime, 1000);
+            
+            // 每5秒重新渲染（更新經過時間）
+            setInterval(renderOrders, 5000);
+            
+            // 每30秒模擬新訂單（僅測試用）
+            setInterval(simulateNewOrder, 30000);
+        });
+    </script>
+</body>
+</html>

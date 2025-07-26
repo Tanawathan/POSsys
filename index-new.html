@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POS 點餐系統</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- 環境配置 (必須在其他腳本之前載入) -->
+    <script src="public/env-config.js"></script>
+</head>
+<body class="bg-gray-50 font-sans">
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <div class="text-center mb-8">
+            <h1 id="restaurant-name" class="text-4xl font-bold text-gray-800 mb-2">餐廳點餐系統</h1>
+            <p class="text-gray-600">歡迎使用我們的數位點餐服務</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">顧客點餐</h2>
+                <p class="text-gray-600 mb-4">掃描桌上的 QR 碼開始點餐</p>
+                <button class="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-colors" onclick="startOrdering()">開始點餐</button>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">管理系統</h2>
+                <p class="text-gray-600 mb-4">店員專用管理介面</p>
+                <button class="bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition-colors" onclick="openManagement()">管理後台</button>
+            </div>
+        </div>
+
+        <div class="mt-8">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4">系統狀態</h2>
+                <div id="system-status">
+                    <p class="text-gray-600">正在檢查系統連線...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 初始化應用程式
+        function initApp() {
+            // 設置餐廳名稱
+            if (window.ENV_CONFIG && window.ENV_CONFIG.RESTAURANT_NAME) {
+                document.getElementById('restaurant-name').textContent = window.ENV_CONFIG.RESTAURANT_NAME;
+                document.title = window.ENV_CONFIG.RESTAURANT_NAME + ' - 點餐系統';
+            }
+
+            // 檢查系統狀態
+            checkSystemStatus();
+        }
+
+        function checkSystemStatus() {
+            const statusDiv = document.getElementById('system-status');
+            
+            if (window.ENV_CONFIG) {
+                const hasRequiredConfig = window.ENV_CONFIG.NOTION_API_KEY && 
+                                        window.ENV_CONFIG.MENU_DATABASE_ID;
+                
+                if (hasRequiredConfig) {
+                    statusDiv.innerHTML = '<div class="bg-green-100 text-green-800 p-3 rounded">✅ 系統運行正常</div>';
+                } else {
+                    statusDiv.innerHTML = '<div class="bg-yellow-100 text-yellow-800 p-3 rounded">⚠️ 系統配置不完整，請聯繫技術支援</div>';
+                }
+            } else {
+                statusDiv.innerHTML = '<div class="bg-red-100 text-red-800 p-3 rounded">❌ 無法載入系統配置</div>';
+            }
+        }
+
+        function startOrdering() {
+            alert('請掃描桌上的 QR 碼或聯繫服務生協助點餐');
+        }
+
+        function openManagement() {
+            const password = prompt('請輸入管理密碼：');
+            if (password === 'admin123') {
+                alert('管理功能開發中...');
+            } else if (password) {
+                alert('密碼錯誤');
+            }
+        }
+
+        // 頁面載入完成後初始化
+        document.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>

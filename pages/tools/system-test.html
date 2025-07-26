@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系統測試工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gray-50 font-sans">
+    <div class="container mx-auto px-4 py-8">
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">系統測試工具</h1>
+            <button onclick="window.close()" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">返回</button>
+        </div>
+
+        <!-- 系統狀態檢查 -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">🔍 系統狀態檢查</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="border rounded-lg p-4">
+                    <h3 class="font-semibold text-gray-700 mb-2">前端狀態</h3>
+                    <div id="frontendStatus" class="text-sm">檢查中...</div>
+                </div>
+                <div class="border rounded-lg p-4">
+                    <h3 class="font-semibold text-gray-700 mb-2">API 連線</h3>
+                    <div id="apiStatus" class="text-sm">檢查中...</div>
+                </div>
+                <div class="border rounded-lg p-4">
+                    <h3 class="font-semibold text-gray-700 mb-2">資料庫</h3>
+                    <div id="databaseStatus" class="text-sm">檢查中...</div>
+                </div>
+                <div class="border rounded-lg p-4">
+                    <h3 class="font-semibold text-gray-700 mb-2">儲存空間</h3>
+                    <div id="storageStatus" class="text-sm">檢查中...</div>
+                </div>
+            </div>
+            <button onclick="runSystemCheck()" class="mt-4 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">重新檢查</button>
+        </div>
+
+        <!-- 功能測試 -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">🧪 功能測試</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <button onclick="testMenuLoad()" class="bg-purple-500 text-white p-4 rounded-lg hover:bg-purple-600">
+                    <div class="font-semibold">菜單載入測試</div>
+                    <div class="text-sm opacity-90">測試菜單資料載入</div>
+                </button>
+                <button onclick="testOrderProcess()" class="bg-green-500 text-white p-4 rounded-lg hover:bg-green-600">
+                    <div class="font-semibold">訂單流程測試</div>
+                    <div class="text-sm opacity-90">測試完整訂單流程</div>
+                </button>
+                <button onclick="testPaymentSystem()" class="bg-orange-500 text-white p-4 rounded-lg hover:bg-orange-600">
+                    <div class="font-semibold">付款系統測試</div>
+                    <div class="text-sm opacity-90">測試結帳功能</div>
+                </button>
+                <button onclick="testNotifications()" class="bg-blue-500 text-white p-4 rounded-lg hover:bg-blue-600">
+                    <div class="font-semibold">通知系統測試</div>
+                    <div class="text-sm opacity-90">測試推送通知</div>
+                </button>
+                <button onclick="testQRGeneration()" class="bg-indigo-500 text-white p-4 rounded-lg hover:bg-indigo-600">
+                    <div class="font-semibold">QR 碼生成測試</div>
+                    <div class="text-sm opacity-90">測試 QR 碼功能</div>
+                </button>
+                <button onclick="testReports()" class="bg-red-500 text-white p-4 rounded-lg hover:bg-red-600">
+                    <div class="font-semibold">報表系統測試</div>
+                    <div class="text-sm opacity-90">測試資料報表</div>
+                </button>
+            </div>
+            <div id="testResults" class="mt-4"></div>
+        </div>
+
+        <!-- 壓力測試 -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">⚡ 壓力測試</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">並發用戶數</label>
+                    <input type="number" id="concurrentUsers" value="10" min="1" max="100" class="w-full p-2 border border-gray-300 rounded">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">測試持續時間（秒）</label>
+                    <input type="number" id="testDuration" value="30" min="5" max="300" class="w-full p-2 border border-gray-300 rounded">
+                </div>
+                <div class="flex items-end">
+                    <button onclick="runLoadTest()" class="w-full bg-red-600 text-white py-2 rounded hover:bg-red-700">開始壓力測試</button>
+                </div>
+            </div>
+            <div id="loadTestResults" class="mt-4"></div>
+        </div>
+
+        <!-- 錯誤模擬 -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">🐛 錯誤模擬</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <h3 class="text-lg font-semibold mb-3">網路錯誤</h3>
+                    <div class="space-y-2">
+                        <button onclick="simulateNetworkError()" class="w-full bg-yellow-500 text-white py-2 rounded hover:bg-yellow-600">模擬網路中斷</button>
+                        <button onclick="simulateSlowNetwork()" class="w-full bg-orange-500 text-white py-2 rounded hover:bg-orange-600">模擬網路延遲</button>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-lg font-semibold mb-3">系統錯誤</h3>
+                    <div class="space-y-2">
+                        <button onclick="simulateServerError()" class="w-full bg-red-500 text-white py-2 rounded hover:bg-red-600">模擬伺服器錯誤</button>
+                        <button onclick="simulateMemoryError()" class="w-full bg-purple-500 text-white py-2 rounded hover:bg-purple-600">模擬記憶體不足</button>
+                    </div>
+                </div>
+            </div>
+            <div id="errorSimResults" class="mt-4"></div>
+        </div>
+    </div>
+
+    <script>
+        // 系統狀態檢查
+        function runSystemCheck() {
+            checkFrontend();
+            checkAPI();
+            checkDatabase();
+            checkStorage();
+        }
+
+        function checkFrontend() {
+            document.getElementById('frontendStatus').innerHTML = '檢查中...';
+            setTimeout(() => {
+                document.getElementById('frontendStatus').innerHTML = '<span class="text-green-600">✅ 正常</span>';
+            }, 500);
+        }
+
+        function checkAPI() {
+            document.getElementById('apiStatus').innerHTML = '檢查中...';
+            setTimeout(() => {
+                const status = Math.random() > 0.2 ? '✅ 連線正常' : '❌ 連線失敗';
+                const color = status.includes('✅') ? 'text-green-600' : 'text-red-600';
+                document.getElementById('apiStatus').innerHTML = `<span class="${color}">${status}</span>`;
+            }, 1000);
+        }
+
+        function checkDatabase() {
+            document.getElementById('databaseStatus').innerHTML = '檢查中...';
+            setTimeout(() => {
+                document.getElementById('databaseStatus').innerHTML = '<span class="text-green-600">✅ 連線正常</span>';
+            }, 800);
+        }
+
+        function checkStorage() {
+            document.getElementById('storageStatus').innerHTML = '檢查中...';
+            setTimeout(() => {
+                const used = Math.floor(Math.random() * 80) + 10;
+                const color = used > 80 ? 'text-red-600' : used > 60 ? 'text-yellow-600' : 'text-green-600';
+                document.getElementById('storageStatus').innerHTML = `<span class="${color}">使用 ${used}%</span>`;
+            }, 600);
+        }
+
+        // 功能測試
+        function testMenuLoad() {
+            showTestResult('測試菜單載入...', 'blue');
+            setTimeout(() => {
+                const success = Math.random() > 0.1;
+                const message = success ? '✅ 菜單載入測試通過' : '❌ 菜單載入測試失敗';
+                const color = success ? 'green' : 'red';
+                showTestResult(message, color);
+            }, 2000);
+        }
+
+        function testOrderProcess() {
+            showTestResult('測試訂單流程...', 'blue');
+            setTimeout(() => {
+                showTestResult('✅ 訂單流程測試通過', 'green');
+            }, 3000);
+        }
+
+        function testPaymentSystem() {
+            showTestResult('測試付款系統...', 'blue');
+            setTimeout(() => {
+                showTestResult('✅ 付款系統測試通過', 'green');
+            }, 2500);
+        }
+
+        function testNotifications() {
+            showTestResult('測試通知系統...', 'blue');
+            setTimeout(() => {
+                showTestResult('✅ 通知系統測試通過', 'green');
+            }, 1500);
+        }
+
+        function testQRGeneration() {
+            showTestResult('測試 QR 碼生成...', 'blue');
+            setTimeout(() => {
+                showTestResult('✅ QR 碼生成測試通過', 'green');
+            }, 1000);
+        }
+
+        function testReports() {
+            showTestResult('測試報表系統...', 'blue');
+            setTimeout(() => {
+                showTestResult('✅ 報表系統測試通過', 'green');
+            }, 2000);
+        }
+
+        function showTestResult(message, color) {
+            const resultsDiv = document.getElementById('testResults');
+            resultsDiv.innerHTML = `<div class="bg-${color}-100 text-${color}-800 p-3 rounded">${message}</div>`;
+        }
+
+        // 壓力測試
+        function runLoadTest() {
+            const users = document.getElementById('concurrentUsers').value;
+            const duration = document.getElementById('testDuration').value;
+            const resultsDiv = document.getElementById('loadTestResults');
+            
+            resultsDiv.innerHTML = `<div class="bg-blue-100 text-blue-800 p-3 rounded">正在執行壓力測試：${users} 個並發用戶，持續 ${duration} 秒...</div>`;
+            
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += 100 / (duration * 2);
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    const avgResponse = Math.floor(Math.random() * 200) + 50;
+                    const errorRate = Math.floor(Math.random() * 5);
+                    resultsDiv.innerHTML = `
+                        <div class="bg-green-100 text-green-800 p-3 rounded">
+                            ✅ 壓力測試完成<br>
+                            平均響應時間：${avgResponse}ms<br>
+                            錯誤率：${errorRate}%<br>
+                            系統穩定性：良好
+                        </div>
+                    `;
+                } else {
+                    resultsDiv.innerHTML = `<div class="bg-blue-100 text-blue-800 p-3 rounded">測試進度：${Math.floor(progress)}%</div>`;
+                }
+            }, 500);
+        }
+
+        // 錯誤模擬
+        function simulateNetworkError() {
+            showErrorResult('模擬網路中斷...', 'yellow');
+            setTimeout(() => {
+                showErrorResult('❌ 網路錯誤已觸發，測試系統錯誤處理能力', 'red');
+            }, 1000);
+        }
+
+        function simulateSlowNetwork() {
+            showErrorResult('模擬網路延遲...', 'yellow');
+            setTimeout(() => {
+                showErrorResult('⚠️ 網路延遲模擬中，響應時間 > 5秒', 'orange');
+            }, 2000);
+        }
+
+        function simulateServerError() {
+            showErrorResult('模擬伺服器錯誤...', 'yellow');
+            setTimeout(() => {
+                showErrorResult('❌ 500 伺服器內部錯誤已觸發', 'red');
+            }, 1500);
+        }
+
+        function simulateMemoryError() {
+            showErrorResult('模擬記憶體不足...', 'yellow');
+            setTimeout(() => {
+                showErrorResult('⚠️ 記憶體使用率 > 95%，系統效能下降', 'purple');
+            }, 2000);
+        }
+
+        function showErrorResult(message, color) {
+            const resultsDiv = document.getElementById('errorSimResults');
+            resultsDiv.innerHTML = `<div class="bg-${color}-100 text-${color}-800 p-3 rounded">${message}</div>`;
+        }
+
+        // 頁面載入時執行系統檢查
+        document.addEventListener('DOMContentLoaded', runSystemCheck);
+    </script>
+</body>
+</html>

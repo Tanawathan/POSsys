@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>客戶點餐介面</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gray-50 font-sans">
+    <div class="container mx-auto px-4 py-8">
+        <div class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800">客戶點餐介面</h1>
+                <p class="text-gray-600" id="tableInfo">桌號：未指定</p>
+            </div>
+            <button onclick="window.close()" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">返回</button>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- 菜單區域 -->
+            <div class="lg:col-span-2">
+                <!-- 分類標籤 -->
+                <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+                    <div class="flex space-x-2 overflow-x-auto">
+                        <button onclick="filterCategory('all')" class="category-btn bg-blue-500 text-white px-4 py-2 rounded whitespace-nowrap">全部</button>
+                        <button onclick="filterCategory('appetizer')" class="category-btn bg-gray-200 text-gray-700 px-4 py-2 rounded whitespace-nowrap">開胃菜</button>
+                        <button onclick="filterCategory('main')" class="category-btn bg-gray-200 text-gray-700 px-4 py-2 rounded whitespace-nowrap">主餐</button>
+                        <button onclick="filterCategory('drink')" class="category-btn bg-gray-200 text-gray-700 px-4 py-2 rounded whitespace-nowrap">飲料</button>
+                        <button onclick="filterCategory('dessert')" class="category-btn bg-gray-200 text-gray-700 px-4 py-2 rounded whitespace-nowrap">甜點</button>
+                    </div>
+                </div>
+
+                <!-- 菜單項目 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="menuItems">
+                    <!-- 動態載入菜單項目 -->
+                </div>
+            </div>
+
+            <!-- 購物車區域 -->
+            <div class="bg-white rounded-lg shadow-md p-6 h-fit sticky top-4">
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">您的訂單</h3>
+                
+                <div id="cartItems" class="space-y-3 mb-4">
+                    <!-- 動態載入購物車項目 -->
+                </div>
+
+                <div class="border-t pt-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="font-semibold">小計：</span>
+                        <span class="font-bold text-lg" id="cartTotal">$0</span>
+                    </div>
+                    <button onclick="submitOrder()" class="w-full bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 transition-colors" id="submitBtn" disabled>
+                        送出訂單
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 模擬菜單資料
+        const menuData = [
+            { id: 1, name: '凱薩沙拉', category: 'appetizer', price: 180, description: '新鮮生菜配經典凱薩醬', image: '🥗' },
+            { id: 2, name: '蒜味麵包', category: 'appetizer', price: 120, description: '香蒜奶油烤麵包', image: '🍞' },
+            { id: 3, name: '牛排', category: 'main', price: 580, description: '8oz 頂級牛排', image: '🥩' },
+            { id: 4, name: '義大利麵', category: 'main', price: 320, description: '經典番茄肉醬義大利麵', image: '🍝' },
+            { id: 5, name: '可樂', category: 'drink', price: 60, description: '冰涼可口可樂', image: '🥤' },
+            { id: 6, name: '柳橙汁', category: 'drink', price: 80, description: '現榨新鮮柳橙汁', image: '🍊' },
+            { id: 7, name: '提拉米蘇', category: 'dessert', price: 150, description: '義式經典甜點', image: '🍰' },
+            { id: 8, name: '冰淇淋', category: 'dessert', price: 100, description: '香草冰淇淋', image: '🍦' }
+        ];
+
+        let cart = [];
+        let currentCategory = 'all';
+
+        // 從 URL 獲取桌號
+        function getTableNumber() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const tableNumber = urlParams.get('table');
+            if (tableNumber) {
+                document.getElementById('tableInfo').textContent = `桌號：${tableNumber} 號桌`;
+                return tableNumber;
+            }
+            return null;
+        }
+
+        // 渲染菜單項目
+        function renderMenuItems() {
+            const container = document.getElementById('menuItems');
+            container.innerHTML = '';
+
+            const filteredItems = currentCategory === 'all' 
+                ? menuData 
+                : menuData.filter(item => item.category === currentCategory);
+
+            filteredItems.forEach(item => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow';
+                itemDiv.innerHTML = `
+                    <div class="text-4xl mb-2">${item.image}</div>
+                    <h4 class="font-semibold text-gray-800 mb-1">${item.name}</h4>
+                    <p class="text-gray-600 text-sm mb-2">${item.description}</p>
+                    <div class="flex justify-between items-center">
+                        <span class="font-bold text-lg text-green-600">$${item.price}</span>
+                        <button onclick="addToCart(${item.id})" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">
+                            加入購物車
+                        </button>
+                    </div>
+                `;
+                container.appendChild(itemDiv);
+            });
+        }
+
+        // 分類篩選
+        function filterCategory(category) {
+            currentCategory = category;
+            
+            // 更新按鈕樣式
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                btn.className = 'category-btn bg-gray-200 text-gray-700 px-4 py-2 rounded whitespace-nowrap';
+            });
+            event.target.className = 'category-btn bg-blue-500 text-white px-4 py-2 rounded whitespace-nowrap';
+            
+            renderMenuItems();
+        }
+
+        // 加入購物車
+        function addToCart(itemId) {
+            const item = menuData.find(item => item.id === itemId);
+            const existingItem = cart.find(cartItem => cartItem.id === itemId);
+
+            if (existingItem) {
+                existingItem.quantity += 1;
+            } else {
+                cart.push({ ...item, quantity: 1 });
+            }
+
+            renderCart();
+        }
+
+        // 渲染購物車
+        function renderCart() {
+            const container = document.getElementById('cartItems');
+            const totalElement = document.getElementById('cartTotal');
+            const submitBtn = document.getElementById('submitBtn');
+
+            if (cart.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center">購物車為空</p>';
+                totalElement.textContent = '$0';
+                submitBtn.disabled = true;
+                submitBtn.className = 'w-full bg-gray-300 text-gray-500 py-3 rounded-lg cursor-not-allowed';
+                return;
+            }
+
+            container.innerHTML = '';
+            let total = 0;
+
+            cart.forEach((item, index) => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'flex justify-between items-center p-2 bg-gray-50 rounded';
+                itemDiv.innerHTML = `
+                    <div class="flex-1">
+                        <span class="font-medium">${item.name}</span>
+                        <div class="text-sm text-gray-600">$${item.price} x ${item.quantity}</div>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="updateQuantity(${index}, -1)" class="bg-red-500 text-white w-6 h-6 rounded text-sm">-</button>
+                        <span class="w-8 text-center">${item.quantity}</span>
+                        <button onclick="updateQuantity(${index}, 1)" class="bg-green-500 text-white w-6 h-6 rounded text-sm">+</button>
+                    </div>
+                `;
+                container.appendChild(itemDiv);
+                total += item.price * item.quantity;
+            });
+
+            totalElement.textContent = `$${total}`;
+            submitBtn.disabled = false;
+            submitBtn.className = 'w-full bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 transition-colors';
+        }
+
+        // 更新數量
+        function updateQuantity(index, change) {
+            cart[index].quantity += change;
+            if (cart[index].quantity <= 0) {
+                cart.splice(index, 1);
+            }
+            renderCart();
+        }
+
+        // 送出訂單
+        function submitOrder() {
+            if (cart.length === 0) return;
+
+            const tableNumber = getTableNumber();
+            const orderData = {
+                table: tableNumber,
+                items: cart,
+                total: cart.reduce((sum, item) => sum + (item.price * item.quantity), 0),
+                timestamp: new Date().toISOString()
+            };
+
+            // 這裡可以發送到後端 API
+            console.log('訂單資料:', orderData);
+            
+            alert(`訂單送出成功！\n桌號：${tableNumber}\n總金額：$${orderData.total}\n\n訂單將會送到廚房準備。`);
+            
+            // 清空購物車
+            cart = [];
+            renderCart();
+        }
+
+        // 頁面載入時執行
+        document.addEventListener('DOMContentLoaded', function() {
+            getTableNumber();
+            renderMenuItems();
+            renderCart();
+        });
+    </script>
+</body>
+</html>

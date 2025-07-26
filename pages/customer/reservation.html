@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>訂位管理系統</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gray-50 font-sans">
+    <div class="container mx-auto px-4 py-8">
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">訂位管理系統</h1>
+            <button onclick="window.close()" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">返回</button>
+        </div>
+
+        <!-- 快速新增訂位 -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">新增訂位</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">客戶姓名</label>
+                    <input type="text" id="customerName" class="w-full p-2 border border-gray-300 rounded" placeholder="請輸入姓名">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">聯絡電話</label>
+                    <input type="tel" id="customerPhone" class="w-full p-2 border border-gray-300 rounded" placeholder="請輸入電話">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">用餐人數</label>
+                    <select id="guestCount" class="w-full p-2 border border-gray-300 rounded">
+                        <option value="">選擇人數</option>
+                        <option value="1">1 人</option>
+                        <option value="2">2 人</option>
+                        <option value="3">3 人</option>
+                        <option value="4">4 人</option>
+                        <option value="5">5 人</option>
+                        <option value="6">6 人</option>
+                        <option value="8">8 人</option>
+                        <option value="10">10 人</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">訂位日期</label>
+                    <input type="date" id="reservationDate" class="w-full p-2 border border-gray-300 rounded">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">訂位時間</label>
+                    <select id="reservationTime" class="w-full p-2 border border-gray-300 rounded">
+                        <option value="">選擇時間</option>
+                        <option value="11:00">11:00</option>
+                        <option value="11:30">11:30</option>
+                        <option value="12:00">12:00</option>
+                        <option value="12:30">12:30</option>
+                        <option value="13:00">13:00</option>
+                        <option value="17:00">17:00</option>
+                        <option value="17:30">17:30</option>
+                        <option value="18:00">18:00</option>
+                        <option value="18:30">18:30</option>
+                        <option value="19:00">19:00</option>
+                        <option value="19:30">19:30</option>
+                        <option value="20:00">20:00</option>
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button onclick="addReservation()" class="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600">新增訂位</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 今日訂位列表 -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold text-gray-800 mb-4">今日訂位</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full table-auto">
+                    <thead>
+                        <tr class="bg-gray-100">
+                            <th class="px-4 py-2 text-left">時間</th>
+                            <th class="px-4 py-2 text-left">客戶姓名</th>
+                            <th class="px-4 py-2 text-left">聯絡電話</th>
+                            <th class="px-4 py-2 text-left">人數</th>
+                            <th class="px-4 py-2 text-left">狀態</th>
+                            <th class="px-4 py-2 text-left">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reservationList">
+                        <!-- 動態載入訂位資料 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 模擬訂位資料
+        let reservations = [
+            { id: 1, time: '12:00', name: '陳先生', phone: '0912-345-678', guests: 4, status: '已確認' },
+            { id: 2, time: '13:30', name: '王小姐', phone: '0987-654-321', guests: 2, status: '已確認' },
+            { id: 3, time: '18:00', name: '李先生', phone: '0955-123-456', guests: 6, status: '等待確認' },
+        ];
+
+        function addReservation() {
+            const name = document.getElementById('customerName').value;
+            const phone = document.getElementById('customerPhone').value;
+            const guests = document.getElementById('guestCount').value;
+            const date = document.getElementById('reservationDate').value;
+            const time = document.getElementById('reservationTime').value;
+
+            if (!name || !phone || !guests || !date || !time) {
+                alert('請填寫所有必要資訊');
+                return;
+            }
+
+            const newReservation = {
+                id: reservations.length + 1,
+                time: time,
+                name: name,
+                phone: phone,
+                guests: parseInt(guests),
+                status: '已確認'
+            };
+
+            reservations.push(newReservation);
+            renderReservations();
+            clearForm();
+            alert('訂位新增成功！');
+        }
+
+        function clearForm() {
+            document.getElementById('customerName').value = '';
+            document.getElementById('customerPhone').value = '';
+            document.getElementById('guestCount').value = '';
+            document.getElementById('reservationDate').value = '';
+            document.getElementById('reservationTime').value = '';
+        }
+
+        function renderReservations() {
+            const tbody = document.getElementById('reservationList');
+            tbody.innerHTML = '';
+
+            reservations.forEach(reservation => {
+                const row = document.createElement('tr');
+                row.className = 'border-b hover:bg-gray-50';
+                
+                const statusColor = reservation.status === '已確認' ? 'text-green-600' : 'text-yellow-600';
+                
+                row.innerHTML = `
+                    <td class="px-4 py-2">${reservation.time}</td>
+                    <td class="px-4 py-2">${reservation.name}</td>
+                    <td class="px-4 py-2">${reservation.phone}</td>
+                    <td class="px-4 py-2">${reservation.guests} 人</td>
+                    <td class="px-4 py-2 ${statusColor}">${reservation.status}</td>
+                    <td class="px-4 py-2">
+                        <button onclick="confirmReservation(${reservation.id})" class="bg-green-500 text-white px-2 py-1 rounded text-sm hover:bg-green-600 mr-1">確認</button>
+                        <button onclick="cancelReservation(${reservation.id})" class="bg-red-500 text-white px-2 py-1 rounded text-sm hover:bg-red-600">取消</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function confirmReservation(id) {
+            const reservation = reservations.find(r => r.id === id);
+            if (reservation) {
+                reservation.status = '已確認';
+                renderReservations();
+            }
+        }
+
+        function cancelReservation(id) {
+            if (confirm('確定要取消這個訂位嗎？')) {
+                reservations = reservations.filter(r => r.id !== id);
+                renderReservations();
+            }
+        }
+
+        // 設定今日日期為預設值
+        function setDefaultDate() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('reservationDate').value = today;
+        }
+
+        // 頁面載入時執行
+        document.addEventListener('DOMContentLoaded', function() {
+            setDefaultDate();
+            renderReservations();
+        });
+    </script>
+</body>
+</html>

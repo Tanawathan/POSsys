@@ -20,17 +20,48 @@
             <p class="text-gray-600">歡迎使用我們的數位點餐服務</p>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- 主要系統導航 -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <!-- 管理系統 -->
             <div class="bg-white rounded-lg shadow-md p-6">
-                <h2 class="text-2xl font-semibold text-gray-800 mb-4">顧客點餐</h2>
-                <p class="text-gray-600 mb-4">掃描桌上的 QR 碼開始點餐</p>
-                <button class="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-colors" onclick="startOrdering()">開始點餐</button>
+                <h2 class="text-2xl font-semibold text-red-600 mb-4">🏢 管理系統</h2>
+                <p class="text-gray-600 mb-4">店員專用管理介面</p>
+                <div class="space-y-2">
+                    <button class="w-full text-left p-2 rounded hover:bg-gray-100 transition-colors" onclick="openPage('pages/management/order-management.html')">📋 訂單管理</button>
+                    <button class="w-full text-left p-2 rounded hover:bg-gray-100 transition-colors" onclick="openPage('pages/management/menu-management.html')">🍽️ 菜單管理</button>
+                    <button class="w-full text-left p-2 rounded hover:bg-gray-100 transition-colors" onclick="openPage('pages/management/table-management.html')">🪑 桌況管理</button>
+                    <button class="w-full text-left p-2 rounded hover:bg-gray-100 transition-colors" onclick="openPage('pages/management/purchase-management.html')">🛒 採購管理</button>
+                    <button class="w-full text-left p-2 rounded hover:bg-gray-100 transition-colors" onclick="openPage('pages/management/recipe-management.html')">👨‍🍳 食譜管理</button>
+                    <button class="w-full text-left p-2 rounded hover:bg-gray-100 transition-colors" onclick="openPage('pages/management/inventory-management.html')">📦 庫存管理</button>
+                    <button class="w-full text-left p-2 rounded hover:bg-gray-100 transition-colors" onclick="openPage('pages/management/cost-analysis.html')">💰 成本分析</button>
+                </div>
+                <button class="w-full mt-4 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors" onclick="openManagementDashboard()">進入管理後台</button>
             </div>
 
+            <!-- 客戶端系統 -->
             <div class="bg-white rounded-lg shadow-md p-6">
-                <h2 class="text-2xl font-semibold text-gray-800 mb-4">管理系統</h2>
-                <p class="text-gray-600 mb-4">店員專用管理介面</p>
-                <button class="bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition-colors" onclick="openManagement()">管理後台</button>
+                <h2 class="text-2xl font-semibold text-blue-600 mb-4">👥 客戶端系統</h2>
+                <p class="text-gray-600 mb-4">客戶服務相關功能</p>
+                <div class="space-y-2">
+                    <button class="w-full text-left p-2 rounded hover:bg-gray-100 transition-colors" onclick="openPage('pages/customer/dashboard.html')">📊 主控台儀表板</button>
+                    <button class="w-full text-left p-2 rounded hover:bg-gray-100 transition-colors" onclick="openPage('pages/customer/reservation.html')">📅 訂位管理</button>
+                    <button class="w-full text-left p-2 rounded hover:bg-gray-100 transition-colors" onclick="openPage('pages/customer/ordering.html')">🍴 客戶點餐介面</button>
+                    <button class="w-full text-left p-2 rounded hover:bg-gray-100 transition-colors" onclick="openPage('pages/customer/checkout.html')">💳 結帳系統</button>
+                    <button class="w-full text-left p-2 rounded hover:bg-gray-100 transition-colors" onclick="openPage('pages/customer/kitchen-display.html')">🍳 廚房顯示系統 (KDS)</button>
+                </div>
+                <button class="w-full mt-4 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors" onclick="startOrdering()">顧客點餐</button>
+            </div>
+
+            <!-- 工具和測試 -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-2xl font-semibold text-green-600 mb-4">🔧 工具和測試</h2>
+                <p class="text-gray-600 mb-4">系統配置與測試工具</p>
+                <div class="space-y-2">
+                    <button class="w-full text-left p-2 rounded hover:bg-gray-100 transition-colors" onclick="openPage('pages/tools/database-setup.html')">🗄️ 資料庫設定工具</button>
+                    <button class="w-full text-left p-2 rounded hover:bg-gray-100 transition-colors" onclick="openPage('pages/tools/csv-notion-sync.html')">🔄 CSV-Notion 同步工具</button>
+                    <button class="w-full text-left p-2 rounded hover:bg-gray-100 transition-colors" onclick="openPage('pages/tools/system-test.html')">🧪 系統測試工具</button>
+                </div>
+                <button class="w-full mt-4 bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors" onclick="openPage('pages/tools/')">工具箱</button>
             </div>
         </div>
 
@@ -151,6 +182,32 @@
             link.click();
         }
 
+        // 新增頁面導航功能
+        function openPage(pagePath) {
+            // 檢查是否需要密碼驗證（管理系統頁面）
+            if (pagePath.includes('management/')) {
+                const password = prompt('請輸入管理密碼：');
+                if (password !== 'admin123') {
+                    if (password) {
+                        alert('密碼錯誤');
+                    }
+                    return;
+                }
+            }
+            
+            // 開啟頁面
+            window.open(pagePath, '_blank');
+        }
+
+        function openManagementDashboard() {
+            const password = prompt('請輸入管理密碼：');
+            if (password === 'admin123') {
+                window.open('pages/management/dashboard.html', '_blank');
+            } else if (password) {
+                alert('密碼錯誤');
+            }
+        }
+
         function checkSystemStatus() {
             const statusDiv = document.getElementById('system-status');
             
@@ -179,12 +236,8 @@
         }
 
         function openManagement() {
-            const password = prompt('請輸入管理密碼：');
-            if (password === 'admin123') {
-                alert('管理功能開發中...');
-            } else if (password) {
-                alert('密碼錯誤');
-            }
+            // 保留原有的管理功能，現在重定向到管理儀表板
+            openManagementDashboard();
         }
 
         // 頁面載入完成後初始化
