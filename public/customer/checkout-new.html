@@ -247,6 +247,8 @@
         // === API 函數 ===
         async function fetchTables() {
             console.log('🔄 正在獲取桌況資料...');
+            console.log('🔗 API URL:', `${CONFIG.netlifyFunctionBase}/notion-api`);
+            console.log('📋 請求資料庫 ID:', CONFIG.notion.databaseIds.tables);
             try {
                 const response = await fetch(`${CONFIG.netlifyFunctionBase}/notion-api`, {
                     method: 'POST',
@@ -266,8 +268,12 @@
                     })
                 });
                 
+                console.log('📡 Response status:', response.status);
+                
                 if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    const errorText = await response.text();
+                    console.error('📄 錯誤詳情:', errorText);
+                    throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorText}`);
                 }
                 
                 const data = await response.json();
@@ -282,6 +288,8 @@
 
         async function fetchOrders() {
             console.log('🔄 正在獲取訂單資料...');
+            console.log('🔗 API URL:', `${CONFIG.netlifyFunctionBase}/notion-api`);
+            console.log('📋 請求資料庫 ID:', CONFIG.notion.databaseIds.orders);
             try {
                 const response = await fetch(`${CONFIG.netlifyFunctionBase}/notion-api`, {
                     method: 'POST',
@@ -301,8 +309,12 @@
                     })
                 });
                 
+                console.log('📡 Response status:', response.status);
+                
                 if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    const errorText = await response.text();
+                    console.error('📄 錯誤詳情:', errorText);
+                    throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorText}`);
                 }
                 
                 const data = await response.json();
@@ -930,6 +942,9 @@
         // 頁面載入完成後初始化
         document.addEventListener('DOMContentLoaded', () => {
             console.log('🚀 結帳系統初始化...');
+            console.log('⚙️ 系統配置:', CONFIG);
+            console.log('🌐 當前網站 URL:', window.location.origin);
+            console.log('📡 Netlify Functions URL:', CONFIG.netlifyFunctionBase);
             setupEventListeners();
             loadData();
         });
