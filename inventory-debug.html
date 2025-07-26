@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>庫存管理系統診斷工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-4xl mx-auto">
+            <h1 class="text-3xl font-bold text-gray-800 mb-8">
+                <i class="fas fa-diagnoses text-blue-600"></i>
+                庫存管理系統診斷工具
+            </h1>
+
+            <!-- 診斷結果區域 -->
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                <h2 class="text-xl font-semibold mb-4">
+                    <i class="fas fa-clipboard-check text-green-600"></i>
+                    系統診斷結果
+                </h2>
+                <div id="diagnostic-results" class="space-y-3">
+                    <div class="text-gray-500">正在執行診斷...</div>
+                </div>
+            </div>
+
+            <!-- API 測試區域 -->
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                <h2 class="text-xl font-semibold mb-4">
+                    <i class="fas fa-plug text-purple-600"></i>
+                    API 連接測試
+                </h2>
+                <div id="api-test-results" class="space-y-3">
+                    <div class="text-gray-500">準備測試 API 連接...</div>
+                </div>
+                <button id="test-api-btn" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                    <i class="fas fa-play"></i>
+                    執行 API 測試
+                </button>
+            </div>
+
+            <!-- 庫存資料測試區域 -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h2 class="text-xl font-semibold mb-4">
+                    <i class="fas fa-database text-orange-600"></i>
+                    庫存資料載入測試
+                </h2>
+                <div id="inventory-test-results" class="space-y-3">
+                    <div class="text-gray-500">準備測試庫存資料載入...</div>
+                </div>
+                <button id="test-inventory-btn" class="mt-4 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
+                    <i class="fas fa-download"></i>
+                    測試庫存資料載入
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 診斷函數
+        async function runDiagnostics() {
+            const resultsDiv = document.getElementById('diagnostic-results');
+            const checks = [];
+
+            // 檢查 1: 環境配置
+            try {
+                if (typeof window.ENV_CONFIG !== 'undefined') {
+                    checks.push({
+                        name: '環境配置',
+                        status: 'success',
+                        message: '✅ ENV_CONFIG 已載入'
+                    });
+                } else {
+                    checks.push({
+                        name: '環境配置',
+                        status: 'warning',
+                        message: '⚠️ ENV_CONFIG 未找到，嘗試載入...'
+                    });
+                    
+                    // 嘗試載入環境配置
+                    const script = document.createElement('script');
+                    script.src = '/public/env-config.js';
+                    document.head.appendChild(script);
+                }
+            } catch (error) {
+                checks.push({
+                    name: '環境配置',
+                    status: 'error',
+                    message: `❌ 環境配置錯誤: ${error.message}`
+                });
+            }
+
+            // 檢查 2: Netlify Functions 可用性
+            try {
+                const response = await fetch('/.netlify/functions/notion-api/health');
+                if (response.ok) {
+                    const data = await response.json();
+                    checks.push({
+                        name: 'Netlify Functions',
+                        status: 'success',
+                        message: `✅ Functions 運行正常 (${data.environment})`
+                    });
+                } else {
+                    checks.push({
+                        name: 'Netlify Functions',
+                        status: 'error',
+                        message: `❌ Functions 回應錯誤: ${response.status}`
+                    });
+                }
+            } catch (error) {
+                checks.push({
+                    name: 'Netlify Functions',
+                    status: 'error',
+                    message: `❌ Functions 連接失敗: ${error.message}`
+                });
+            }
+
+            // 檢查 3: Notion API 配置
+            try {
+                const response = await fetch('/.netlify/functions/notion-api/test-notion');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.connected) {
+                        checks.push({
+                            name: 'Notion API',
+                            status: 'success',
+                            message: `✅ Notion API 連接成功 (用戶: ${data.user})`
+                        });
+                    } else {
+                        checks.push({
+                            name: 'Notion API',
+                            status: 'error',
+                            message: `❌ Notion API 認證失敗: ${data.error}`
+                        });
+                    }
+                } else {
+                    checks.push({
+                        name: 'Notion API',
+                        status: 'error',
+                        message: `❌ Notion API 測試失敗: ${response.status}`
+                    });
+                }
+            } catch (error) {
+                checks.push({
+                    name: 'Notion API',
+                    status: 'error',
+                    message: `❌ Notion API 測試錯誤: ${error.message}`
+                });
+            }
+
+            // 渲染結果
+            resultsDiv.innerHTML = checks.map(check => {
+                const colorClass = {
+                    'success': 'text-green-600 bg-green-50 border-green-200',
+                    'warning': 'text-yellow-600 bg-yellow-50 border-yellow-200',
+                    'error': 'text-red-600 bg-red-50 border-red-200'
+                }[check.status];
+
+                return `
+                    <div class="p-3 rounded-lg border ${colorClass}">
+                        <div class="font-medium">${check.name}</div>
+                        <div class="text-sm mt-1">${check.message}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // API 測試函數
+        async function testAPI() {
+            const resultsDiv = document.getElementById('api-test-results');
+            const btn = document.getElementById('test-api-btn');
+            
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 測試中...';
+            
+            const tests = [];
+
+            // 測試 1: Health Check
+            try {
+                const start = Date.now();
+                const response = await fetch('/.netlify/functions/notion-api/health');
+                const end = Date.now();
+                const data = await response.json();
+                
+                tests.push({
+                    name: 'Health Check',
+                    status: response.ok ? 'success' : 'error',
+                    message: response.ok ? 
+                        `✅ 回應時間: ${end - start}ms` : 
+                        `❌ 狀態碼: ${response.status}`,
+                    details: JSON.stringify(data, null, 2)
+                });
+            } catch (error) {
+                tests.push({
+                    name: 'Health Check',
+                    status: 'error',
+                    message: `❌ 連接錯誤: ${error.message}`,
+                    details: error.stack
+                });
+            }
+
+            // 測試 2: Notion 連接
+            try {
+                const start = Date.now();
+                const response = await fetch('/.netlify/functions/notion-api/test-notion');
+                const end = Date.now();
+                const data = await response.json();
+                
+                tests.push({
+                    name: 'Notion 連接測試',
+                    status: data.connected ? 'success' : 'error',
+                    message: data.connected ? 
+                        `✅ 連接成功，回應時間: ${end - start}ms` : 
+                        `❌ 連接失敗: ${data.error}`,
+                    details: JSON.stringify(data, null, 2)
+                });
+            } catch (error) {
+                tests.push({
+                    name: 'Notion 連接測試',
+                    status: 'error',
+                    message: `❌ 測試錯誤: ${error.message}`,
+                    details: error.stack
+                });
+            }
+
+            // 渲染結果
+            resultsDiv.innerHTML = tests.map(test => {
+                const colorClass = {
+                    'success': 'text-green-600 bg-green-50 border-green-200',
+                    'error': 'text-red-600 bg-red-50 border-red-200'
+                }[test.status];
+
+                return `
+                    <div class="p-4 rounded-lg border ${colorClass}">
+                        <div class="font-medium">${test.name}</div>
+                        <div class="text-sm mt-1">${test.message}</div>
+                        <details class="mt-2">
+                            <summary class="cursor-pointer text-xs text-gray-600">詳細資訊</summary>
+                            <pre class="text-xs mt-2 p-2 bg-gray-100 rounded overflow-x-auto">${test.details}</pre>
+                        </details>
+                    </div>
+                `;
+            }).join('');
+
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-play"></i> 執行 API 測試';
+        }
+
+        // 庫存資料測試函數
+        async function testInventoryData() {
+            const resultsDiv = document.getElementById('inventory-test-results');
+            const btn = document.getElementById('test-inventory-btn');
+            
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 載入中...';
+            
+            try {
+                const start = Date.now();
+                const response = await fetch('/.netlify/functions/notion-api/databases/237fd5adc30b808cbba3c03f8f2065fd/query', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({})
+                });
+                const end = Date.now();
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const itemCount = data.results ? data.results.length : 0;
+                    
+                    resultsDiv.innerHTML = `
+                        <div class="p-4 rounded-lg border text-green-600 bg-green-50 border-green-200">
+                            <div class="font-medium">✅ 庫存資料載入成功</div>
+                            <div class="text-sm mt-1">載入了 ${itemCount} 項庫存資料</div>
+                            <div class="text-sm">回應時間: ${end - start}ms</div>
+                            <div class="text-sm">有更多資料: ${data.has_more ? '是' : '否'}</div>
+                            ${itemCount > 0 ? `
+                                <details class="mt-2">
+                                    <summary class="cursor-pointer text-xs text-gray-600">前3項資料範例</summary>
+                                    <pre class="text-xs mt-2 p-2 bg-gray-100 rounded overflow-x-auto">${JSON.stringify(data.results.slice(0, 3), null, 2)}</pre>
+                                </details>
+                            ` : ''}
+                        </div>
+                    `;
+                } else {
+                    const errorData = await response.text();
+                    resultsDiv.innerHTML = `
+                        <div class="p-4 rounded-lg border text-red-600 bg-red-50 border-red-200">
+                            <div class="font-medium">❌ 庫存資料載入失敗</div>
+                            <div class="text-sm mt-1">狀態碼: ${response.status}</div>
+                            <div class="text-sm">回應時間: ${end - start}ms</div>
+                            <details class="mt-2">
+                                <summary class="cursor-pointer text-xs text-gray-600">錯誤詳情</summary>
+                                <pre class="text-xs mt-2 p-2 bg-gray-100 rounded overflow-x-auto">${errorData}</pre>
+                            </details>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div class="p-4 rounded-lg border text-red-600 bg-red-50 border-red-200">
+                        <div class="font-medium">❌ 庫存資料載入錯誤</div>
+                        <div class="text-sm mt-1">${error.message}</div>
+                        <details class="mt-2">
+                            <summary class="cursor-pointer text-xs text-gray-600">錯誤堆疊</summary>
+                            <pre class="text-xs mt-2 p-2 bg-gray-100 rounded overflow-x-auto">${error.stack}</pre>
+                        </details>
+                    </div>
+                `;
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-download"></i> 測試庫存資料載入';
+        }
+
+        // 事件監聽器
+        document.getElementById('test-api-btn').addEventListener('click', testAPI);
+        document.getElementById('test-inventory-btn').addEventListener('click', testInventoryData);
+
+        // 頁面載入時自動執行診斷
+        document.addEventListener('DOMContentLoaded', runDiagnostics);
+    </script>
+</body>
+</html>
