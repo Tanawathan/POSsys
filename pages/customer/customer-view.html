@@ -1429,7 +1429,7 @@
             console.log(`🪑 更新桌號 ${tableNumber} 狀態為: ${newStatus}`);
 
             try {
-                // 1. 先查詢該桌號的 Notion 記錄
+                // 1. 先查詢該桌號的 Notion 記錄 - 使用 rich_text 而不是 title
                 const response = await fetch(`${config.netlifyFunctionBase}/notion-api`, {
                     method: 'POST',
                     headers: {
@@ -1441,8 +1441,8 @@
                         body: {
                             filter: {
                                 property: '桌號',
-                                title: {
-                                    equals: tableNumber.toString()
+                                rich_text: {
+                                    contains: tableNumber.toString()
                                 }
                             }
                         }
@@ -1450,6 +1450,8 @@
                 });
 
                 if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('📄 查詢桌況錯誤詳情:', errorText);
                     throw new Error(`查詢桌況失敗: ${response.status}`);
                 }
 
@@ -1459,8 +1461,9 @@
                 if (queryResult.results && queryResult.results.length > 0) {
                     // 更新現有記錄
                     const existingTable = queryResult.results[0];
-                    console.log(`📝 更新現有桌況記錄: ${tableNumber}`);
+                    console.log(`📝 更新現有桌況記錄: ${tableNumber}`, existingTable.id);
                     
+                    // 只更新狀態欄位，移除更新時間欄位
                     const updateResponse = await fetch(`${config.netlifyFunctionBase}/notion-api`, {
                         method: 'POST',
                         headers: {
@@ -1475,11 +1478,6 @@
                                         select: {
                                             name: newStatus
                                         }
-                                    },
-                                    '更新時間': {
-                                        date: {
-                                            start: new Date().toISOString()
-                                        }
                                     }
                                 }
                             }
@@ -1487,10 +1485,13 @@
                     });
 
                     if (!updateResponse.ok) {
-                        throw new Error(`更新桌況失敗: ${updateResponse.status}`);
+                        const errorText = await updateResponse.text();
+                        console.error('📄 更新桌況錯誤詳情:', errorText);
+                        throw new Error(`更新桌況失敗: ${updateResponse.status} - ${errorText}`);
                     }
 
-                    console.log('✅ 桌況狀態更新成功');
+                    const updateResult = await updateResponse.json();
+                    console.log('✅ 桌況狀態更新成功:', updateResult);
                 } else {
                     console.log('⚠️ 未找到對應桌號記錄，跳過狀態更新');
                 }
