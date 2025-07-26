@@ -1,0 +1,22 @@
+# Netlify 部署時忽略的檔案
+.env
+netlify-env-vars.txt
+production-records-db-config.json
+NETLIFY-DEPLOYMENT-GUIDE.md
+*.md
+
+# Node modules 和 logs
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 開發檔案
+.git/
+.gitignore
+
+# 備份和臨時檔案
+*.bak
+*.tmp
+.DS_Store
+Thumbs.db

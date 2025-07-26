@@ -1,50 +1,67 @@
 // 配置文件 - 可以根據環境動態載入
+// 優先使用 window.ENV_CONFIG (Netlify 環境變數)，然後是 process.env (Node.js 環境)
+const getEnvVar = (key, defaultValue = '') => {
+    if (typeof window !== 'undefined' && window.ENV_CONFIG && window.ENV_CONFIG[key]) {
+        return window.ENV_CONFIG[key];
+    }
+    if (typeof process !== 'undefined' && process.env && process.env[key]) {
+        return process.env[key];
+    }
+    return defaultValue;
+};
+
 const CONFIG = {
   production: {
     // Make.com Webhooks (備用方案)
     makeWebhooks: {
-      menuWebhookUrl: 'https://hook.us2.make.com/7x1uvc1swnt7oyijv35fuwl253esfl95',
-      orderWebhookUrl: 'https://hook.us2.make.com/rxk02bzg5yp5pqergrmyeh1mxid8gwcb',
-      tableWebhookUrl: 'https://hook.us2.make.com/5h275y5bqajl3x4eecvg9ve4im9bo4nd',
-      fetchOrdersWebhookUrl: 'https://hook.us2.make.com/x38sw9p1gpwgv8lg4ysg6swywvdtjheh',
-      completeOrderWebhookUrl: 'https://hook.us2.make.com/pphblun9ny4h8dysflo1npk8qim8rsis',
-      checkoutWebhookUrl: 'https://hook.us2.make.com/4q80ozgqm3eg8x848z0zvf11m79o9k6e'
+      menuWebhookUrl: getEnvVar('MAKE_MENU_WEBHOOK'),
+      orderWebhookUrl: getEnvVar('MAKE_ORDER_WEBHOOK'),
+      tableWebhookUrl: getEnvVar('MAKE_TABLE_WEBHOOK'),
+      fetchOrdersWebhookUrl: getEnvVar('MAKE_FETCH_ORDERS_WEBHOOK'),
+      completeOrderWebhookUrl: getEnvVar('MAKE_COMPLETE_ORDER_WEBHOOK'),
+      checkoutWebhookUrl: getEnvVar('MAKE_CHECKOUT_WEBHOOK')
     },
     
     // Notion API 設定 (主要資料同步方案)
     notion: {
-        apiKey: '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', // 您的 Notion API Key
+        apiKey: getEnvVar('NOTION_API_KEY'), // 從環境變數讀取
         apiVersion: '2022-06-28',
         databaseIds: {
-            menu: '23afd5adc30b80c58355fd93d05c66d6',
-            orders: '23afd5adc30b80c39e71d1a640ccfb5d', 
-            tables: '23afd5adc30b80fe86c9e086a54a0d61',
-            reservations: '23afd5adc30b802fbe36d69085c495b7',
-            staff: '23afd5adc30b80b7a8e7dec998bf5aad'
+            menu: getEnvVar('MENU_DATABASE_ID'),
+            orders: getEnvVar('ORDERS_DB_ID'), 
+            tables: getEnvVar('TABLES_DB_ID'),
+            reservations: getEnvVar('RESERVATIONS_DB_ID'),
+            staff: getEnvVar('STAFF_DB_ID')
         }
     },    // 同步設定
-    syncMethod: 'notion', // 'notion' 或 'make' 或 'both'
-    offlineQueueSize: 100,
-    syncInterval: 30000 // 30秒同步一次
+    syncMethod: getEnvVar('SYNC_METHOD', 'notion'), // 'notion' 或 'make' 或 'both'
+    offlineQueueSize: parseInt(getEnvVar('OFFLINE_QUEUE_SIZE', '100')),
+    syncInterval: parseInt(getEnvVar('SYNC_INTERVAL', '30000')) // 30秒同步一次
   },
   development: {
-    // 開發環境的設定
+    // 開發環境的設定 - 也使用環境變數
     makeWebhooks: {
-      menuWebhookUrl: 'https://hook.us2.make.com/dev-menu',
-      orderWebhookUrl: 'https://hook.us2.make.com/dev-order',
+      menuWebhookUrl: getEnvVar('MAKE_MENU_WEBHOOK'),
+      orderWebhookUrl: getEnvVar('MAKE_ORDER_WEBHOOK'),
+      tableWebhookUrl: getEnvVar('MAKE_TABLE_WEBHOOK'),
+      fetchOrdersWebhookUrl: getEnvVar('MAKE_FETCH_ORDERS_WEBHOOK'),
+      completeOrderWebhookUrl: getEnvVar('MAKE_COMPLETE_ORDER_WEBHOOK'),
+      checkoutWebhookUrl: getEnvVar('MAKE_CHECKOUT_WEBHOOK')
     },
     notion: {
-      apiKey: 'your-dev-notion-api-key',
+      apiKey: getEnvVar('NOTION_API_KEY'),
       apiVersion: '2022-06-28',
       databaseIds: {
-        menu: 'your-dev-menu-database-id',
-        orders: 'your-dev-orders-database-id',
-        // ... 其他開發資料庫 IDs
+        menu: getEnvVar('MENU_DATABASE_ID'),
+        orders: getEnvVar('ORDERS_DB_ID'),
+        tables: getEnvVar('TABLES_DB_ID'),
+        reservations: getEnvVar('RESERVATIONS_DB_ID'),
+        staff: getEnvVar('STAFF_DB_ID')
       }
     },
-    syncMethod: 'notion',
-    offlineQueueSize: 50,
-    syncInterval: 10000 // 開發環境 10秒同步一次
+    syncMethod: getEnvVar('SYNC_METHOD', 'notion'),
+    offlineQueueSize: parseInt(getEnvVar('OFFLINE_QUEUE_SIZE', '50')),
+    syncInterval: parseInt(getEnvVar('SYNC_INTERVAL', '10000')) // 開發環境預設 10秒同步一次
   }
 };
 
