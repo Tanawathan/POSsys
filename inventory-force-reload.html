@@ -7,6 +7,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- 載入 InventoryManager 類別 -->
+    <script src="/assets/js/inventory-management.js"></script>
     <!-- 加入時間戳防止快取 -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
@@ -221,100 +223,34 @@
 
     <script>
         // 全域變數
-        let inventoryData = [];
+        let inventoryManager = null;
         let isDataLoaded = false;
         const timestamp = Date.now();
         
-        // 直接內嵌載入邏輯，避免外部文件快取問題
+        // 使用 InventoryManager 類別載入資料
         async function loadNotionData() {
             const loadingIndicator = document.getElementById('loading-indicator');
             const statusDiv = document.getElementById('system-status');
             const dataSourceDiv = document.getElementById('data-source-info');
             
             try {
-                statusDiv.innerHTML = '🔄 連接 Notion API...';
-                
-                let allResults = [];
-                let hasMore = true;
-                let startCursor = null;
-                let pageCount = 0;
-                
-                // 分頁載入所有資料
-                while (hasMore) {
-                    pageCount++;
-                    statusDiv.innerHTML = `🔄 載入第 ${pageCount} 頁資料...`;
-                    
-                    const requestBody = startCursor ? 
-                        JSON.stringify({ start_cursor: startCursor }) : 
-                        JSON.stringify({});
-                    
-                    const response = await fetch("/.netlify/functions/notion-api/databases/237fd5adc30b808cbba3c03f8f2065fd/query?t=${timestamp}`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Cache-Control': 'no-cache'
-                        },
-                        body: requestBody
-                    });
-                    
-                    if (!response.ok) {
-                        let errorMessage = `HTTP ${response.status}`;
-                        try {
-                            const errorData = await response.json();
-                            errorMessage = errorData.error || errorData.message || errorMessage;
-                        } catch (e) {
-                            const errorText = await response.text();
-                            if (errorText) errorMessage = errorText;
-                        }
-                        const error = new Error(`API 調用失敗: ${errorMessage}`);
-                        error.status = response.status;
-                        throw error;
-                    }
-                    
-                    const pageData = await response.json();
-                    allResults = allResults.concat(pageData.results);
-                    hasMore = pageData.has_more;
-                    startCursor = pageData.next_cursor;
-                    
-                    statusDiv.innerHTML = `✅ 第 ${pageCount} 頁載入完成，累計 ${allResults.length} 項`;
+                // 檢查 InventoryManager 是否已載入
+                if (typeof InventoryManager === 'undefined') {
+                    throw new Error('InventoryManager 類別未載入，請檢查 JavaScript 文件');
                 }
                 
-                // 轉換資料格式
-                inventoryData = allResults.map((item, index) => {
-                    const properties = item.properties;
-                    
-                    // 從規格/單位欄位解析單位
-                    const specText = properties['規格/單位']?.rich_text?.[0]?.text?.content || '';
-                    const unitMatch = specText.match(/(克|公斤|毫升|公升|顆|斤|包|瓶|罐)/);
-                    const extractedUnit = unitMatch ? unitMatch[1] : '公克';
-                    
-                    const stock = properties['庫存量']?.number || 0;
-                    const safetyStock = properties['安全庫存量']?.number || 100;
-                    
-                    return {
-                        id: item.id,
-                        itemId: properties['品項ID']?.title?.[0]?.text?.content || `ITEM-${String(index + 1).padStart(3, '0')}`,
-                        name: properties['食材名稱']?.rich_text?.[0]?.text?.content || 
-                              properties['品項ID']?.title?.[0]?.text?.content || '未命名食材',
-                        supplier: properties['供應商']?.select?.name || '未指定供應商',
-                        specification: properties['規格/單位']?.rich_text?.[0]?.text?.content || '',
-                        unit: extractedUnit,
-                        stock: stock,
-                        safetyStock: safetyStock,
-                        unitCost: properties['單位成本']?.formula?.number || 0,
-                        purchasePrice: properties['進價']?.number || 0,
-                        category: properties['品項類別']?.select?.name || '一般食材',
-                        status: stock === 0 ? 'critical' : stock <= safetyStock ? 'low' : 'safe',
-                        lastPurchase: properties['最後進貨日']?.last_edited_time ? 
-                            new Date(properties['最後進貨日'].last_edited_time).toLocaleDateString('zh-TW') : 
-                            new Date().toLocaleDateString('zh-TW'),
-                        notes: properties['狀態']?.status?.name || '',
-                        totalPurchase: properties['總進貨量']?.rollup?.number || 0
-                    };
-                });
+                statusDiv.innerHTML = '🔄 初始化 InventoryManager...';
                 
-                statusDiv.innerHTML = `✅ 成功載入 ${inventoryData.length} 項 Notion 資料`;
-                dataSourceDiv.innerHTML = `📡 資料來源: Notion API (${inventoryData.length} 項) - ${new Date().toLocaleTimeString()}`;
+                // 創建 InventoryManager 實例，不自動初始化
+                inventoryManager = new InventoryManager(false);
+                
+                statusDiv.innerHTML = '🔄 連接 Notion API...';
+                
+                // 使用 InventoryManager 的 loadFromNotion 方法
+                await inventoryManager.loadFromNotion();
+                
+                statusDiv.innerHTML = `✅ 成功載入 ${inventoryManager.inventoryData.length} 項 Notion 資料`;
+                dataSourceDiv.innerHTML = `📡 資料來源: Notion API (${inventoryManager.inventoryData.length} 項) - ${new Date().toLocaleTimeString()}`;
                 loadingIndicator.style.display = 'none';
                 isDataLoaded = true;
                 
@@ -323,7 +259,7 @@
                 updateStatistics();
                 
                 // 顯示前3項作為確認
-                const sampleNames = inventoryData.slice(0, 3).map(item => item.name).join(', ');
+                const sampleNames = inventoryManager.inventoryData.slice(0, 3).map(item => item.name).join(', ');
                 console.log(`✅ 載入的食材範例: ${sampleNames}`);
                 
             } catch (error) {
@@ -373,7 +309,7 @@
         function renderTable() {
             const tbody = document.getElementById('inventory-table-body');
             
-            if (!isDataLoaded || inventoryData.length === 0) {
+            if (!isDataLoaded || !inventoryManager || inventoryManager.inventoryData.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="11" class="px-6 py-8 text-center text-gray-500">無資料</td></tr>';
                 return;
             }
@@ -384,7 +320,7 @@
                 'safe': { class: 'text-green-600', text: '安全庫存', dot: 'status-safe' }
             };
             
-            const displayData = inventoryData.slice(0, 20); // 顯示前20項
+            const displayData = inventoryManager.inventoryData.slice(0, 20); // 顯示前20項
             
             tbody.innerHTML = displayData.map(item => {
                 const config = statusConfig[item.status] || statusConfig.safe;
@@ -445,9 +381,9 @@
         
         // 更新統計
         function updateStatistics() {
-            if (!isDataLoaded) return;
+            if (!isDataLoaded || !inventoryManager) return;
             
-            const stats = inventoryData.reduce((acc, item) => {
+            const stats = inventoryManager.inventoryData.reduce((acc, item) => {
                 acc.total++;
                 if (item.status === 'safe') acc.safe++;
                 else if (item.status === 'low') acc.low++;
