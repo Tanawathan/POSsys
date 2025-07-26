@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0, private">
     <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">
+    <meta http-equiv="Expires" content="Thu, 01 Jan 1970 00:00:00 GMT">
     <meta http-equiv="Last-Modified" content="0">
-    <meta name="timestamp" content="1737879430000">
-    <title>結帳系統 v1.4.0 - Tanawat Restaurant</title>
+    <meta name="timestamp" content="1737879500000">
+    <meta name="cache-buster" content="v2.0.0-force-refresh">
+    <title>結帳系統 v2.0.0 - Tanawat Restaurant</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link href="../../assets/css/unified-design.css" rel="stylesheet">
     <style>
@@ -196,21 +197,32 @@
     </div>
 
     <script>
-        // === 版本資訊與快取控制 ===
-        const VERSION = '1.4.0-' + Date.now(); // 強制快取失效
-        console.log('🔧 結帳系統版本:', VERSION);
+        // === 🚨 強制快取清除 v2.0.0 🚨 ===
+        const VERSION = '2.0.0-FORCE-REFRESH-' + Date.now(); // 強制快取失效
+        console.log('� 結帳系統版本:', VERSION);
+        console.log('🔥 這是 v2.0.0 - 如果您看到此訊息，快取已成功清除！');
         
-        // 強制清除 localStorage 和 sessionStorage
+        // 強制清除所有快取
         localStorage.clear();
         sessionStorage.clear();
         
+        // 強制重新載入樣式表
+        if ('caches' in window) {
+            caches.keys().then(names => {
+                names.forEach(name => {
+                    caches.delete(name);
+                });
+            });
+        }
+        
         // 檢測快取問題
-        console.log('🔍 快取檢測:');
+        console.log('🔍 系統檢測:');
         console.log('   - UserAgent:', navigator.userAgent);
         console.log('   - 頁面 URL:', window.location.href);
         console.log('   - Referrer:', document.referrer);
+        console.log('   - 時間戳:', new Date().toISOString());
 
-        // === 配置 ===
+        // === 🌐 Netlify Functions 配置 ===
         const CONFIG = {
             netlifyFunctionBase: `${window.location.origin}/.netlify/functions`,
             notion: {
@@ -220,6 +232,20 @@
                 }
             }
         };
+        
+        // === 🔍 配置驗證 ===
+        console.log('⚙️ 系統配置驗證:');
+        console.log('   - 當前域名:', window.location.origin);
+        console.log('   - Netlify Functions Base:', CONFIG.netlifyFunctionBase);
+        console.log('   - 完整 API 端點:', `${CONFIG.netlifyFunctionBase}/notion-api`);
+        
+        // 🚨 LOCALHOST 檢測警報
+        if (CONFIG.netlifyFunctionBase.includes('localhost')) {
+            console.error('🚨🚨🚨 快取錯誤：仍在使用 localhost！');
+            alert('⚠️ 快取錯誤！\n\n系統檢測到您的瀏覽器正在使用舊版本！\n\n立即執行以下步驟：\n\n1. 按 Ctrl+Shift+R (硬重新整理)\n2. 或按 F12 開啟開發工具 → Network 標籤 → 勾選 "Disable cache"\n3. 或使用無痕模式開啟');
+        } else {
+            console.log('✅ 配置檢查通過：正在使用 Netlify Functions');
+        }
 
         // === 全局變數 ===
         let allTables = [];
