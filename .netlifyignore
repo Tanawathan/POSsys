@@ -1,53 +1,129 @@
-# Netlify 部署時忽略的檔案
-.env
+# ============================================
+# NETLIFY 最終安全排除清單
+# ============================================
+
+# 環境和配置檔案
+.env*
+*.env*
 netlify-env-vars.txt
-production-records-db-config.json
+*-records-db-config.json
 NETLIFY-DEPLOYMENT-GUIDE.md
 
-# 開發和測試檔案 - 包含敏感值
+# 所有文檔和說明檔案
 *.md
+*.MD
+*.txt
+*.TXT
+README*
+CHANGELOG*
+LICENSE*
+CONTRIBUTING*
+
+# 完整開發目錄排除
 data/
 docs/
 scripts/
-test-*.js
-test-*.html
-debug-*.js
-debug-*.html
-monitor-*.js
-check-*.js
-create-*.js
-delete-*.js
-direct-*.js
-proxy-server.js
-server.js
-start-*.bat
-start-*.ps1
-start-server.*
-
-# 包含硬編碼值的頁面
 pages/
 assets/js/
-menu-management-system.html
-pos-system.html
-diagnostic-tool.html
-inventory-*.html
-pagination-test.html
-recipe-*.html
-simple-*.html
+assets/css/
+tools/
+config/
 
-# Node modules 和 logs  
+# 所有測試和開發檔案
+test*
+debug*
+monitor*
+check*
+create*
+delete*
+direct*
+proxy*
+server*
+start*
+*.test.*
+*.spec.*
+*.debug.*
+
+# 所有 HTML 檔案（除了基本的）
+*.html
+!index.html
+!public/index.html
+
+# 所有 JavaScript 檔案（除了必需的）
+*.js
+!public/env-config.js
+!build-for-netlify.js
+
+# 所有 CSS 檔案（保留基本樣式）
+*.css
+!public/assets/css/style.css
+
+# Node.js 相關
 node_modules/
+package-lock.json
+yarn.lock
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-package-lock.json
 
-# 開發檔案
+# Git 和版本控制
 .git/
 .gitignore
+.gitattributes
+
+# 系統和編輯器檔案
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 
 # 備份和臨時檔案
 *.bak
+*.tmp
+*.temp
+*.old
+*.orig
+
+# CSV 和資料檔案
+*.csv
+*.CSV
+*.json
+!package.json
+!public/env-config.js
+
+# 圖片和媒體（保留必要的）
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.svg
+*.ico
+*.pdf
+*.zip
+*.tar.gz
+
+# Python 檔案
+*.py
+*.pyc
+__pycache__/
+
+# 其他程式語言檔案
+*.php
+*.rb
+*.go
+*.java
+*.c
+*.cpp
+*.h
+
+# 所有其他檔案類型
+*.bat
+*.ps1
+*.sh
+*.cmd
 *.tmp
 *.log
 

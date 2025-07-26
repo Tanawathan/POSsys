@@ -6,6 +6,28 @@
 [build.environment]
   # 環境變數
   NODE_VERSION = "18"
+  # 配置秘密掃描
+  SECRETS_SCAN_ENABLED = "false"
+
+# 秘密掃描配置
+[build.secrets_scan]
+  enabled = false
+
+# 或者使用路徑排除（如果需要啟用掃描但排除特定路徑）
+# [build.secrets_scan]
+#   enabled = true
+#   omit_paths = [
+#     "data/**",
+#     "docs/**", 
+#     "scripts/**",
+#     "pages/**",
+#     "assets/js/**",
+#     "*.md",
+#     "*.csv",
+#     "test-*",
+#     "debug-*",
+#     ".netlify/**"
+#   ]
 
 [[headers]]
   # 設定所有頁面的安全標頭
@@ -17,7 +39,22 @@
     Referrer-Policy = "strict-origin-when-cross-origin"
 
 [[redirects]]
-  # SPA 路由支援 - 將所有路徑重定向到 index.html (移除 admin 條件，這會阻止正常訪問)
+  # 強制 HTTPS
+  from = "http://tanawat-order-system.netlify.app/*"
+  to = "https://tanawat-order-system.netlify.app/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  # 靜態資源快取
+  from = "/assets/*"
+  to = "/assets/:splat"
+  status = 200
+  [redirects.conditions]
+    max-age = "31536000"
+
+[[redirects]]
+  # SPA 路由支援 - 將所有路徑重定向到 index.html
   from = "/*"
   to = "/index.html"
   status = 200

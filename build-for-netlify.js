@@ -3,6 +3,29 @@ const path = require('path');
 
 console.log('🔧 開始 Netlify 構建處理...');
 
+// 檢查環境變數是否存在（但不記錄值）
+const requiredEnvVars = [
+    'NOTION_API_KEY',
+    'MENU_DATABASE_ID', 
+    'ORDERS_DB_ID',
+    'TABLES_DB_ID',
+    'RESERVATIONS_DB_ID',
+    'STAFF_DB_ID'
+];
+
+let missingVars = [];
+requiredEnvVars.forEach(varName => {
+    if (!process.env[varName]) {
+        missingVars.push(varName);
+    }
+});
+
+if (missingVars.length > 0) {
+    console.log('⚠️  警告：缺少以下環境變數：', missingVars.join(', '));
+} else {
+    console.log('✅ 所有必需的環境變數已設置');
+}
+
 // 創建環境配置文件
 const envConfig = `// 自動生成的環境配置文件 - 由 Netlify 構建腳本創建
 window.ENV_CONFIG = {
@@ -21,6 +44,7 @@ window.ENV_CONFIG = {
     NODE_ENV: '${process.env.NODE_ENV || 'production'}',
     SYNC_METHOD: '${process.env.SYNC_METHOD || 'notion'}',
     SYNC_INTERVAL: '${process.env.SYNC_INTERVAL || '30000'}',
+    PORT: '${process.env.PORT || '3000'}',
     RESTAURANT_TIMEZONE: '${process.env.RESTAURANT_TIMEZONE || 'Asia/Taipei'}'
 };
 
