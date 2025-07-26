@@ -254,8 +254,18 @@
         const VERSION = 'mobile-customer-v1.0-' + Date.now();
         console.log('📱 手機點餐系統版本:', VERSION);
 
+        // 根據環境自動切換 API 路徑
+        function getApiBase() {
+            // Netlify Functions 部署時 window.location.pathname 會以 /.netlify/functions/ 開頭
+            if (window.location.hostname.endsWith('netlify.app') || window.location.origin.includes('netlify')) {
+                return '/.netlify/functions/notion-api';
+            }
+            // 其他情境（本地開發）
+            return `${window.location.origin}/api/notion`;
+        }
+
         const CONFIG = {
-            apiBase: `${window.location.origin}/.netlify/functions/notion-api`,
+            apiBase: getApiBase(),
             databases: {
                 tables: '23afd5adc30b80fe86c9e086a54a0d61',
                 menu: '23afd5adc30b80a2818ffeb6b2d22265',
@@ -274,10 +284,10 @@
         // === API 函數 ===
         async function callNotionAPI(path, method = 'GET', body = null) {
             try {
-                const response = await fetch(CONFIG.apiBase, {
-                    method: 'POST',
+                const response = await fetch(CONFIG.apiBase + path, {
+                    method: method,
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ path, method, body })
+                    body: body ? JSON.stringify(body) : undefined
                 });
 
                 if (!response.ok) {
