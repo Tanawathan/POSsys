@@ -9,6 +9,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- 環境配置 -->
+    <script src="env-config.js"></script>
+    
     <style>
         body { font-family: 'Noto Sans TC', sans-serif; }
         ::-webkit-scrollbar { width: 8px; }
@@ -31,11 +35,11 @@
                 <div class="flex items-center space-x-4">
                     <!-- 返回按鈕 -->
                     <div class="flex space-x-2">
-                        <a href="index.html" class="flex items-center px-3 py-2 text-gray-400 hover:text-blue-400 hover:bg-gray-700 rounded-lg transition-colors">
+                        <a href="../index.html" class="flex items-center px-3 py-2 text-gray-400 hover:text-blue-400 hover:bg-gray-700 rounded-lg transition-colors">
                             <i class="fas fa-home mr-2"></i>
                             主系統
                         </a>
-                        <a href="main-dashboard.html" class="flex items-center px-3 py-2 text-gray-400 hover:text-blue-400 hover:bg-gray-700 rounded-lg transition-colors">
+                        <a href="../pages/main-dashboard.html" class="flex items-center px-3 py-2 text-gray-400 hover:text-blue-400 hover:bg-gray-700 rounded-lg transition-colors">
                             <i class="fas fa-tachometer-alt mr-2"></i>
                             儀表板
                         </a>
@@ -54,11 +58,11 @@
                         <div class="w-3 h-3 bg-green-400 rounded-full mr-2 animate-pulse"></div>
                         <span class="text-green-400">系統連線正常</span>
                     </div>
-                    <button onclick="window.open('/public/management/table-management-v2.html', '_blank')" 
+                    <button onclick="window.open('management/table-management-v2.html', '_blank')" 
                             class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                         <i class="fas fa-table mr-2"></i>桌況管理
                     </button>
-                    <button onclick="window.open('/public/customer/checkout.html', '_blank')" 
+                    <button onclick="window.open('customer/checkout.html', '_blank')" 
                             class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
                         <i class="fas fa-cash-register mr-2"></i>結帳系統
                     </button>
@@ -423,7 +427,14 @@
                         allOrders = generateMockOrders();
                     }
                 } else {
-                    console.warn('⚠️ 無法載入 Notion 訂單，使用模擬資料');
+                    const errorData = await response.json();
+                    console.warn('⚠️ Notion API 錯誤:', errorData);
+                    if (errorData.code === 'unauthorized') {
+                        console.warn('🔑 API Token 無效或已過期，使用模擬資料');
+                        showNotification('warning', 'API連線失敗，目前顯示模擬資料');
+                    } else {
+                        console.warn('⚠️ 無法載入 Notion 訂單，使用模擬資料');
+                    }
                     allOrders = generateMockOrders();
                 }
                 
@@ -433,6 +444,7 @@
             } catch (error) {
                 console.error('❌ 載入訂單失敗:', error);
                 console.log('🔄 使用模擬資料作為備用方案');
+                showNotification('warning', '連線失敗，目前顯示模擬資料');
                 allOrders = generateMockOrders();
                 updateStatistics();
                 filterOrders();
@@ -496,9 +508,31 @@
                     }
                 } else {
                     console.warn('⚠️ 無法載入桌位資料');
+                    // 生成預設桌位選項
+                    const defaultTables = [];
+                    for (let i = 1; i <= 20; i++) {
+                        defaultTables.push({
+                            id: `table-${i}`,
+                            tableNumber: `A${i}`,
+                            status: '空閒中',
+                            maxCapacity: 4
+                        });
+                    }
+                    populateTableSelect(defaultTables);
                 }
             } catch (error) {
                 console.error('❌ 載入桌位失敗:', error);
+                // 生成預設桌位選項
+                const defaultTables = [];
+                for (let i = 1; i <= 20; i++) {
+                    defaultTables.push({
+                        id: `table-${i}`,
+                        tableNumber: `A${i}`,
+                        status: '空閒中',
+                        maxCapacity: 4
+                    });
+                }
+                populateTableSelect(defaultTables);
             }
         }
 
@@ -908,12 +942,28 @@
         function showNotification(type, message) {
             // 簡單的通知實現
             const notification = document.createElement('div');
-            notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${
-                type === 'success' ? 'bg-green-600' : 'bg-red-600'
-            } text-white`;
+            let bgColor, icon;
+            
+            switch(type) {
+                case 'success':
+                    bgColor = 'bg-green-600';
+                    icon = 'fa-check';
+                    break;
+                case 'warning':
+                    bgColor = 'bg-yellow-600';
+                    icon = 'fa-exclamation-triangle';
+                    break;
+                case 'error':
+                default:
+                    bgColor = 'bg-red-600';
+                    icon = 'fa-exclamation-triangle';
+                    break;
+            }
+            
+            notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${bgColor} text-white`;
             notification.innerHTML = `
                 <div class="flex items-center">
-                    <i class="fas ${type === 'success' ? 'fa-check' : 'fa-exclamation-triangle'} mr-2"></i>
+                    <i class="fas ${icon} mr-2"></i>
                     ${message}
                 </div>
             `;
@@ -922,7 +972,7 @@
             
             setTimeout(() => {
                 notification.remove();
-            }, 3000);
+            }, 5000);
         }
 
         // 格式化持續時間
