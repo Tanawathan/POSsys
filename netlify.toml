@@ -74,6 +74,12 @@
   to = "/public/customer/checkout-new.html"
   status = 200
 
+# 新的結帳系統 v3.0
+[[redirects]]
+  from = "/public/customer/checkout-system-v3.html"
+  to = "/public/customer/checkout-system-v3.html"
+  status = 200
+
 # SPA 路由支援 - 只對不是靜態文件的路徑重定向到 index.html
 [[redirects]]
   from = "/*"
