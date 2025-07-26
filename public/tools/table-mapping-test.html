@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>桌號映射測試</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>body { font-family: 'Noto Sans TC', sans-serif; }</style>
+</head>
+<body class="bg-gray-100 p-6">
+    <div class="max-w-4xl mx-auto">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h1 class="text-2xl font-bold text-gray-900 mb-6">桌號映射測試</h1>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- 左側：建立測試訂單 -->
+                <div class="space-y-4">
+                    <h2 class="text-lg font-semibold text-gray-800">建立測試訂單</h2>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">選擇桌號</label>
+                        <select id="table-select" class="w-full border rounded-md px-3 py-2">
+                            <option value="">載入中...</option>
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">訂單編號</label>
+                        <input type="text" id="order-number" class="w-full border rounded-md px-3 py-2" value="">
+                    </div>
+                    
+                    <button id="create-order-btn" class="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 transition-colors">
+                        建立測試訂單
+                    </button>
+                </div>
+                
+                <!-- 右側：結果顯示 -->
+                <div class="space-y-4">
+                    <h2 class="text-lg font-semibold text-gray-800">測試結果</h2>
+                    <div id="result-area" class="bg-gray-50 rounded-md p-4 min-h-32">
+                        <p class="text-gray-500">點擊建立訂單來測試桌號映射...</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 現有訂單顯示 -->
+            <div class="mt-8">
+                <h2 class="text-lg font-semibold text-gray-800 mb-4">現有訂單 (測試桌號解析)</h2>
+                <div id="orders-list" class="space-y-2">
+                    <p class="text-gray-500">載入中...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const CONFIG = {
+            notionApiEndpoint: 'http://localhost:3000/api/notion',
+            tablesDatabase: '23afd5adc30b80fe86c9e086a54a0d61',
+            ordersDatabase: '23afd5adc30b80c39e71d1a640ccfb5d'
+        };
+
+        let availableTables = [];
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 頁面載入完成，開始初始化...');
+            loadTables();
+            loadExistingOrders();
+            document.getElementById('create-order-btn').addEventListener('click', createTestOrder);
+        });
+
+        // 載入桌位選項
+        async function loadTables() {
+            console.log('📋 開始載入桌位...');
+            try {
+                const response = await fetch(`${CONFIG.notionApiEndpoint}/databases/${CONFIG.tablesDatabase}/query`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('📊 桌位資料:', data);
+                    availableTables = data.results || [];
+                    
+                    const select = document.getElementById('table-select');
+                    select.innerHTML = '<option value="">請選擇桌號</option>';
+                    
+                    availableTables.forEach(table => {
+                        const tableNumber = table.properties?.['桌號']?.title?.[0]?.text?.content || '未知';
+                        const option = document.createElement('option');
+                        option.value = tableNumber;
+                        option.textContent = `桌號: ${tableNumber}`;
+                        select.appendChild(option);
+                        console.log(`✅ 添加桌號選項: ${tableNumber}`);
+                    });
+                    
+                    showResult(`✅ 成功載入 ${availableTables.length} 個桌位`, 'success');
+                } else {
+                    const errorText = await response.text();
+                    console.error('❌ 載入桌位失敗:', response.status, errorText);
+                    showResult(`載入桌位失敗: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                console.error('❌ 載入桌位錯誤:', error);
+                showResult(`載入桌位錯誤: ${error.message}`, 'error');
+            }
+        }
+
+        // 載入現有訂單
+        async function loadExistingOrders() {
+            console.log('📦 開始載入現有訂單...');
+            try {
+                const response = await fetch(`${CONFIG.notionApiEndpoint}/databases/${CONFIG.ordersDatabase}/query`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sorts: [{ property: "建立時間", direction: "descending" }],
+                        page_size: 10
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('📦 訂單資料:', data);
+                    displayOrders(data.results || []);
+                } else {
+                    const errorText = await response.text();
+                    console.error('❌ 載入訂單失敗:', response.status, errorText);
+                    document.getElementById('orders-list').innerHTML = `<p class="text-red-500">載入訂單失敗: ${response.status}</p>`;
+                }
+            } catch (error) {
+                console.error('❌ 載入訂單錯誤:', error);
+                document.getElementById('orders-list').innerHTML = `<p class="text-red-500">載入訂單錯誤: ${error.message}</p>`;
+            }
+        }
+
+        // 顯示訂單列表
+        function displayOrders(orders) {
+            const container = document.getElementById('orders-list');
+            
+            if (orders.length === 0) {
+                container.innerHTML = '<p class="text-gray-500">目前沒有訂單</p>';
+                return;
+            }
+
+            const ordersHtml = orders.map(order => {
+                const orderId = order.properties?.['訂單編號']?.title?.[0]?.text?.content || order.id.slice(0, 8);
+                const tableNumber = order.properties?.['桌號']?.number || null;
+                const tableText = order.properties?.['桌號']?.rich_text?.[0]?.text?.content || null;
+                const status = order.properties?.['狀態']?.select?.name || '未知';
+                const createdTime = order.properties?.['建立時間']?.created_time || order.created_time;
+                
+                return `
+                    <div class="border rounded-md p-3 bg-white">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="font-semibold">訂單: ${orderId}</p>
+                                <p class="text-sm text-gray-600">
+                                    桌號: ${tableNumber !== null ? `(數字) ${tableNumber}` : ''}
+                                    ${tableText ? `(文字) ${tableText}` : ''}
+                                    ${!tableNumber && !tableText ? '無桌號資料' : ''}
+                                </p>
+                                <p class="text-xs text-gray-500">${new Date(createdTime).toLocaleString('zh-TW')}</p>
+                            </div>
+                            <span class="px-2 py-1 text-xs rounded ${
+                                status === '進行中' ? 'bg-yellow-100 text-yellow-800' :
+                                status === '已完成' ? 'bg-green-100 text-green-800' :
+                                'bg-gray-100 text-gray-800'
+                            }">${status}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = ordersHtml;
+        }
+
+        // 建立測試訂單
+        async function createTestOrder() {
+            const selectedTable = document.getElementById('table-select').value;
+            const orderNumber = document.getElementById('order-number').value || `TEST-${Date.now().toString().slice(-6)}`;
+
+            if (!selectedTable) {
+                showResult('請選擇桌號', 'error');
+                return;
+            }
+
+            showResult('正在建立測試訂單...', 'info');
+            console.log('🚀 開始建立測試訂單:', { selectedTable, orderNumber });
+
+            try {
+                // 直接使用 API 建立訂單
+                const orderData = {
+                    parent: { database_id: CONFIG.ordersDatabase },
+                    properties: {
+                        "訂單編號": { title: [{ text: { content: orderNumber } }] },
+                        "桌號": { rich_text: [{ text: { content: selectedTable } }] },
+                        "狀態": { select: { name: '進行中' } },
+                        "總金額": { number: 100 },
+                        "訂單內容(JSON)": { rich_text: [{ text: { content: JSON.stringify([{ name: '測試商品', quantity: 1, price: 100 }]) } }] },
+                        "建立時間": { date: { start: new Date().toISOString() } }
+                    }
+                };
+
+                console.log('📤 發送訂單資料:', orderData);
+
+                const response = await fetch(`${CONFIG.notionApiEndpoint}/pages`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(orderData)
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log('✅ 訂單建立成功:', result);
+                    showResult(`✅ 測試訂單建立成功！<br>訂單編號: ${orderNumber}<br>桌號: ${selectedTable}`, 'success');
+                    
+                    // 重新載入訂單列表
+                    setTimeout(loadExistingOrders, 1000);
+                } else {
+                    const error = await response.json();
+                    console.error('❌ 建立訂單失敗:', error);
+                    showResult(`❌ 建立失敗: ${error.message}`, 'error');
+                }
+            } catch (error) {
+                console.error('❌ 建立訂單錯誤:', error);
+                showResult(`❌ 建立失敗: ${error.message}`, 'error');
+            }
+        }
+
+        // 顯示結果
+        function showResult(message, type) {
+            const resultArea = document.getElementById('result-area');
+            const className = type === 'success' ? 'text-green-800 bg-green-50' :
+                             type === 'error' ? 'text-red-800 bg-red-50' :
+                             'text-blue-800 bg-blue-50';
+            
+            resultArea.innerHTML = `<div class="p-3 rounded ${className}">${message}</div>`;
+        }
+
+        // 生成隨機訂單編號
+        document.getElementById('table-select').addEventListener('change', function() {
+            if (this.value) {
+                const orderNumber = `${this.value}-${Date.now().toString().slice(-6)}`;
+                document.getElementById('order-number').value = orderNumber;
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notion 食材庫映射測試</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-6xl mx-auto">
+        <h1 class="text-3xl font-bold text-gray-900 mb-6">🧪 Notion 食材庫欄位映射測試</h1>
+        
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">🔗 API 連接狀態</h2>
+            <div id="connection-status" class="text-gray-600">正在測試連接...</div>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">📋 原始 Notion 資料結構</h2>
+            <pre id="raw-data" class="bg-gray-50 p-4 rounded text-sm overflow-auto max-h-64"></pre>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">🔄 映射後的資料結構</h2>
+            <pre id="mapped-data" class="bg-gray-50 p-4 rounded text-sm overflow-auto max-h-64"></pre>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-xl font-semibold mb-4">📊 食材庫存清單 (前10項)</h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">食材名稱</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">供應商</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">規格/單位</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">庫存量</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">安全庫存</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">單位成本</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">狀態</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inventory-table" class="bg-white divide-y divide-gray-200">
+                        <!-- 資料將在這裡動態載入 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="mt-6 text-center">
+            <button onclick="refreshData()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">
+                🔄 重新載入資料
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // 測試映射功能
+        async function testNotionMapping() {
+            try {
+                document.getElementById('connection-status').innerHTML = 
+                    '<span class="text-yellow-600">⏳ 正在載入 Notion 資料...</span>';
+                
+                // 獲取原始 Notion 資料
+                const response = await fetch('/api/notion/databases/237fd5adc30b808cbba3c03f8f2065fd/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const rawData = await response.json();
+                
+                // 顯示連接狀態
+                document.getElementById('connection-status').innerHTML = 
+                    '<span class="text-green-600">✅ Notion API 連接成功</span>';
+                
+                // 顯示原始資料結構（第一個項目）
+                document.getElementById('raw-data').textContent = 
+                    JSON.stringify(rawData.results[0].properties, null, 2);
+                
+                // 映射資料
+                const mappedData = rawData.results.slice(0, 10).map((item, index) => {
+                    const properties = item.properties;
+                    
+                    // 從規格/單位欄位解析單位
+                    const specText = properties['規格/單位']?.rich_text?.[0]?.text?.content || '';
+                    const unitMatch = specText.match(/(克|公斤|毫升|公升|顆|斤|包|瓶|罐)/);
+                    const extractedUnit = unitMatch ? unitMatch[1] : '公克';
+                    
+                    return {
+                        id: item.id,
+                        itemId: properties['品項ID']?.title?.[0]?.text?.content || `ITEM-${String(index + 1).padStart(3, '0')}`,
+                        name: properties['食材名稱']?.rich_text?.[0]?.text?.content || 
+                              properties['品項ID']?.title?.[0]?.text?.content || '未命名食材',
+                        supplier: properties['供應商']?.select?.name || '未指定供應商',
+                        specification: properties['規格/單位']?.rich_text?.[0]?.text?.content || '',
+                        unit: extractedUnit,
+                        stock: properties['庫存量']?.number || 0,
+                        safetyStock: properties['安全庫存量']?.number || 100,
+                        unitCost: properties['單位成本']?.formula?.number || 0,
+                        purchasePrice: properties['進價']?.number || 0,
+                        category: properties['品項類別']?.select?.name || '一般食材',
+                        status: getStockStatus(
+                            properties['庫存量']?.number || 0, 
+                            properties['安全庫存量']?.number || 100
+                        ),
+                        lastPurchase: properties['最後進貨日']?.last_edited_time ? 
+                            new Date(properties['最後進貨日'].last_edited_time).toLocaleDateString('zh-TW') : 
+                            new Date().toLocaleDateString('zh-TW'),
+                        notes: properties['狀態']?.status?.name || '',
+                        totalPurchase: properties['總進貨量']?.rollup?.number || 0
+                    };
+                });
+                
+                // 顯示映射後的資料結構
+                document.getElementById('mapped-data').textContent = 
+                    JSON.stringify(mappedData[0], null, 2);
+                
+                // 渲染表格
+                renderTable(mappedData);
+                
+            } catch (error) {
+                console.error('❌ 載入失敗:', error);
+                document.getElementById('connection-status').innerHTML = 
+                    `<span class="text-red-600">❌ 載入失敗: ${error.message}</span>`;
+            }
+        }
+        
+        // 判斷庫存狀態
+        function getStockStatus(stock, safetyStock) {
+            if (stock === 0) return 'critical';
+            if (stock <= safetyStock) return 'low';
+            return 'safe';
+        }
+        
+        // 格式化重量顯示
+        function formatWeight(grams) {
+            if (!grams || grams === 0) return '0';
+            if (grams >= 1000) {
+                const kg = grams / 1000;
+                return kg % 1 === 0 ? `${kg}` : `${kg.toFixed(1)}`;
+            }
+            return grams.toLocaleString();
+        }
+        
+        // 獲取重量單位
+        function getWeightUnit(grams) {
+            if (!grams || grams === 0) return '公克';
+            return grams >= 1000 ? '公斤' : '公克';
+        }
+        
+        // 渲染表格
+        function renderTable(data) {
+            const tbody = document.getElementById('inventory-table');
+            tbody.innerHTML = '';
+            
+            data.forEach(item => {
+                const statusConfig = {
+                    'critical': { class: 'text-red-600', text: '缺貨' },
+                    'low': { class: 'text-yellow-600', text: '庫存不足' },
+                    'safe': { class: 'text-green-600', text: '庫存充足' }
+                };
+                
+                const config = statusConfig[item.status] || statusConfig.safe;
+                
+                // 為公克單位使用特殊格式化
+                const displayStock = item.unit === '克' || item.unit === '公克' ? 
+                    formatWeight(item.stock) : item.stock.toLocaleString();
+                const displaySafetyStock = item.unit === '克' || item.unit === '公克' ? 
+                    formatWeight(item.safetyStock) : item.safetyStock.toLocaleString();
+                const stockUnit = item.unit === '克' || item.unit === '公克' ? 
+                    getWeightUnit(item.stock) : item.unit;
+                
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50';
+                row.innerHTML = `
+                    <td class="px-4 py-3 font-medium text-gray-900">${item.name}</td>
+                    <td class="px-4 py-3">
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            ${item.supplier}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-500">${item.specification}</td>
+                    <td class="px-4 py-3">
+                        <span class="font-semibold ${config.class}">
+                            ${displayStock} ${stockUnit}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-sm text-gray-500">${displaySafetyStock} ${stockUnit}</td>
+                    <td class="px-4 py-3 text-sm text-gray-900">NT$ ${item.unitCost.toFixed(2)}</td>
+                    <td class="px-4 py-3">
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${config.class.replace('text-', 'bg-').replace('-600', '-100')} ${config.class}">
+                            ${config.text}
+                        </span>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+        
+        // 重新載入資料
+        function refreshData() {
+            testNotionMapping();
+        }
+        
+        // 頁面載入時執行測試
+        document.addEventListener('DOMContentLoaded', testNotionMapping);
+    </script>
+</body>
+</html>

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>簡易訂單測試</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white p-8">
+    <div class="max-w-2xl mx-auto">
+        <h1 class="text-2xl font-bold mb-6">🧪 簡易訂單建立測試</h1>
+        
+        <div class="bg-gray-800 rounded-lg p-6 mb-6">
+            <button onclick="createSimpleOrder()" 
+                    class="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                🚀 建立測試訂單
+            </button>
+        </div>
+        
+        <div id="result" class="bg-gray-800 rounded-lg p-6 hidden">
+            <h3 class="font-semibold mb-2">結果:</h3>
+            <pre id="resultData" class="text-sm bg-black p-3 rounded overflow-auto"></pre>
+        </div>
+        
+        <div id="log" class="bg-black rounded-lg p-4 mt-6 h-64 overflow-y-auto font-mono text-sm">
+            <div class="text-green-400">🚀 準備進行測試...</div>
+        </div>
+    </div>
+
+    <script>
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const colors = {
+                info: 'text-white',
+                success: 'text-green-400',
+                error: 'text-red-400',
+                warning: 'text-yellow-400'
+            };
+            
+            const logEntry = document.createElement('div');
+            logEntry.className = colors[type] || 'text-white';
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            
+            logDiv.appendChild(logEntry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        async function createSimpleOrder() {
+            log('🧪 開始建立簡易測試訂單');
+            
+            const orderData = {
+                parent: { database_id: '23afd5adc30b80c39e71d1a640ccfb5d' },
+                properties: {
+                    訂單編號: { 
+                        title: [{ text: { content: `TEST-${Date.now().toString().slice(-8)}` } }] 
+                    },
+                    桌號: { 
+                        rich_text: [{ text: { content: 'F1' } }] 
+                    },
+                    狀態: { 
+                        select: { name: '進行中' } 
+                    },
+                    總金額: { 
+                        number: 350 
+                    },
+                    訂單項目: { 
+                        rich_text: [{ text: { content: '測試餐點 x1 - NT$350' } }] 
+                    },
+                    建立時間: { 
+                        date: { start: new Date().toISOString() } 
+                    },
+                    用餐人數: { 
+                        number: 1 
+                    },
+                    備註: { 
+                        rich_text: [{ text: { content: '系統測試訂單' } }] 
+                    },
+                    付款狀態: { 
+                        select: { name: '未付款' } 
+                    },
+                    服務生: { 
+                        rich_text: [{ text: { content: '測試系統' } }] 
+                    }
+                }
+            };
+            
+            log('📤 發送資料到 Notion API...');
+            console.log('發送的資料:', JSON.stringify(orderData, null, 2));
+            
+            try {
+                const response = await fetch('/api/notion/pages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(orderData)
+                });
+                
+                const result = await response.text();
+                
+                document.getElementById('result').classList.remove('hidden');
+                
+                if (response.ok) {
+                    log('✅ 訂單建立成功！', 'success');
+                    const jsonResult = JSON.parse(result);
+                    document.getElementById('resultData').textContent = JSON.stringify(jsonResult, null, 2);
+                    document.getElementById('resultData').className = 'text-sm bg-black p-3 rounded overflow-auto text-green-400';
+                } else {
+                    log(`❌ 訂單建立失敗: ${response.status}`, 'error');
+                    document.getElementById('resultData').textContent = result;
+                    document.getElementById('resultData').className = 'text-sm bg-black p-3 rounded overflow-auto text-red-400';
+                }
+                
+            } catch (error) {
+                log(`❌ 請求異常: ${error.message}`, 'error');
+                document.getElementById('result').classList.remove('hidden');
+                document.getElementById('resultData').textContent = error.message;
+                document.getElementById('resultData').className = 'text-sm bg-black p-3 rounded overflow-auto text-red-400';
+            }
+        }
+    </script>
+</body>
+</html>

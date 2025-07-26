@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>食譜管理系統 - TANAWAT POS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .recipe-card {
+            transition: all 0.3s ease;
+        }
+        .recipe-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+        .ingredient-tag {
+            background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto px-4 py-6">
+        <!-- 載入指示器 -->
+        <div id="loading-indicator" class="fixed top-4 right-4 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 hidden">
+            <i class="fas fa-spinner fa-spin mr-2"></i>
+            <span id="loading-text">正在載入食譜資料...</span>
+        </div>
+
+        <!-- 頁面標題 -->
+        <div class="mb-6">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">
+                <i class="fas fa-utensils text-blue-600 mr-3"></i>
+                食譜管理系統
+            </h1>
+            <p class="text-gray-600">管理餐廳食譜、計算食材用量、控制製作成本</p>
+            <div id="data-status" class="mt-2 text-sm text-gray-500">
+                🔄 正在連接食譜資料庫...
+            </div>
+        </div>
+
+        <!-- 統計儀表板 -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+            <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500 uppercase">總食譜數</p>
+                        <p class="text-2xl font-bold text-gray-900" id="total-recipes">載入中...</p>
+                    </div>
+                    <div class="bg-blue-100 p-3 rounded-full">
+                        <i class="fas fa-book text-blue-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500 uppercase">可製作食譜</p>
+                        <p class="text-2xl font-bold text-green-600" id="producible-recipes">載入中...</p>
+                    </div>
+                    <div class="bg-green-100 p-3 rounded-full">
+                        <i class="fas fa-check-circle text-green-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-yellow-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500 uppercase">缺料食譜</p>
+                        <p class="text-2xl font-bold text-yellow-600" id="shortage-recipes">載入中...</p>
+                    </div>
+                    <div class="bg-yellow-100 p-3 rounded-full">
+                        <i class="fas fa-exclamation-triangle text-yellow-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-red-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500 uppercase">平均成本</p>
+                        <p class="text-2xl font-bold text-red-600" id="avg-cost">載入中...</p>
+                    </div>
+                    <div class="bg-red-100 p-3 rounded-full">
+                        <i class="fas fa-dollar-sign text-red-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 控制面板 -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <div class="flex flex-wrap gap-4 items-center justify-between">
+                <div class="flex flex-wrap gap-4 items-center">
+                    <div class="relative">
+                        <input type="text" id="recipe-search" placeholder="搜尋食譜名稱..." 
+                               class="pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 w-64">
+                        <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                    </div>
+                    
+                    <select id="category-filter" class="border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500">
+                        <option value="">所有分類</option>
+                        <option value="前菜">前菜</option>
+                        <option value="主菜">主菜</option>
+                        <option value="湯品">湯品</option>
+                        <option value="甜點">甜點</option>
+                        <option value="飲品">飲品</option>
+                        <option value="醬料">醬料</option>
+                        <option value="其他">其他</option>
+                    </select>
+                    
+                    <select id="stock-filter" class="border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500">
+                        <option value="">庫存狀況</option>
+                        <option value="sufficient">庫存充足</option>
+                        <option value="low">庫存偏低</option>
+                        <option value="shortage">缺料</option>
+                    </select>
+                </div>
+                
+                <div class="flex gap-3">
+                    <button id="check-ingredients-btn" class="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors">
+                        <i class="fas fa-exclamation-circle mr-2"></i>檢查缺料
+                    </button>
+                    <button id="refresh-data-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-sync-alt mr-2"></i>重新載入
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 食譜卡片列表 -->
+        <div id="recipes-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- 載入狀態 -->
+            <div id="loading-placeholder" class="col-span-full">
+                <div class="bg-white rounded-xl shadow-lg p-8 text-center">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <p class="text-gray-600">正在載入食譜資料...</p>
+                    <div id="progress-info" class="mt-2 text-sm text-gray-500"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 分頁控制 -->
+        <div class="bg-white rounded-xl shadow-lg p-4 mt-6">
+            <div class="flex justify-between items-center">
+                <div class="text-sm text-gray-500">
+                    顯示 <span id="showing-start">0</span> 到 <span id="showing-end">0</span> 項，共 <span id="total-count">0</span> 項
+                </div>
+                <div class="flex space-x-2">
+                    <button id="prev-page" class="px-4 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50" disabled>
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <span id="page-info" class="px-4 py-2">第 1 頁，共 1 頁</span>
+                    <button id="next-page" class="px-4 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50" disabled>
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 缺料檢查 Modal -->
+    <div id="shortage-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-screen overflow-y-auto">
+                <div class="p-6 border-b border-gray-200">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-lg font-semibold text-gray-800">
+                            <i class="fas fa-exclamation-circle text-orange-500 mr-2"></i>
+                            食譜缺料檢查報告
+                        </h3>
+                        <button id="close-shortage-modal" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="p-6">
+                    <div id="shortage-content">
+                        <!-- 載入狀態 -->
+                        <div id="shortage-loading" class="text-center py-8">
+                            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto mb-4"></div>
+                            <p class="text-gray-600">正在檢查食材庫存...</p>
+                            <div id="shortage-progress-info" class="mt-2 text-sm text-gray-500"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 內嵌 RecipeNotionManager -->
+    <script>
+        class RecipeNotionManager {
+            constructor() {
+                this.baseUrl = '/api/notion/databases';
+                this.recipesDbId = '237fd5adc30b80c09b59c03cd67c6432';
+                this.ingredientsDbId = '237fd5adc30b80f7aedfe94804d80218';
+                this.inventoryDbId = '237fd5adc30b808cbba3c03f8f2065fd'; // 食材庫存資料庫
+                this.recipesData = [];
+                this.ingredientsData = [];
+                this.inventoryData = [];
+                this.isDataLoaded = false;
+            }
+
+            async loadDatabaseData(databaseId, databaseName = '') {
+                console.log(`🔄 開始載入 ${databaseName} 資料庫...`);
+                
+                let allResults = [];
+                let hasMore = true;
+                let startCursor = null;
+                let pageCount = 0;
+                
+                try {
+                    while (hasMore) {
+                        pageCount++;
+                        console.log(`📄 載入 ${databaseName} 第 ${pageCount} 頁...`);
+                        
+                        const requestBody = {
+                            page_size: 100
+                        };
+                        
+                        if (startCursor) {
+                            requestBody.start_cursor = startCursor;
+                        }
+                        
+                        const response = await fetch(`${this.baseUrl}/${databaseId}/query?t=${Date.now()}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Cache-Control': 'no-cache'
+                            },
+                            body: JSON.stringify(requestBody)
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        
+                        const pageData = await response.json();
+                        allResults = allResults.concat(pageData.results);
+                        hasMore = pageData.has_more;
+                        startCursor = pageData.next_cursor;
+                        
+                        // 更新進度
+                        let progressElement = document.getElementById('progress-info');
+                        if (!progressElement) {
+                            progressElement = document.getElementById('shortage-progress-info');
+                        }
+                        
+                        if (progressElement) {
+                            progressElement.textContent = `${databaseName}: ${allResults.length} 項`;
+                        } else {
+                            console.log(`📊 ${databaseName}: ${allResults.length} 項`);
+                        }
+                    }
+                    
+                    console.log(`🎉 ${databaseName} 資料載入完成，總計 ${allResults.length} 項`);
+                    return allResults;
+                    
+                } catch (error) {
+                    console.error(`❌ 載入 ${databaseName} 失敗:`, error);
+                    throw error;
+                }
+            }
+
+            async loadRecipes() {
+                const rawData = await this.loadDatabaseData(this.recipesDbId, '食譜資料');
+                
+                this.recipesData = rawData.map((item, index) => {
+                    const properties = item.properties;
+                    
+                    return {
+                        id: item.id,
+                        name: properties['名稱']?.title?.[0]?.plain_text || `食譜-${index + 1}`,
+                        weight: properties['重量']?.rollup?.number || 0,
+                        totalCost: properties['總物料成本']?.rollup?.number || 0,
+                        unitCost: properties['元/100g']?.formula?.number || 0,
+                        currentStock: properties['實際庫存量']?.number || 0,
+                        maxProduction: properties['總可製作份數']?.rollup?.number || 0,
+                        category: this.extractCategoryFromName(properties['名稱']?.title?.[0]?.plain_text || ''),
+                        status: this.calculateRecipeStatus(
+                            properties['總可製作份數']?.rollup?.number || 0,
+                            properties['實際庫存量']?.number || 0
+                        ),
+                        lastUpdated: item.last_edited_time
+                    };
+                });
+                
+                console.log(`✅ 食譜資料處理完成: ${this.recipesData.length} 項食譜`);
+                return this.recipesData;
+            }
+
+            async loadIngredients() {
+                const rawData = await this.loadDatabaseData(this.ingredientsDbId, '食材組成');
+                
+                this.ingredientsData = rawData.map((item, index) => {
+                    const properties = item.properties;
+                    
+                    return {
+                        id: item.id,
+                        name: properties['項目名稱']?.title?.[0]?.plain_text || `食材-${index + 1}`,
+                        recipeRelation: properties['食譜/菜單資料庫']?.relation || [],
+                        usageAmount: properties['使用數量(克)']?.number || 0,
+                        itemCost: properties['項目成本']?.formula?.number || 0,
+                        ingredientStock: properties['食材庫存量']?.rollup?.number || 0,
+                        lastUpdated: item.last_edited_time
+                    };
+                });
+                
+                console.log(`✅ 食材組成處理完成: ${this.ingredientsData.length} 項`);
+                return this.ingredientsData;
+            }
+
+            async loadInventory() {
+                const rawData = await this.loadDatabaseData(this.inventoryDbId, '食材庫存');
+                
+                this.inventoryData = rawData.map((item, index) => {
+                    const properties = item.properties;
+                    
+                    return {
+                        id: item.id,
+                        name: properties['品項ID']?.title?.[0]?.plain_text || 
+                              properties['食材名稱']?.rich_text?.[0]?.plain_text ||
+                              `食材-${index + 1}`,
+                        currentStock: properties['庫存量']?.number || 0,
+                        minStock: properties['安全庫存量']?.number || 0,
+                        unit: this.extractUnit(properties['規格/單位']?.rich_text?.[0]?.plain_text || ''),
+                        category: properties['品項類別']?.select?.name || '其他',
+                        cost: properties['進價']?.number || 
+                              properties['單位成本']?.formula?.number || 0,
+                        supplier: properties['供應商']?.select?.name || '',
+                        totalPurchase: properties['總進貨量']?.rollup?.number || 0,
+                        lastUpdated: item.last_edited_time
+                    };
+                });
+                
+                console.log(`✅ 食材庫存處理完成: ${this.inventoryData.length} 項`);
+                return this.inventoryData;
+            }
+
+            extractUnit(specText) {
+                if (!specText) return 'g';
+                
+                // 從規格文字中提取單位，例如 "50 克" -> "克"
+                const unitMatch = specText.match(/(克|公克|g|斤|公斤|kg|毫升|ml|公升|l|個|包|罐|瓶)/i);
+                return unitMatch ? unitMatch[1] : 'g';
+            }
+
+            extractCategoryFromName(name) {
+                if (!name) return '其他';
+                
+                if (name.includes('湯')) return '湯品';
+                if (name.includes('沙拉') || name.includes('前菜')) return '前菜';
+                if (name.includes('飯') || name.includes('麵') || name.includes('粉') || name.includes('排') || name.includes('雞') || name.includes('魚') || name.includes('肉')) return '主菜';
+                if (name.includes('甜點') || name.includes('蛋糕') || name.includes('布丁')) return '甜點';
+                if (name.includes('茶') || name.includes('咖啡') || name.includes('果汁') || name.includes('飲')) return '飲品';
+                if (name.includes('醬')) return '醬料';
+                
+                return '其他';
+            }
+
+            calculateRecipeStatus(maxProduction, currentStock) {
+                if (maxProduction === 0) return 'unavailable';
+                if (currentStock === 0) return 'out-of-stock';
+                if (maxProduction < 5) return 'low-stock';
+                return 'available';
+            }
+
+            async loadAllData() {
+                try {
+                    console.log('🚀 開始載入食譜管理系統資料...');
+                    
+                    const [recipes, ingredients] = await Promise.all([
+                        this.loadRecipes(),
+                        this.loadIngredients()
+                    ]);
+                    
+                    // 建立關聯
+                    this.linkRecipesWithIngredients();
+                    
+                    // 載入食材庫存並評估狀況
+                    await this.loadInventory();
+                    this.evaluateRecipeStockStatus();
+                    
+                    this.isDataLoaded = true;
+                    
+                    const producibleCount = recipes.filter(r => r.stockStatus === 'sufficient').length;
+                    const shortageCount = recipes.filter(r => r.stockStatus === 'shortage').length;
+                    const lowStockCount = recipes.filter(r => r.stockStatus === 'low').length;
+                    const avgCost = recipes.length > 0 ? 
+                        (recipes.reduce((sum, r) => sum + (r.unitCost || 0), 0) / recipes.length).toFixed(2) : '0.00';
+                    
+                    return {
+                        recipes: this.recipesData,
+                        ingredients: this.ingredientsData,
+                        inventory: this.inventoryData,
+                        summary: {
+                            totalRecipes: recipes.length,
+                            totalIngredients: ingredients.length,
+                            totalInventory: this.inventoryData.length,
+                            producibleRecipes: producibleCount,
+                            shortageRecipes: shortageCount,
+                            lowStockRecipes: lowStockCount,
+                            averageCost: avgCost
+                        }
+                    };
+                    
+                } catch (error) {
+                    console.error('❌ 食譜資料載入失敗:', error);
+                    throw error;
+                }
+            }
+
+            evaluateRecipeStockStatus() {
+                this.recipesData.forEach(recipe => {
+                    if (!recipe.ingredients || recipe.ingredients.length === 0) {
+                        recipe.stockStatus = 'unknown';
+                        recipe.stockDetails = { sufficient: 0, low: 0, shortage: 0, notFound: 0 };
+                        return;
+                    }
+
+                    const stockDetails = { sufficient: 0, low: 0, shortage: 0, notFound: 0 };
+                    let hasShortage = false;
+                    let hasLowStock = false;
+
+                    recipe.ingredients.forEach(ingredient => {
+                        const inventoryMatch = this.findMatchingInventoryItem(ingredient.name);
+                        
+                        if (!inventoryMatch) {
+                            stockDetails.notFound++;
+                            hasShortage = true;
+                        } else {
+                            if (inventoryMatch.currentStock < ingredient.usageAmount) {
+                                stockDetails.shortage++;
+                                hasShortage = true;
+                            } else if (inventoryMatch.minStock > 0 && 
+                                     inventoryMatch.currentStock <= inventoryMatch.minStock * 1.5) {
+                                stockDetails.low++;
+                                hasLowStock = true;
+                            } else {
+                                stockDetails.sufficient++;
+                            }
+                        }
+                    });
+
+                    recipe.stockDetails = stockDetails;
+                    
+                    if (hasShortage) {
+                        recipe.stockStatus = 'shortage';
+                    } else if (hasLowStock) {
+                        recipe.stockStatus = 'low';
+                    } else {
+                        recipe.stockStatus = 'sufficient';
+                    }
+                });
+            }
+
+            linkRecipesWithIngredients() {
+                this.recipesData.forEach(recipe => {
+                    recipe.ingredients = this.ingredientsData.filter(ingredient => 
+                        ingredient.recipeRelation.some(relation => relation.id === recipe.id)
+                    );
+                });
+            }
+
+            async checkIngredientShortages() {
+                try {
+                    // 確保食材庫存數據已載入
+                    if (this.inventoryData.length === 0) {
+                        await this.loadInventory();
+                    }
+
+                    const shortageReport = {
+                        criticalShortages: [], // 嚴重缺料 (低於最低庫存)
+                        lowStock: [], // 庫存偏低 (接近最低庫存)
+                        affectedRecipes: [], // 受影響的食譜
+                        totalAffected: 0
+                    };
+
+                    // 分析每個食材的庫存狀況
+                    this.inventoryData.forEach(inventoryItem => {
+                        const stockRatio = inventoryItem.currentStock / Math.max(inventoryItem.minStock, 1);
+                        
+                        if (inventoryItem.currentStock <= inventoryItem.minStock) {
+                            shortageReport.criticalShortages.push({
+                                ...inventoryItem,
+                                shortage: inventoryItem.minStock - inventoryItem.currentStock,
+                                stockRatio: stockRatio
+                            });
+                        } else if (stockRatio <= 1.5) { // 庫存量少於最低庫存的1.5倍
+                            shortageReport.lowStock.push({
+                                ...inventoryItem,
+                                stockRatio: stockRatio
+                            });
+                        }
+                    });
+
+                    // 分析受影響的食譜
+                    this.recipesData.forEach(recipe => {
+                        const missingIngredients = [];
+                        let canMake = true;
+
+                        recipe.ingredients?.forEach(recipeIngredient => {
+                            // 更精確的食材匹配邏輯
+                            const inventoryMatch = this.findMatchingInventoryItem(recipeIngredient.name);
+
+                            if (inventoryMatch) {
+                                if (inventoryMatch.currentStock < recipeIngredient.usageAmount) {
+                                    missingIngredients.push({
+                                        name: recipeIngredient.name,
+                                        inventoryName: inventoryMatch.name,
+                                        needed: recipeIngredient.usageAmount,
+                                        available: inventoryMatch.currentStock,
+                                        shortage: recipeIngredient.usageAmount - inventoryMatch.currentStock,
+                                        unit: inventoryMatch.unit
+                                    });
+                                    canMake = false;
+                                }
+                            } else {
+                                missingIngredients.push({
+                                    name: recipeIngredient.name,
+                                    needed: recipeIngredient.usageAmount,
+                                    available: 0,
+                                    shortage: recipeIngredient.usageAmount,
+                                    notFound: true,
+                                    unit: 'g'
+                                });
+                                canMake = false;
+                            }
+                        });
+
+                        if (!canMake) {
+                            shortageReport.affectedRecipes.push({
+                                ...recipe,
+                                missingIngredients: missingIngredients
+                            });
+                        }
+                    });
+
+                    shortageReport.totalAffected = shortageReport.affectedRecipes.length;
+
+                    console.log('🔍 缺料檢查完成:', shortageReport);
+                    return shortageReport;
+
+                } catch (error) {
+                    console.error('❌ 缺料檢查失敗:', error);
+                    throw error;
+                }
+            }
+
+            findMatchingInventoryItem(ingredientName) {
+                if (!ingredientName) return null;
+                
+                const cleanIngredientName = ingredientName.toLowerCase().trim();
+                
+                // 精確匹配
+                let match = this.inventoryData.find(inv => 
+                    inv.name.toLowerCase().trim() === cleanIngredientName
+                );
+                
+                if (match) return match;
+                
+                // 包含匹配
+                match = this.inventoryData.find(inv => 
+                    inv.name.toLowerCase().includes(cleanIngredientName) ||
+                    cleanIngredientName.includes(inv.name.toLowerCase())
+                );
+                
+                if (match) return match;
+                
+                // 關鍵字匹配 - 移除常見的修飾詞
+                const keywords = cleanIngredientName
+                    .replace(/[的、]/g, '')
+                    .replace(/\s+/g, '')
+                    .split('')
+                    .filter(char => char.length > 0);
+                
+                if (keywords.length >= 2) {
+                    match = this.inventoryData.find(inv => {
+                        const invName = inv.name.toLowerCase();
+                        return keywords.some(keyword => invName.includes(keyword));
+                    });
+                }
+                
+                return match;
+            }
+
+            searchRecipes(query, category, stockFilter) {
+                let filtered = this.recipesData;
+                
+                if (query) {
+                    filtered = filtered.filter(recipe => 
+                        recipe.name.toLowerCase().includes(query.toLowerCase())
+                    );
+                }
+                
+                if (category) {
+                    filtered = filtered.filter(recipe => recipe.category === category);
+                }
+                
+                if (stockFilter) {
+                    filtered = filtered.filter(recipe => recipe.stockStatus === stockFilter);
+                }
+                
+                return filtered;
+            }
+        }
+
+        // 主程式
+        let recipeManager;
+        let currentRecipes = [];
+        let filteredRecipes = [];
+        let currentPage = 1;
+        const recipesPerPage = 12;
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('🚀 初始化食譜管理系統...');
+            
+            try {
+                recipeManager = new RecipeNotionManager();
+                await loadRecipeData();
+                setupEventListeners();
+                
+            } catch (error) {
+                console.error('❌ 初始化失敗:', error);
+                showError(`初始化失敗: ${error.message}`);
+            }
+        });
+
+        async function loadRecipeData() {
+            try {
+                showLoading(true, '正在載入食譜資料...');
+                updateDataStatus('🔄 正在連接食譜資料庫...');
+                
+                const data = await recipeManager.loadAllData();
+                
+                currentRecipes = data.recipes;
+                filteredRecipes = [...currentRecipes];
+                
+                updateStatistics(data.summary);
+                updateDataStatus(`✅ 已載入 ${data.summary.totalRecipes} 道食譜，${data.summary.totalIngredients} 種食材`);
+                
+                renderRecipeCards();
+                showLoading(false);
+                
+                console.log('✅ 食譜資料載入完成:', data.summary);
+                
+            } catch (error) {
+                console.error('❌ 載入食譜資料失敗:', error);
+                showError(`載入失敗: ${error.message}`);
+                updateDataStatus('❌ 載入失敗，請檢查網路連接');
+                showLoading(false);
+            }
+        }
+
+        function updateStatistics(summary) {
+            document.getElementById('total-recipes').textContent = summary.totalRecipes || 0;
+            document.getElementById('producible-recipes').textContent = summary.producibleRecipes || 0;
+            document.getElementById('shortage-recipes').textContent = summary.shortageRecipes || 0;
+            document.getElementById('avg-cost').textContent = `$${summary.averageCost || '0.00'}`;
+            updatePaginationInfo();
+        }
+
+        function renderRecipeCards() {
+            const container = document.getElementById('recipes-container');
+            const startIndex = (currentPage - 1) * recipesPerPage;
+            const endIndex = startIndex + recipesPerPage;
+            const pageRecipes = filteredRecipes.slice(startIndex, endIndex);
+            
+            if (pageRecipes.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full bg-white rounded-xl shadow-lg p-8 text-center">
+                        <i class="fas fa-search text-gray-400 text-4xl mb-4"></i>
+                        <p class="text-gray-600">沒有找到符合條件的食譜</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = pageRecipes.map(recipe => createRecipeCard(recipe)).join('');
+            updatePaginationInfo();
+        }
+
+        function createRecipeCard(recipe) {
+            // 根據庫存狀況決定顯示樣式
+            const stockConfig = {
+                'sufficient': { 
+                    class: 'text-green-600 bg-green-100', 
+                    text: '庫存充足', 
+                    icon: 'fas fa-check-circle' 
+                },
+                'low': { 
+                    class: 'text-yellow-600 bg-yellow-100', 
+                    text: '庫存偏低', 
+                    icon: 'fas fa-exclamation-triangle' 
+                },
+                'shortage': { 
+                    class: 'text-red-600 bg-red-100', 
+                    text: '缺料', 
+                    icon: 'fas fa-times-circle' 
+                },
+                'unknown': { 
+                    class: 'text-gray-600 bg-gray-100', 
+                    text: '未知', 
+                    icon: 'fas fa-question-circle' 
+                }
+            };
+            
+            const config = stockConfig[recipe.stockStatus] || stockConfig.unknown;
+            const ingredientCount = recipe.ingredients?.length || 0;
+            
+            // 生成庫存詳情
+            const stockDetails = recipe.stockDetails || { sufficient: 0, low: 0, shortage: 0, notFound: 0 };
+            const stockSummary = `充足:${stockDetails.sufficient} 偏低:${stockDetails.low} 缺料:${stockDetails.shortage}${stockDetails.notFound > 0 ? ` 未找到:${stockDetails.notFound}` : ''}`;
+            
+            return `
+                <div class="recipe-card bg-white rounded-xl shadow-lg overflow-hidden border hover:border-blue-300 cursor-pointer" 
+                     onclick="showRecipeDetails('${recipe.id}')">
+                    <div class="p-6">
+                        <!-- 狀態標籤 -->
+                        <div class="flex justify-between items-start mb-4">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${config.class}">
+                                <i class="${config.icon} mr-1"></i>
+                                ${config.text}
+                            </span>
+                            <span class="text-xs text-gray-500">${recipe.category}</span>
+                        </div>
+                        
+                        <!-- 食譜名稱 -->
+                        <h3 class="text-lg font-semibold text-gray-800 mb-2 line-clamp-2">
+                            ${recipe.name}
+                        </h3>
+                        
+                        <!-- 基本資訊 -->
+                        <div class="space-y-2 mb-4">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600">份量:</span>
+                                <span class="font-medium">${recipe.weight}g</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600">成本:</span>
+                                <span class="font-medium">$${recipe.unitCost.toFixed(2)}/100g</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600">庫存:</span>
+                                <span class="font-medium">${recipe.currentStock}份</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600">可製作:</span>
+                                <span class="font-medium text-green-600">${recipe.maxProduction}份</span>
+                            </div>
+                        </div>
+                        
+                        <!-- 庫存狀況詳情 -->
+                        <div class="mb-4">
+                            <div class="text-xs text-gray-600 mb-1">食材狀況</div>
+                            <div class="text-xs text-gray-500">${stockSummary}</div>
+                        </div>
+                        
+                        <!-- 食材組成 -->
+                        <div class="mb-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs text-gray-600">食材組成</span>
+                                <span class="text-xs text-gray-500">${ingredientCount} 種</span>
+                            </div>
+                            <div class="flex flex-wrap gap-1">
+                                ${recipe.ingredients?.slice(0, 3).map(ing => `
+                                    <span class="ingredient-tag text-white text-xs px-2 py-1 rounded">
+                                        ${ing.name.length > 8 ? ing.name.substring(0, 8) + '...' : ing.name}
+                                    </span>
+                                `).join('') || ''}
+                                ${ingredientCount > 3 ? `<span class="text-xs text-gray-500">+${ingredientCount - 3}種</span>` : ''}
+                            </div>
+                        </div>
+                        
+                        <!-- 操作按鈕 -->
+                        <div class="flex space-x-2">
+                            <button onclick="event.stopPropagation(); showRecipeDetails('${recipe.id}')" 
+                                    class="flex-1 bg-blue-600 text-white text-sm py-2 px-3 rounded hover:bg-blue-700 transition-colors">
+                                <i class="fas fa-eye mr-1"></i>查看
+                            </button>
+                            <button onclick="event.stopPropagation(); checkRecipeStock('${recipe.id}')" 
+                                    class="flex-1 bg-orange-600 text-white text-sm py-2 px-3 rounded hover:bg-orange-700 transition-colors">
+                                <i class="fas fa-clipboard-check mr-1"></i>檢查
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function setupEventListeners() {
+            document.getElementById('refresh-data-btn')?.addEventListener('click', async () => {
+                await loadRecipeData();
+            });
+
+            document.getElementById('check-ingredients-btn')?.addEventListener('click', async () => {
+                await showIngredientShortages();
+            });
+            
+            document.getElementById('recipe-search')?.addEventListener('input', () => {
+                applyFilters();
+            });
+            
+            document.getElementById('category-filter')?.addEventListener('change', () => {
+                applyFilters();
+            });
+
+            document.getElementById('stock-filter')?.addEventListener('change', () => {
+                applyFilters();
+            });
+            
+            document.getElementById('prev-page')?.addEventListener('click', () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    renderRecipeCards();
+                }
+            });
+            
+            document.getElementById('next-page')?.addEventListener('click', () => {
+                const maxPage = Math.ceil(filteredRecipes.length / recipesPerPage);
+                if (currentPage < maxPage) {
+                    currentPage++;
+                    renderRecipeCards();
+                }
+            });
+
+            // Modal 關閉事件
+            document.getElementById('close-shortage-modal')?.addEventListener('click', () => {
+                document.getElementById('shortage-modal').classList.add('hidden');
+            });
+        }
+
+        function applyFilters() {
+            const searchQuery = document.getElementById('recipe-search')?.value || '';
+            const categoryFilter = document.getElementById('category-filter')?.value || '';
+            const stockFilter = document.getElementById('stock-filter')?.value || '';
+            
+            filteredRecipes = recipeManager.searchRecipes(searchQuery, categoryFilter, stockFilter);
+            currentPage = 1;
+            renderRecipeCards();
+        }
+
+        function checkRecipeStock(recipeId) {
+            const recipe = currentRecipes.find(r => r.id === recipeId);
+            if (!recipe) return;
+            
+            let message = `${recipe.name} 的庫存狀況：\n\n`;
+            
+            if (recipe.stockDetails) {
+                const details = recipe.stockDetails;
+                message += `充足食材：${details.sufficient} 種\n`;
+                message += `庫存偏低：${details.low} 種\n`;
+                message += `缺料食材：${details.shortage} 種\n`;
+                if (details.notFound > 0) {
+                    message += `未找到食材：${details.notFound} 種\n`;
+                }
+                message += `\n整體狀況：${getStockStatusText(recipe.stockStatus)}`;
+            } else {
+                message += '尚未分析庫存狀況';
+            }
+            
+            alert(message);
+        }
+
+        function getStockStatusText(status) {
+            const statusMap = {
+                'sufficient': '庫存充足 ✅',
+                'low': '庫存偏低 ⚠️',
+                'shortage': '缺料 ❌',
+                'unknown': '未知 ❓'
+            };
+            return statusMap[status] || '未知';
+        }
+
+        function showRecipeDetails(recipeId) {
+            const recipe = currentRecipes.find(r => r.id === recipeId);
+            if (!recipe) {
+                alert('找不到食譜詳細信息');
+                return;
+            }
+            
+            // 創建詳細信息的彈窗內容
+            let detailsHtml = `
+                <div class="recipe-details-modal">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">${recipe.name}</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- 基本信息 -->
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-700 mb-3">基本信息</h3>
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">分類:</span>
+                                    <span class="font-medium">${recipe.category}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">份量:</span>
+                                    <span class="font-medium">${recipe.weight}g</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">單位成本:</span>
+                                    <span class="font-medium">$${recipe.unitCost.toFixed(2)}/100g</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">總成本:</span>
+                                    <span class="font-medium">$${recipe.totalCost.toFixed(2)}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">目前庫存:</span>
+                                    <span class="font-medium">${recipe.currentStock}份</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">可製作:</span>
+                                    <span class="font-medium text-green-600">${recipe.maxProduction}份</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 庫存狀況 -->
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-700 mb-3">庫存狀況</h3>
+                            <div class="mb-3">
+                                <span class="inline-block px-3 py-1 rounded-full text-sm font-medium ${getStockStatusConfig(recipe.stockStatus).class}">
+                                    ${getStockStatusConfig(recipe.stockStatus).text}
+                                </span>
+                            </div>
+                            ${recipe.stockDetails ? `
+                                <div class="space-y-2 text-sm">
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">充足食材:</span>
+                                        <span class="text-green-600 font-medium">${recipe.stockDetails.sufficient} 種</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">庫存偏低:</span>
+                                        <span class="text-yellow-600 font-medium">${recipe.stockDetails.low} 種</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">缺料:</span>
+                                        <span class="text-red-600 font-medium">${recipe.stockDetails.shortage} 種</span>
+                                    </div>
+                                    ${recipe.stockDetails.notFound > 0 ? `
+                                        <div class="flex justify-between">
+                                            <span class="text-gray-600">未找到:</span>
+                                            <span class="text-gray-600 font-medium">${recipe.stockDetails.notFound} 種</span>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            ` : '<p class="text-gray-500 text-sm">尚未分析庫存狀況</p>'}
+                        </div>
+                    </div>
+                    
+                    <!-- 食材清單 -->
+                    <div class="mt-6">
+                        <h3 class="text-lg font-semibold text-gray-700 mb-3">食材清單 (${recipe.ingredients?.length || 0} 種)</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-64 overflow-y-auto">
+                            ${recipe.ingredients?.map(ingredient => {
+                                const inventoryMatch = recipeManager.findMatchingInventoryItem(ingredient.name);
+                                let statusClass = 'text-gray-600';
+                                let statusText = '未知';
+                                
+                                if (inventoryMatch) {
+                                    if (inventoryMatch.currentStock >= ingredient.usageAmount) {
+                                        statusClass = 'text-green-600';
+                                        statusText = '充足';
+                                    } else {
+                                        statusClass = 'text-red-600';
+                                        statusText = '不足';
+                                    }
+                                } else {
+                                    statusClass = 'text-gray-500';
+                                    statusText = '未找到';
+                                }
+                                
+                                return `
+                                    <div class="bg-gray-50 p-3 rounded-lg">
+                                        <div class="flex justify-between items-start">
+                                            <div>
+                                                <div class="font-medium text-gray-800">${ingredient.name}</div>
+                                                <div class="text-sm text-gray-600">需要: ${ingredient.usageAmount}g</div>
+                                                ${inventoryMatch ? `
+                                                    <div class="text-xs text-gray-500">庫存: ${inventoryMatch.currentStock}${inventoryMatch.unit}</div>
+                                                ` : ''}
+                                            </div>
+                                            <span class="text-xs px-2 py-1 rounded-full ${statusClass} bg-opacity-20">
+                                                ${statusText}
+                                            </span>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('') || '<p class="text-gray-500">沒有食材資料</p>'}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // 顯示自定義彈窗
+            showCustomModal('食譜詳細信息', detailsHtml);
+        }
+
+        function getStockStatusConfig(status) {
+            const configs = {
+                'sufficient': { class: 'text-green-600 bg-green-100', text: '庫存充足' },
+                'low': { class: 'text-yellow-600 bg-yellow-100', text: '庫存偏低' },
+                'shortage': { class: 'text-red-600 bg-red-100', text: '缺料' },
+                'unknown': { class: 'text-gray-600 bg-gray-100', text: '未知' }
+            };
+            return configs[status] || configs.unknown;
+        }
+
+        function showCustomModal(title, content) {
+            // 創建或更新自定義模態框
+            let modal = document.getElementById('custom-modal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'custom-modal';
+                modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 hidden';
+                modal.innerHTML = `
+                    <div class="flex items-center justify-center min-h-screen p-4">
+                        <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-screen overflow-y-auto">
+                            <div class="p-6 border-b border-gray-200">
+                                <div class="flex justify-between items-center">
+                                    <h3 class="text-lg font-semibold text-gray-800" id="custom-modal-title"></h3>
+                                    <button id="close-custom-modal" class="text-gray-500 hover:text-gray-700">
+                                        <i class="fas fa-times text-xl"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="p-6" id="custom-modal-content"></div>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
+                
+                // 添加關閉事件
+                document.getElementById('close-custom-modal').addEventListener('click', () => {
+                    modal.classList.add('hidden');
+                });
+                
+                // 點擊背景關閉
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        modal.classList.add('hidden');
+                    }
+                });
+            }
+            
+            // 更新內容
+            document.getElementById('custom-modal-title').textContent = title;
+            document.getElementById('custom-modal-content').innerHTML = content;
+            
+            // 顯示模態框
+            modal.classList.remove('hidden');
+        }
+
+        async function showIngredientShortages() {
+            try {
+                // 顯示 Modal 和載入狀態
+                document.getElementById('shortage-modal').classList.remove('hidden');
+                document.getElementById('shortage-loading').style.display = 'block';
+                
+                // 重置內容區域
+                const contentDiv = document.getElementById('shortage-content');
+                contentDiv.innerHTML = `
+                    <div id="shortage-loading" class="text-center py-8">
+                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto mb-4"></div>
+                        <p class="text-gray-600">正在檢查食材庫存...</p>
+                        <div id="shortage-progress-info" class="mt-2 text-sm text-gray-500"></div>
+                    </div>
+                `;
+                
+                // 執行缺料檢查
+                const shortageReport = await recipeManager.checkIngredientShortages();
+                
+                // 生成報告內容
+                contentDiv.innerHTML = generateShortageReport(shortageReport);
+                
+            } catch (error) {
+                console.error('❌ 缺料檢查失敗:', error);
+                const contentDiv = document.getElementById('shortage-content');
+                contentDiv.innerHTML = `
+                    <div class="text-center py-8">
+                        <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
+                        <h3 class="text-lg font-semibold text-red-700 mb-2">缺料檢查失敗</h3>
+                        <p class="text-red-600 mb-4">${error.message}</p>
+                        <button onclick="showIngredientShortages()" class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700">
+                            重試
+                        </button>
+                    </div>
+                `;
+            }
+        }
+
+        function generateShortageReport(report) {
+            let html = '';
+            
+            // 總覽統計
+            html += `
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <div class="flex items-center">
+                            <i class="fas fa-exclamation-circle text-red-500 text-2xl mr-3"></i>
+                            <div>
+                                <p class="text-sm text-red-600">嚴重缺料</p>
+                                <p class="text-2xl font-bold text-red-700">${report.criticalShortages.length}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                        <div class="flex items-center">
+                            <i class="fas fa-exclamation-triangle text-yellow-500 text-2xl mr-3"></i>
+                            <div>
+                                <p class="text-sm text-yellow-600">庫存偏低</p>
+                                <p class="text-2xl font-bold text-yellow-700">${report.lowStock.length}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div class="flex items-center">
+                            <i class="fas fa-utensils text-blue-500 text-2xl mr-3"></i>
+                            <div>
+                                <p class="text-sm text-blue-600">受影響食譜</p>
+                                <p class="text-2xl font-bold text-blue-700">${report.totalAffected}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // 嚴重缺料區塊
+            if (report.criticalShortages.length > 0) {
+                html += `
+                    <div class="mb-6">
+                        <h4 class="text-lg font-semibold text-red-700 mb-3">
+                            <i class="fas fa-exclamation-circle mr-2"></i>嚴重缺料食材
+                        </h4>
+                        <div class="space-y-2">
+                            ${report.criticalShortages.map(item => `
+                                <div class="bg-red-50 border border-red-200 rounded-lg p-3">
+                                    <div class="flex justify-between items-center">
+                                        <div>
+                                            <span class="font-medium text-red-800">${item.name}</span>
+                                            <span class="text-sm text-red-600 ml-2">(${item.category})</span>
+                                        </div>
+                                        <div class="text-right">
+                                            <div class="text-sm text-red-700">
+                                                庫存: ${item.currentStock}${item.unit} / 安全: ${item.minStock || 0}${item.unit}
+                                            </div>
+                                            <div class="text-xs text-red-600">
+                                                缺少: ${item.shortage}${item.unit}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 庫存偏低區塊
+            if (report.lowStock.length > 0) {
+                html += `
+                    <div class="mb-6">
+                        <h4 class="text-lg font-semibold text-yellow-700 mb-3">
+                            <i class="fas fa-exclamation-triangle mr-2"></i>庫存偏低食材
+                        </h4>
+                        <div class="space-y-2">
+                            ${report.lowStock.map(item => `
+                                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                                    <div class="flex justify-between items-center">
+                                        <div>
+                                            <span class="font-medium text-yellow-800">${item.name}</span>
+                                            <span class="text-sm text-yellow-600 ml-2">(${item.category})</span>
+                                        </div>
+                                        <div class="text-right">
+                                            <div class="text-sm text-yellow-700">
+                                                庫存: ${item.currentStock}${item.unit} / 安全: ${item.minStock || 0}${item.unit}
+                                            </div>
+                                            <div class="text-xs text-yellow-600">
+                                                庫存比例: ${(item.stockRatio * 100).toFixed(1)}%
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 受影響食譜區塊
+            if (report.affectedRecipes.length > 0) {
+                html += `
+                    <div class="mb-6">
+                        <h4 class="text-lg font-semibold text-blue-700 mb-3">
+                            <i class="fas fa-utensils mr-2"></i>受影響的食譜
+                        </h4>
+                        <div class="space-y-3">
+                            ${report.affectedRecipes.map(recipe => `
+                                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                    <div class="flex justify-between items-start mb-2">
+                                        <h5 class="font-medium text-blue-800">${recipe.name}</h5>
+                                        <span class="text-xs px-2 py-1 bg-blue-200 text-blue-700 rounded">${recipe.category}</span>
+                                    </div>
+                                    <div class="text-sm text-blue-700 mb-2">
+                                        缺少食材 ${recipe.missingIngredients.length} 項：
+                                    </div>
+                                    <div class="space-y-1">
+                                        ${recipe.missingIngredients.map(ingredient => `
+                                            <div class="text-xs text-blue-600 pl-4">
+                                                • ${ingredient.name}${ingredient.inventoryName ? ` (庫存: ${ingredient.inventoryName})` : ''}: 
+                                                需要 ${ingredient.needed}g, 
+                                                ${ingredient.notFound ? '未找到此食材' : `現有 ${ingredient.available}${ingredient.unit}, 缺少 ${ingredient.shortage}${ingredient.unit}`}
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 如果沒有任何問題
+            if (report.criticalShortages.length === 0 && report.lowStock.length === 0 && report.affectedRecipes.length === 0) {
+                html = `
+                    <div class="text-center py-8">
+                        <i class="fas fa-check-circle text-green-500 text-4xl mb-4"></i>
+                        <h3 class="text-lg font-semibold text-green-700 mb-2">庫存狀況良好！</h3>
+                        <p class="text-green-600">目前所有食材庫存充足，可以正常製作所有食譜。</p>
+                    </div>
+                `;
+            }
+
+            return html;
+        }
+
+        function updatePaginationInfo() {
+            const total = filteredRecipes.length;
+            const maxPage = Math.ceil(total / recipesPerPage);
+            const startIndex = (currentPage - 1) * recipesPerPage + 1;
+            const endIndex = Math.min(currentPage * recipesPerPage, total);
+            
+            document.getElementById('showing-start').textContent = total > 0 ? startIndex : 0;
+            document.getElementById('showing-end').textContent = total > 0 ? endIndex : 0;
+            document.getElementById('total-count').textContent = total;
+            document.getElementById('page-info').textContent = `第 ${currentPage} 頁，共 ${maxPage} 頁`;
+            
+            const prevBtn = document.getElementById('prev-page');
+            const nextBtn = document.getElementById('next-page');
+            
+            if (prevBtn) prevBtn.disabled = currentPage <= 1;
+            if (nextBtn) nextBtn.disabled = currentPage >= maxPage;
+        }
+
+        function updateDataStatus(message) {
+            const statusDiv = document.getElementById('data-status');
+            if (statusDiv) {
+                statusDiv.textContent = message;
+            }
+        }
+
+        function showLoading(show, message = '載入中...') {
+            const indicator = document.getElementById('loading-indicator');
+            const placeholder = document.getElementById('loading-placeholder');
+            const loadingText = document.getElementById('loading-text');
+            
+            if (indicator) {
+                indicator.classList.toggle('hidden', !show);
+                if (loadingText) loadingText.textContent = message;
+            }
+            
+            if (placeholder) {
+                placeholder.style.display = show ? 'block' : 'none';
+            }
+        }
+
+        function showError(message) {
+            const container = document.getElementById('recipes-container');
+            container.innerHTML = `
+                <div class="col-span-full bg-red-50 border border-red-200 rounded-xl p-8 text-center">
+                    <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
+                    <h3 class="text-lg font-semibold text-red-800 mb-2">載入失敗</h3>
+                    <p class="text-red-600 mb-4">${message}</p>
+                    <button onclick="loadRecipeData()" class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700">
+                        重試
+                    </button>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>

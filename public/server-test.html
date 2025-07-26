@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>伺服器連線測試</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .online { background: #d4edda; color: #155724; }
+        .offline { background: #f8d7da; color: #721c24; }
+        .testing { background: #fff3cd; color: #856404; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>🔧 伺服器連線診斷工具</h1>
+    
+    <div id="status" class="status testing">正在檢查伺服器狀態...</div>
+    
+    <div>
+        <button onclick="testConnection()">重新測試連線</button>
+        <button onclick="startServerInstructions()">顯示啟動說明</button>
+        <button onclick="window.open('/public/test-table-api.html', '_blank')">開啟API測試頁面</button>
+    </div>
+    
+    <div id="instructions" style="display: none; margin-top: 20px; padding: 15px; background: #e7f3ff; border-radius: 5px;">
+        <h3>🚀 手動啟動伺服器步驟：</h3>
+        <ol>
+            <li>開啟命令提示字元（CMD）或PowerShell</li>
+            <li>切換到專案目錄：<code>cd "c:\Users\fiend\OneDrive\桌面2\tanawat-order-api-main"</code></li>
+            <li>啟動伺服器：<code>"C:\Program Files\nodejs\node.exe" proxy-server.js</code></li>
+            <li>看到 "🚀 伺服器已啟動於 http://localhost:3000" 表示成功</li>
+            <li>然後重新整理此頁面測試連線</li>
+        </ol>
+        
+        <h4>或者雙擊這些檔案：</h4>
+        <ul>
+            <li><code>start-server.ps1</code> (PowerShell腳本)</li>
+            <li><code>scripts/start.bat</code> (批次檔)</li>
+        </ul>
+    </div>
+    
+    <div id="details" style="margin-top: 20px;"></div>
+
+    <script>
+        let testInterval;
+        
+        function testConnection() {
+            const statusDiv = document.getElementById('status');
+            const detailsDiv = document.getElementById('details');
+            
+            statusDiv.className = 'status testing';
+            statusDiv.textContent = '正在測試連線...';
+            
+            // 測試多個端點
+            Promise.all([
+                fetch('/api/health').then(r => r.json()).catch(e => ({ error: e.message })),
+                fetch('/api/tables').then(r => r.json()).catch(e => ({ error: e.message })),
+                fetch('/').then(r => r.text()).catch(e => ({ error: e.message }))
+            ]).then(results => {
+                const [health, tables, root] = results;
+                
+                if (!health.error) {
+                    statusDiv.className = 'status online';
+                    statusDiv.innerHTML = '✅ 伺服器連線正常！<br>所有API端點都可以訪問';
+                    
+                    detailsDiv.innerHTML = `
+                        <h3>✅ 連線測試結果：</h3>
+                        <ul>
+                            <li><strong>健康檢查:</strong> ${health.message || '正常'}</li>
+                            <li><strong>桌況API:</strong> 載入了 ${tables.length || 0} 筆資料</li>
+                            <li><strong>靜態檔案:</strong> 正常</li>
+                        </ul>
+                        <p><a href="/pages/management/table-management.html" target="_blank">🎯 點此進入桌況管理系統</a></p>
+                    `;
+                } else {
+                    statusDiv.className = 'status offline';
+                    statusDiv.innerHTML = '❌ 伺服器未啟動或連線失敗<br>請按照下方說明手動啟動伺服器';
+                    
+                    detailsDiv.innerHTML = `
+                        <h3>❌ 連線失敗詳情：</h3>
+                        <ul>
+                            <li><strong>健康檢查:</strong> ${health.error}</li>
+                            <li><strong>桌況API:</strong> ${tables.error}</li>
+                            <li><strong>靜態檔案:</strong> ${root.error}</li>
+                        </ul>
+                    `;
+                }
+            });
+        }
+        
+        function startServerInstructions() {
+            const instructions = document.getElementById('instructions');
+            instructions.style.display = instructions.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        // 頁面載入時自動測試
+        testConnection();
+        
+        // 每5秒自動重測
+        testInterval = setInterval(testConnection, 5000);
+        
+        // 頁面關閉時清除定時器
+        window.addEventListener('beforeunload', () => {
+            if (testInterval) clearInterval(testInterval);
+        });
+    </script>
+</body>
+</html>

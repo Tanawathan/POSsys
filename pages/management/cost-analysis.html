@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>成本控制與分析</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body { 
+            font-family: 'Noto Sans TC', sans-serif; 
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        }
+        
+        .metric-card {
+            background: linear-gradient(145deg, #1e293b, #334155);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+        
+        .chart-container {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body class="min-h-screen text-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <!-- 返回導航按鈕 -->
+        <div class="mb-6 flex gap-3">
+            <a href="../../index.html" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm flex items-center">
+                ← 主系統
+            </a>
+            <a href="../../main-dashboard.html" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm flex items-center">
+                📊 儀表板
+            </a>
+        </div>
+        
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-4xl font-bold text-white mb-2">
+                <span class="bg-gradient-to-r from-green-400 to-blue-400 bg-clip-text text-transparent">
+                    成本控制與分析
+                </span>
+            </h1>
+            <p class="text-gray-400">監控採購成本、分析供應商價格趨勢，優化成本結構</p>
+        </div>
+
+        <!-- 時間範圍選擇 -->
+        <div class="mb-8 bg-gray-800/50 rounded-xl p-6 border border-gray-700">
+            <div class="flex flex-col md:flex-row gap-4 items-center justify-between">
+                <div class="flex gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">開始日期</label>
+                        <input type="date" id="start-date" class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">結束日期</label>
+                        <input type="date" id="end-date" class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white">
+                    </div>
+                </div>
+                
+                <div class="flex gap-2">
+                    <button onclick="setDateRange(7)" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm">近7天</button>
+                    <button onclick="setDateRange(30)" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm">近30天</button>
+                    <button onclick="setDateRange(90)" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm">近3個月</button>
+                    <button onclick="updateAnalysis()" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg font-semibold">更新分析</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 關鍵指標 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="metric-card rounded-xl p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-300">總採購成本</h3>
+                    <svg class="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                    </svg>
+                </div>
+                <div class="text-3xl font-bold text-white mb-2" id="total-cost">$0</div>
+                <div class="text-sm text-gray-400">
+                    <span id="cost-change" class="text-green-400">+0%</span> 與上期比較
+                </div>
+            </div>
+
+            <div class="metric-card rounded-xl p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-300">平均訂單金額</h3>
+                    <svg class="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                    </svg>
+                </div>
+                <div class="text-3xl font-bold text-white mb-2" id="avg-order">$0</div>
+                <div class="text-sm text-gray-400">
+                    <span id="order-change" class="text-blue-400">+0%</span> 與上期比較
+                </div>
+            </div>
+
+            <div class="metric-card rounded-xl p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-300">成本節省</h3>
+                    <svg class="w-8 h-8 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                    </svg>
+                </div>
+                <div class="text-3xl font-bold text-white mb-2" id="cost-savings">$0</div>
+                <div class="text-sm text-gray-400">通過優化採購策略</div>
+            </div>
+
+            <div class="metric-card rounded-xl p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-300">供應商效率</h3>
+                    <svg class="w-8 h-8 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <div class="text-3xl font-bold text-white mb-2" id="supplier-efficiency">85%</div>
+                <div class="text-sm text-gray-400">平均準時交貨率</div>
+            </div>
+        </div>
+
+        <!-- 圖表區域 -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <!-- 成本趨勢圖 -->
+            <div class="chart-container rounded-xl p-6">
+                <h3 class="text-xl font-bold text-white mb-4">成本趨勢分析</h3>
+                <div class="h-80">
+                    <canvas id="cost-trend-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- 供應商成本分布 -->
+            <div class="chart-container rounded-xl p-6">
+                <h3 class="text-xl font-bold text-white mb-4">供應商成本分布</h3>
+                <div class="h-80">
+                    <canvas id="supplier-cost-chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- 分類成本分析 -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <!-- 商品類別成本 -->
+            <div class="chart-container rounded-xl p-6">
+                <h3 class="text-xl font-bold text-white mb-4">商品類別成本分析</h3>
+                <div class="h-80">
+                    <canvas id="category-cost-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- 價格變化趨勢 -->
+            <div class="chart-container rounded-xl p-6">
+                <h3 class="text-xl font-bold text-white mb-4">主要商品價格趨勢</h3>
+                <div class="h-80">
+                    <canvas id="price-trend-chart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- 供應商績效表 -->
+        <div class="chart-container rounded-xl p-6 mb-8">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-white">供應商績效排行</h3>
+                <select id="performance-metric" class="bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white">
+                    <option value="cost-efficiency">成本效益</option>
+                    <option value="delivery-time">交貨時間</option>
+                    <option value="quality-score">品質評分</option>
+                    <option value="total-volume">採購量</option>
+                </select>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b border-gray-600">
+                            <th class="text-left py-3 px-4 text-gray-300">排名</th>
+                            <th class="text-left py-3 px-4 text-gray-300">供應商</th>
+                            <th class="text-left py-3 px-4 text-gray-300">總採購額</th>
+                            <th class="text-left py-3 px-4 text-gray-300">平均交貨時間</th>
+                            <th class="text-left py-3 px-4 text-gray-300">準時率</th>
+                            <th class="text-left py-3 px-4 text-gray-300">成本評級</th>
+                        </tr>
+                    </thead>
+                    <tbody id="supplier-performance-table">
+                        <!-- 動態生成內容 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 成本最佳化建議 -->
+        <div class="chart-container rounded-xl p-6">
+            <h3 class="text-xl font-bold text-white mb-4">成本最佳化建議</h3>
+            <div id="optimization-suggestions" class="space-y-4">
+                <!-- 動態生成建議 -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== 返回按鈕處理邏輯 =====
+        document.addEventListener('DOMContentLoaded', function() {
+            const returnMainBtn = document.getElementById('return-main');
+            const returnDashboardBtn = document.getElementById('return-dashboard');
+            
+            // 檢查是否在iframe中
+            const isInIframe = window.self !== window.top;
+            
+            if (returnMainBtn) {
+                returnMainBtn.addEventListener('click', function() {
+                    if (isInIframe) {
+                        // 在iframe中，通知父視窗切換到主系統
+                        window.parent.postMessage({ action: 'navigate', target: 'main' }, '*');
+                    } else {
+                        // 直接開啟，使用正常連結
+                        window.location.href = '../../public/index.html';
+                    }
+                });
+            }
+            
+            if (returnDashboardBtn) {
+                returnDashboardBtn.addEventListener('click', function() {
+                    if (isInIframe) {
+                        // 在iframe中，通知父視窗切換到儀表板
+                        window.parent.postMessage({ action: 'navigate', target: 'dashboard' }, '*');
+                    } else {
+                        // 直接開啟，使用正常連結
+                        window.location.href = '../../public/main-dashboard.html';
+                    }
+                });
+            }
+        });
+    </script>
+    
+    <script src="assets/js/cost-analysis.js"></script>
+</body>
+</html>

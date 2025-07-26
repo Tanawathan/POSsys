@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POS 主控系統</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- POS 系統增強樣式 -->
+    <link rel="stylesheet" href="assets/css/pos-enhanced.css">
+    
+    <!-- POS 工具庫 -->
+    <script src="assets/js/pos-utils.js"></script>
+    
+    <!-- 資料管理系統 -->
+    <script src="config/config.js"></script>
+    <script src="assets/js/data-manager.js"></script>
+    <script src="assets/js/data-initializer.js"></script>
+    
+    <!-- PWA 配置 -->
+    <link rel="manifest" href="config/manifest.json">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="POS 系統">
+    <link rel="apple-touch-icon" href="assets/icons/icon-192x192.png">
+    <style>
+        body { 
+            font-family: 'Noto Sans TC', sans-serif; 
+            overflow-x: hidden;
+        }
+        
+        /* 改進的滾動條樣式 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #111827; }
+        ::-webkit-scrollbar-thumb { 
+            background: linear-gradient(45deg, #4f46e5, #7c3aed); 
+            border-radius: 3px; 
+        }
+        ::-webkit-scrollbar-thumb:hover { background: linear-gradient(45deg, #6366f1, #8b5cf6); }
+        
+        /* 視圖切換動畫 */
+        .view { 
+            display: none; 
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+        .view.active { 
+            display: block; 
+            height: 100%; 
+            opacity: 1;
+        }
+        
+        /* iframe 改進 */
+        iframe { 
+            width: 100%; 
+            height: 100%; 
+            border: 0; 
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        /* 導航連結 hover 效果 */
+        .nav-link {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-left: 3px solid transparent;
+        }
+        
+        .nav-link:hover {
+            transform: translateX(4px);
+            border-left-color: #6366f1;
+            background: linear-gradient(90deg, rgba(99, 102, 241, 0.1), transparent);
+        }
+        
+        .nav-link.active {
+            background: linear-gradient(90deg, rgba(99, 102, 241, 0.2), rgba(124, 58, 237, 0.1));
+            border-left-color: #6366f1;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        /* 側邊欄改進 */
+        aside {
+            backdrop-filter: blur(10px);
+            background: linear-gradient(180deg, #111827 0%, #1e293b 100%);
+            box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* 標題動畫 */
+        .logo-title {
+            background: linear-gradient(45deg, #6366f1, #8b5cf6, #ec4899);
+            background-size: 200% 200%;
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradient 3s ease infinite;
+        }
+        
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        /* 時間顯示改進 */
+        #system-time {
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+            letter-spacing: 1px;
+            color: #6366f1;
+            text-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+        }
+        
+        /* 響應式改進 */
+        @media (max-width: 768px) {
+            aside {
+                width: 200px;
+            }
+            .nav-link {
+                font-size: 0.9rem;
+                padding: 0.5rem 0.75rem;
+            }
+        }
+        
+        /* 載入動畫 */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, #111827, #1e293b);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            opacity: 1;
+            transition: opacity 0.5s ease;
+        }
+        
+        .loading-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(99, 102, 241, 0.3);
+            border-top: 4px solid #6366f1;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-300">
+    <!-- 載入畫面 -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="text-center">
+            <div class="loading-spinner mx-auto mb-4"></div>
+            <h2 class="text-xl font-semibold text-white mb-2">POS 系統載入中...</h2>
+            <p class="text-gray-400">正在初始化系統組件</p>
+        </div>
+    </div>
+
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-gray-900 border-r border-gray-800 flex flex-col flex-shrink-0">
+            <div class="h-16 flex items-center justify-center border-b border-gray-800 bg-gradient-to-r from-indigo-900/20 to-purple-900/20">
+                <h1 class="text-2xl font-bold logo-title">POS 系統</h1>
+            </div>
+            <nav class="flex-1 px-4 py-6 space-y-2">
+                <a href="#dashboard-view" class="nav-link active flex items-center px-4 py-3 text-lg rounded-lg">
+                    <svg class="h-6 w-6 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+                    <span>儀表板</span>
+                </a>
+                <a href="#customer-view" class="nav-link flex items-center px-4 py-3 text-lg rounded-lg hover:bg-gray-700 hover:text-white">
+                    <svg class="h-6 w-6 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                    <span>顧客點餐</span>
+                </a>
+                <a href="#kds-view" class="nav-link flex items-center px-4 py-3 text-lg rounded-lg hover:bg-gray-700 hover:text-white">
+                    <svg class="h-6 w-6 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                    <span>廚房系統</span>
+                </a>
+                <a href="#order-management-view" class="nav-link flex items-center px-4 py-3 text-lg rounded-lg hover:bg-gray-700 hover:text-white">
+                    <svg class="h-6 w-6 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                    <span>訂單管理</span>
+                </a>
+                <a href="#checkout-view" class="nav-link flex items-center px-4 py-3 text-lg rounded-lg hover:bg-gray-700 hover:text-white">
+                    <svg class="h-6 w-6 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                    <span>結帳系統</span>
+                </a>
+                <a href="#supplier-view" class="nav-link flex items-center px-4 py-3 text-lg rounded-lg hover:bg-gray-700 hover:text-white">
+                    <svg class="h-6 w-6 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                    <span>供應商管理</span>
+                </a>
+                <a href="#cost-analysis-view" class="nav-link flex items-center px-4 py-3 text-lg rounded-lg hover:bg-gray-700 hover:text-white">
+                    <svg class="h-6 w-6 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                    <span>成本分析</span>
+                </a>
+                <a href="#inventory-view" class="nav-link flex items-center px-4 py-3 text-lg rounded-lg hover:bg-gray-700 hover:text-white">
+                    <svg class="h-6 w-6 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+                    <span>庫存管理</span>
+                </a>
+                <a href="#recipe-view" class="nav-link flex items-center px-4 py-3 text-lg rounded-lg hover:bg-gray-700 hover:text-white">
+                    <svg class="h-6 w-6 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                    <span>配方管理</span>
+                </a>
+                <a href="#table-management-view" class="nav-link flex items-center px-4 py-3 text-lg rounded-lg hover:bg-gray-700 hover:text-white">
+                    <svg class="h-6 w-6 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M3 14h18m-9-4v8m-7 0V4a1 1 0 011-1h12a1 1 0 011 1v16a1 1 0 01-1 1H5a1 1 0 01-1-1V10z" /></svg>
+                    <span>桌況管理</span>
+                </a>
+            </nav>
+            <div class="p-4 border-t border-gray-800 bg-gray-800/50">
+                <div class="text-center">
+                    <p id="system-time" class="text-lg font-mono"></p>
+                    <div id="connection-status" class="flex items-center justify-center mt-2">
+                        <div class="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></div>
+                        <span class="text-xs text-green-400">系統正常</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col overflow-hidden">
+            <!-- Header -->
+            <header class="h-16 bg-gray-900 border-b border-gray-800 flex items-center px-6 justify-between">
+                <h2 id="view-title" class="text-2xl font-semibold text-white">儀表板</h2>
+            </header>
+
+            <!-- Views Container -->
+            <div class="flex-1 overflow-y-auto bg-gray-900">
+                <!-- Dashboard View -->
+                <div id="dashboard-view" class="view active">
+                    <iframe src="main-dashboard.html" title="儀表板"></iframe>
+                </div>
+
+                <!-- Customer Ordering View -->
+                <div id="customer-view" class="view">
+                   <iframe src="customer/customer-view.html" title="顧客點餐系統"></iframe>
+                </div>
+                
+                <!-- KDS View -->
+                <div id="kds-view" class="view">
+                     <iframe src="customer/kds-new.html" title="廚房出餐系統"></iframe>
+                </div>
+                
+                <!-- Checkout View -->
+                <div id="checkout-view" class="view">
+                     <iframe src="customer/checkout.html" title="結帳系統"></iframe>
+                </div>
+                
+                <!-- Order Management View -->
+                <div id="order-management-view" class="view">
+                     <iframe src="order-center.html" title="訂單管理中心"></iframe>
+                </div>
+                
+                <!-- Supplier Management View -->
+                <div id="supplier-view" class="view">
+                     <iframe src="management/supplier-management.html" title="供應商管理系統"></iframe>
+                </div>
+                
+                <!-- Cost Analysis View -->
+                <div id="cost-analysis-view" class="view">
+                     <iframe src="management/cost-analysis.html" title="成本控制與分析"></iframe>
+                </div>
+
+                <!-- 庫存管理視圖 -->
+                <div id="inventory-view" class="view">
+                     <iframe src="management/inventory-management.html" title="庫存管理系統"></iframe>
+                </div>
+
+                <!-- 配方管理視圖 -->
+                <div id="recipe-view" class="view">
+                     <iframe src="management/recipe-management.html" title="配方管理系統"></iframe>
+                </div>
+
+                <!-- 桌況管理視圖 -->
+                <div id="table-management-view" class="view">
+                     <iframe src="management/table-management-v2.html" title="桌況管理系統 v2.0"></iframe>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // ===== iframe 訊息監聽器 =====
+        window.addEventListener('message', function(event) {
+            // 驗證來源（可選：加強安全性）
+            if (event.origin !== window.location.origin) return;
+            
+            if (event.data && event.data.action === 'navigate') {
+                if (event.data.target === 'main') {
+                    // 切換到主系統視圖（這裡就是當前的導航主頁）
+                    showView('dashboard-view');
+                } else if (event.data.target === 'dashboard') {
+                    // 切換到儀表板視圖
+                    showView('dashboard-view');
+                }
+            }
+        });
+        
+        // DOM 元素快取
+        const dom = {
+            navLinks: document.querySelectorAll('.nav-link'),
+            views: document.querySelectorAll('.view'),
+            viewTitle: document.getElementById('view-title'),
+            systemTime: document.getElementById('system-time'),
+            loadingOverlay: document.getElementById('loading-overlay'),
+            connectionStatus: document.getElementById('connection-status')
+        };
+
+        // 系統狀態
+        let currentView = 'dashboard-view';
+        let systemHealth = {
+            lastCheck: Date.now(),
+            status: 'online',
+            errorCount: 0
+        };
+
+        // --- 初始化 ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // 隱藏載入畫面
+            setTimeout(() => {
+                dom.loadingOverlay.classList.add('hidden');
+            }, 1500);
+
+            // 設定導航
+            dom.navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const targetId = link.getAttribute('href').substring(1);
+                    switchView(targetId);
+                });
+
+                // 添加鍵盤支援
+                link.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        link.click();
+                    }
+                });
+            });
+
+            // 設定時間和系統監控
+            updateTime();
+            setInterval(updateTime, 1000);
+            
+            // 系統健康檢查
+            setInterval(checkSystemHealth, 30000); // 每30秒檢查一次
+            
+            // 設定鍵盤快捷鍵
+            setupKeyboardShortcuts();
+            
+            // 初始化第一個視圖
+            switchView(currentView);
+        });
+
+        // --- 視圖切換 (改進版) ---
+        function switchView(viewId) {
+            if (viewId === currentView) return; // 避免重複切換
+            
+            const previousView = currentView;
+            currentView = viewId;
+            
+            // 添加載入指示器
+            showViewTransition();
+            
+            // 切換活動視圖
+            dom.views.forEach(view => {
+                view.classList.remove('active');
+                if (view.id === viewId) {
+                    setTimeout(() => {
+                        view.classList.add('active');
+                    }, 150); // 延遲以創造順暢過渡
+                }
+            });
+
+            // 更新側邊欄連結樣式
+            dom.navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === `#${viewId}`) {
+                    link.classList.add('active');
+                    
+                    // 更新標題
+                    const linkText = link.querySelector('span').textContent;
+                    dom.viewTitle.textContent = linkText;
+                    
+                    // 添加成功切換效果
+                    link.style.transform = 'scale(1.05)';
+                    setTimeout(() => {
+                        link.style.transform = '';
+                    }, 200);
+                }
+            });
+
+            // 刷新 iframe 內容
+            setTimeout(() => {
+                const activeView = document.getElementById(viewId);
+                if (activeView) {
+                    const iframe = activeView.querySelector('iframe');
+                    if (iframe) {
+                        try {
+                            iframe.contentWindow.location.reload();
+                        } catch (error) {
+                            console.warn('無法重新載入 iframe:', error);
+                            // 重新設定 src 作為備用方案
+                            const src = iframe.src;
+                            iframe.src = '';
+                            setTimeout(() => iframe.src = src, 100);
+                        }
+                    }
+                }
+                hideViewTransition();
+            }, 300);
+
+            // 記錄視圖切換
+            logViewChange(previousView, viewId);
+        }
+
+        // 視圖切換動畫
+        function showViewTransition() {
+            const overlay = document.createElement('div');
+            overlay.className = 'fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-40 transition-opacity';
+            overlay.id = 'view-transition';
+            document.body.appendChild(overlay);
+            
+            setTimeout(() => overlay.classList.add('opacity-0'), 10);
+        }
+
+        function hideViewTransition() {
+            const overlay = document.getElementById('view-transition');
+            if (overlay) {
+                overlay.remove();
+            }
+        }
+
+        // --- 鍵盤快捷鍵 ---
+        function setupKeyboardShortcuts() {
+            document.addEventListener('keydown', (e) => {
+                if (e.ctrlKey || e.metaKey) {
+                    switch(e.key) {
+                        case '1':
+                            e.preventDefault();
+                            switchView('dashboard-view');
+                            break;
+                        case '2':
+                            e.preventDefault();
+                            switchView('customer-view');
+                            break;
+                        case '3':
+                            e.preventDefault();
+                            switchView('kds-view');
+                            break;
+                        case '4':
+                            e.preventDefault();
+                            switchView('order-management-view');
+                            break;
+                        case '5':
+                            e.preventDefault();
+                            switchView('checkout-view');
+                            break;
+                        case '6':
+                            e.preventDefault();
+                            switchView('supplier-view');
+                            break;
+                        case '7':
+                            e.preventDefault();
+                            switchView('cost-analysis-view');
+                            break;
+                        case '8':
+                            e.preventDefault();
+                            switchView('inventory-view');
+                            break;
+                        case '9':
+                            e.preventDefault();
+                            switchView('recipe-view');
+                            break;
+                        case '0':
+                            e.preventDefault();
+                            switchView('table-management-view');
+                            break;
+                    }
+                }
+            });
+        }
+
+        // --- 系統監控 ---
+        function updateTime() {
+            const now = new Date();
+            dom.systemTime.textContent = now.toLocaleTimeString('zh-TW', { 
+                hour12: false,
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        }
+
+        function checkSystemHealth() {
+            // 檢查各個模組的健康狀態
+            const now = Date.now();
+            const timeSinceLastCheck = now - systemHealth.lastCheck;
+            
+            if (timeSinceLastCheck > 60000) { // 超過1分鐘沒有活動
+                systemHealth.status = 'warning';
+                updateConnectionStatus('警告', 'yellow');
+            } else {
+                systemHealth.status = 'online';
+                updateConnectionStatus('系統正常', 'green');
+            }
+            
+            systemHealth.lastCheck = now;
+        }
+
+        function updateConnectionStatus(message, color) {
+            const statusElement = dom.connectionStatus;
+            const dot = statusElement.querySelector('div');
+            const text = statusElement.querySelector('span');
+            
+            dot.className = `w-2 h-2 bg-${color}-400 rounded-full mr-2 animate-pulse`;
+            text.textContent = message;
+            text.className = `text-xs text-${color}-400`;
+        }
+
+        // --- 工具函數 ---
+        function logViewChange(from, to) {
+            console.log(`視圖切換: ${from} → ${to}`, {
+                timestamp: new Date().toISOString(),
+                userAgent: navigator.userAgent,
+                viewportSize: `${window.innerWidth}x${window.innerHeight}`
+            });
+        }
+
+        // --- 錯誤處理 ---
+        window.addEventListener('error', (e) => {
+            systemHealth.errorCount++;
+            console.error('系統錯誤:', e.error);
+            
+            if (systemHealth.errorCount > 5) {
+                updateConnectionStatus('系統異常', 'red');
+            }
+        });
+
+        // --- 響應式處理 ---
+        window.addEventListener('resize', debounce(() => {
+            console.log('視窗大小改變:', window.innerWidth, 'x', window.innerHeight);
+            // 可以在這裡添加響應式邏輯
+        }, 250));
+
+        // 防抖函數
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // 使系統健康檢查可被外部調用
+        window.POS_SYSTEM = {
+            switchView,
+            checkSystemHealth,
+            getCurrentView: () => currentView,
+            getSystemHealth: () => systemHealth
+        };
+
+        // --- PWA 功能註冊 ---
+        if ('serviceWorker' in navigator && window.location.protocol === 'https:') {
+            window.addEventListener('load', async () => {
+                try {
+                    const registration = await navigator.serviceWorker.register('/sw.js');
+                    console.log('Service Worker 註冊成功:', registration.scope);
+                    
+                    // 監聽 Service Worker 更新
+                    registration.addEventListener('updatefound', () => {
+                        const newWorker = registration.installing;
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                // 顯示更新可用通知
+                                showUpdateAvailable();
+                            }
+                        });
+                    });
+                } catch (error) {
+                    console.error('Service Worker 註冊失敗:', error);
+                }
+            });
+        }
+
+        // PWA 安裝提示
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            showInstallPrompt();
+        });
+
+        function showInstallPrompt() {
+            const installBanner = document.createElement('div');
+            installBanner.className = 'fixed top-0 left-0 right-0 bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4 z-50 transform -translate-y-full transition-transform duration-300';
+            installBanner.innerHTML = `
+                <div class="container mx-auto flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                        </svg>
+                        <span class="font-medium">將 POS 系統安裝到您的設備以獲得更好的體驗</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button id="install-app" class="bg-white text-indigo-600 px-4 py-2 rounded-lg font-semibold hover:bg-gray-100 transition-colors">
+                            安裝應用
+                        </button>
+                        <button id="dismiss-install" class="text-white/80 hover:text-white p-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(installBanner);
+            setTimeout(() => installBanner.classList.remove('-translate-y-full'), 100);
+
+            // 安裝按鈕事件
+            installBanner.querySelector('#install-app').addEventListener('click', async () => {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    console.log(`安裝提示結果: ${outcome}`);
+                    deferredPrompt = null;
+                }
+                installBanner.remove();
+            });
+
+            // 關閉按鈕事件
+            installBanner.querySelector('#dismiss-install').addEventListener('click', () => {
+                installBanner.classList.add('-translate-y-full');
+                setTimeout(() => installBanner.remove(), 300);
+            });
+
+            // 5秒後自動隱藏
+            setTimeout(() => {
+                if (installBanner.parentNode) {
+                    installBanner.classList.add('-translate-y-full');
+                    setTimeout(() => installBanner.remove(), 300);
+                }
+            }, 5000);
+        }
+
+        function showUpdateAvailable() {
+            if (window.POS && window.POS.Notification) {
+                POS.Notification.info('系統更新可用，請重新整理頁面以獲得最新功能', 0);
+            } else {
+                console.log('系統更新可用，請重新整理頁面以獲得最新功能');
+                // 創建簡單的通知
+                const notification = document.createElement('div');
+                notification.className = 'fixed top-4 right-4 bg-blue-600 text-white p-4 rounded-lg z-50';
+                notification.textContent = '系統更新可用，請重新整理頁面';
+                document.body.appendChild(notification);
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 5000);
+            }
+        }
+    </script>
+</body>
+</html>

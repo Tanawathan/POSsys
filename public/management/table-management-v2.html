@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>桌況管理系統 v2.0 - Notion 整合版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Noto Sans TC', sans-serif; 
+        }
+        .table-card {
+            transition: all 0.3s ease;
+        }
+        .table-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+        .status-free { border-left: 5px solid #10b981; }
+        .status-occupied { border-left: 5px solid #ef4444; }
+        .status-reserved { border-left: 5px solid #f59e0b; }
+        .status-cleaning { border-left: 5px solid #8b5cf6; }
+        .status-maintenance { border-left: 5px solid #6b7280; }
+        
+        .loading-spinner {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-4">
+                    <!-- 返回按鈕 -->
+                    <div class="flex space-x-2">
+                        <a href="../index.html" class="flex items-center px-3 py-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                            <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                            </svg>
+                            主系統
+                        </a>
+                        <a href="../main-dashboard.html" class="flex items-center px-3 py-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                            <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a1 1 0 00-1-1H4a1 1 0 00-1-1V7a1 1 0 011-1h14a1 1 0 011 1v1zM8 12h.01M12 12h.01M16 12h.01" />
+                            </svg>
+                            儀表板
+                        </a>
+                    </div>
+                    <div class="border-l border-gray-300 h-6"></div>
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900">桌況管理系統</h1>
+                        <p class="text-sm text-gray-600">即時監控餐廳桌位狀態 • Notion 整合版 v2.0</p>
+                    </div>
+                </div>
+                <div class="flex space-x-3">
+                    <button id="refresh-btn" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center">
+                        <svg class="w-4 h-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        刷新
+                    </button>
+                    <button id="add-table-btn" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                        + 新增桌位
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Statistics -->
+    <section class="max-w-7xl mx-auto px-4 py-6">
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+            <div class="bg-white rounded-lg p-4 shadow-sm">
+                <div class="flex items-center">
+                    <div class="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
+                    <div>
+                        <p class="text-sm text-gray-600">空閒桌位</p>
+                        <p class="text-xl font-bold text-green-600" id="free-tables">-</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-lg p-4 shadow-sm">
+                <div class="flex items-center">
+                    <div class="w-3 h-3 bg-red-500 rounded-full mr-3"></div>
+                    <div>
+                        <p class="text-sm text-gray-600">使用中</p>
+                        <p class="text-xl font-bold text-red-600" id="occupied-tables">-</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-lg p-4 shadow-sm">
+                <div class="flex items-center">
+                    <div class="w-3 h-3 bg-yellow-500 rounded-full mr-3"></div>
+                    <div>
+                        <p class="text-sm text-gray-600">已預訂</p>
+                        <p class="text-xl font-bold text-yellow-600" id="reserved-tables">-</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-lg p-4 shadow-sm">
+                <div class="flex items-center">
+                    <div class="w-3 h-3 bg-purple-500 rounded-full mr-3"></div>
+                    <div>
+                        <p class="text-sm text-gray-600">清理中</p>
+                        <p class="text-xl font-bold text-purple-600" id="cleaning-tables">-</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-lg p-4 shadow-sm">
+                <div class="flex items-center">
+                    <div class="w-3 h-3 bg-gray-500 rounded-full mr-3"></div>
+                    <div>
+                        <p class="text-sm text-gray-600">總桌數</p>
+                        <p class="text-xl font-bold text-gray-800" id="total-tables">-</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Tables Grid -->
+    <section class="max-w-7xl mx-auto px-4 pb-8">
+        <div id="loading" class="text-center py-12">
+            <div class="loading-spinner w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full mx-auto mb-4"></div>
+            <p class="text-gray-600">正在從 Notion 載入桌況資料...</p>
+        </div>
+        
+        <div id="tables-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 hidden">
+            <!-- 桌位卡片將動態生成 -->
+        </div>
+        
+        <div id="error-state" class="text-center py-12 hidden">
+            <div class="text-red-500 text-6xl mb-4">⚠️</div>
+            <h3 class="text-xl font-semibold text-gray-800 mb-2">載入失敗</h3>
+            <p class="text-gray-600 mb-4">無法連接到 Notion 資料庫</p>
+            <button onclick="loadTables()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                重試載入
+            </button>
+        </div>
+    </section>
+
+    <!-- 桌位編輯模態框 -->
+    <div id="edit-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg p-6 w-full max-w-md">
+                <h3 class="text-lg font-semibold mb-4">編輯桌位</h3>
+                <form id="edit-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">桌號</label>
+                        <input type="text" id="edit-table-number" class="w-full border rounded-md px-3 py-2" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">狀態</label>
+                        <select id="edit-status" class="w-full border rounded-md px-3 py-2" required>
+                            <option value="空閒中">空閒中</option>
+                            <option value="使用中">使用中</option>
+                            <option value="已預訂">已預訂</option>
+                            <option value="清理中">清理中</option>
+                            <option value="維修中">維修中</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">容納人數</label>
+                        <input type="number" id="edit-capacity" class="w-full border rounded-md px-3 py-2" min="1" max="20" required>
+                    </div>
+                    <div class="flex space-x-3 pt-4">
+                        <button type="button" onclick="closeEditModal()" class="flex-1 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50">
+                            取消
+                        </button>
+                        <button type="submit" class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                            保存
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 配置
+        const CONFIG = {
+            notionApiEndpoint: 'http://localhost:3000/api/notion/databases',
+            tablesDatabase: '23afd5adc30b80fe86c9e086a54a0d61',
+            autoRefreshInterval: 30000 // 30秒
+        };
+
+        // 狀態
+        let tables = [];
+        let currentEditingTable = null;
+        let autoRefreshTimer = null;
+
+        // DOM 元素
+        const dom = {
+            loading: document.getElementById('loading'),
+            tablesGrid: document.getElementById('tables-grid'),
+            errorState: document.getElementById('error-state'),
+            refreshBtn: document.getElementById('refresh-btn'),
+            editModal: document.getElementById('edit-modal'),
+            editForm: document.getElementById('edit-form')
+        };
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            setupEventListeners();
+            loadTables();
+            startAutoRefresh();
+        });
+
+        // 設置事件監聽器
+        function setupEventListeners() {
+            dom.refreshBtn.addEventListener('click', loadTables);
+            dom.editForm.addEventListener('submit', handleEditSubmit);
+        }
+
+        // 從 Notion 載入桌況資料
+        async function loadTables() {
+            showLoading();
+            
+            try {
+                console.log('📋 開始從 Notion 載入桌況資料...');
+                
+                const response = await fetch(`${CONFIG.notionApiEndpoint}/${CONFIG.tablesDatabase}/query`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        sorts: [
+                            {
+                                property: '桌號',
+                                direction: 'ascending'
+                            }
+                        ]
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                console.log('📦 收到桌況資料:', data);
+
+                if (data.results && Array.isArray(data.results)) {
+                    tables = data.results.map(mapNotionTableToLocal);
+                    console.log(`✅ 成功載入 ${tables.length} 個桌位`);
+                    renderTables();
+                    updateStatistics();
+                    showTablesGrid();
+                } else {
+                    throw new Error('資料格式異常');
+                }
+            } catch (error) {
+                console.error('❌ 載入桌況失敗:', error);
+                showError();
+            }
+        }
+
+        // 映射 Notion 資料到本地格式
+        function mapNotionTableToLocal(notionTable) {
+            const props = notionTable.properties;
+            
+            return {
+                id: notionTable.id,
+                tableNumber: props['桌號']?.title?.[0]?.text?.content || 
+                           props['桌號']?.rich_text?.[0]?.text?.content || '未知',
+                status: props['狀態']?.select?.name || '空閒中',
+                maxCapacity: props['容納人數']?.number || 4,
+                currentCapacity: props['現在人數']?.number || 0,
+                location: props['位置']?.rich_text?.[0]?.text?.content || '',
+                notes: props['備註']?.rich_text?.[0]?.text?.content || '',
+                lastUpdated: notionTable.last_edited_time
+            };
+        }
+
+        // 渲染桌位
+        function renderTables() {
+            dom.tablesGrid.innerHTML = '';
+            
+            tables.forEach(table => {
+                const tableCard = createTableCard(table);
+                dom.tablesGrid.appendChild(tableCard);
+            });
+        }
+
+        // 創建桌位卡片
+        function createTableCard(table) {
+            const card = document.createElement('div');
+            const statusClass = getStatusClass(table.status);
+            const statusColor = getStatusColor(table.status);
+            
+            card.className = `table-card bg-white rounded-lg p-4 shadow-sm ${statusClass} cursor-pointer`;
+            
+            card.innerHTML = `
+                <div class="flex justify-between items-start mb-3">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800">${table.tableNumber}</h3>
+                        <p class="text-sm text-gray-600">${table.location || '一般區域'}</p>
+                    </div>
+                    <span class="px-2 py-1 rounded-full text-xs font-medium ${statusColor}">
+                        ${table.status}
+                    </span>
+                </div>
+                
+                <div class="space-y-2">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-600">容納人數</span>
+                        <span class="font-medium">${table.maxCapacity} 人</span>
+                    </div>
+                    ${table.currentCapacity > 0 ? `
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">目前人數</span>
+                            <span class="font-medium text-blue-600">${table.currentCapacity} 人</span>
+                        </div>
+                    ` : ''}
+                    ${table.notes ? `
+                        <div class="mt-2 p-2 bg-gray-50 rounded text-xs text-gray-600">
+                            💬 ${table.notes}
+                        </div>
+                    ` : ''}
+                </div>
+                
+                <div class="mt-3 pt-3 border-t border-gray-100">
+                    <button onclick="editTable('${table.id}')" class="w-full px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-md transition-colors">
+                        編輯桌位
+                    </button>
+                </div>
+            `;
+            
+            return card;
+        }
+
+        // 獲取狀態樣式類
+        function getStatusClass(status) {
+            const statusMap = {
+                '空閒中': 'status-free',
+                '使用中': 'status-occupied',
+                '已預訂': 'status-reserved',
+                '清理中': 'status-cleaning',
+                '維修中': 'status-maintenance'
+            };
+            return statusMap[status] || 'status-free';
+        }
+
+        // 獲取狀態顏色
+        function getStatusColor(status) {
+            const colorMap = {
+                '空閒中': 'bg-green-100 text-green-800',
+                '使用中': 'bg-red-100 text-red-800',
+                '已預訂': 'bg-yellow-100 text-yellow-800',
+                '清理中': 'bg-purple-100 text-purple-800',
+                '維修中': 'bg-gray-100 text-gray-800'
+            };
+            return colorMap[status] || 'bg-gray-100 text-gray-800';
+        }
+
+        // 更新統計資料
+        function updateStatistics() {
+            const stats = {
+                free: tables.filter(t => t.status === '空閒中').length,
+                occupied: tables.filter(t => t.status === '使用中').length,
+                reserved: tables.filter(t => t.status === '已預訂').length,
+                cleaning: tables.filter(t => t.status === '清理中').length,
+                total: tables.length
+            };
+
+            document.getElementById('free-tables').textContent = stats.free;
+            document.getElementById('occupied-tables').textContent = stats.occupied;
+            document.getElementById('reserved-tables').textContent = stats.reserved;
+            document.getElementById('cleaning-tables').textContent = stats.cleaning;
+            document.getElementById('total-tables').textContent = stats.total;
+        }
+
+        // 編輯桌位
+        function editTable(tableId) {
+            const table = tables.find(t => t.id === tableId);
+            if (!table) return;
+
+            currentEditingTable = table;
+            
+            document.getElementById('edit-table-number').value = table.tableNumber;
+            document.getElementById('edit-status').value = table.status;
+            document.getElementById('edit-capacity').value = table.maxCapacity;
+            
+            dom.editModal.classList.remove('hidden');
+        }
+
+        // 處理編輯表單提交
+        async function handleEditSubmit(e) {
+            e.preventDefault();
+            
+            if (!currentEditingTable) return;
+
+            const formData = {
+                tableNumber: document.getElementById('edit-table-number').value,
+                status: document.getElementById('edit-status').value,
+                capacity: parseInt(document.getElementById('edit-capacity').value)
+            };
+
+            try {
+                // 更新 Notion 資料庫
+                const response = await fetch(`http://localhost:3000/api/notion/pages/${currentEditingTable.id}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        properties: {
+                            '桌號': {
+                                title: [{ text: { content: formData.tableNumber } }]
+                            },
+                            '狀態': {
+                                select: { name: formData.status }
+                            },
+                            '容納人數': {
+                                number: formData.capacity
+                            }
+                        }
+                    })
+                });
+
+                if (response.ok) {
+                    console.log('✅ 桌位更新成功');
+                    closeEditModal();
+                    loadTables(); // 重新載入資料
+                } else {
+                    throw new Error('更新失敗');
+                }
+            } catch (error) {
+                console.error('❌ 更新桌位失敗:', error);
+                alert('更新失敗，請稍後重試');
+            }
+        }
+
+        // 關閉編輯模態框
+        function closeEditModal() {
+            dom.editModal.classList.add('hidden');
+            currentEditingTable = null;
+        }
+
+        // 顯示載入狀態
+        function showLoading() {
+            dom.loading.classList.remove('hidden');
+            dom.tablesGrid.classList.add('hidden');
+            dom.errorState.classList.add('hidden');
+        }
+
+        // 顯示桌位網格
+        function showTablesGrid() {
+            dom.loading.classList.add('hidden');
+            dom.tablesGrid.classList.remove('hidden');
+            dom.errorState.classList.add('hidden');
+        }
+
+        // 顯示錯誤狀態
+        function showError() {
+            dom.loading.classList.add('hidden');
+            dom.tablesGrid.classList.add('hidden');
+            dom.errorState.classList.remove('hidden');
+        }
+
+        // 開始自動刷新
+        function startAutoRefresh() {
+            autoRefreshTimer = setInterval(loadTables, CONFIG.autoRefreshInterval);
+        }
+
+        // 停止自動刷新
+        function stopAutoRefresh() {
+            if (autoRefreshTimer) {
+                clearInterval(autoRefreshTimer);
+                autoRefreshTimer = null;
+            }
+        }
+
+        // 頁面卸載時清理
+        window.addEventListener('beforeunload', stopAutoRefresh);
+    </script>
+</body>
+</html>

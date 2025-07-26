@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>主控台 - Tanawat Restaurant</title>
+    <meta name="description" content="Tanawat Restaurant 餐廳管理系統主控台">
+    
+    <!-- 統一設計系統樣式 -->
+    <link rel="stylesheet" href="../../assets/css/unified-design.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: var(--space-8);
+            margin-bottom: var(--space-8);
+        }
+        
+        .table-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: var(--space-4);
+        }
+        
+        .table-item {
+            aspect-ratio: 1;
+            border-radius: var(--radius-xl);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .table-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+            opacity: 0.1;
+            transition: opacity 0.2s ease;
+        }
+        
+        .table-item:hover::before {
+            opacity: 0.2;
+        }
+        
+        .table-item.occupied {
+            background: linear-gradient(135deg, var(--error-100), var(--error-50));
+            border: 2px solid var(--error-200);
+            color: var(--error-700);
+        }
+        
+        .table-item.occupied::before {
+            background: linear-gradient(135deg, var(--error-500), var(--error-600));
+            opacity: 0.15;
+        }
+        
+        .table-item.available {
+            background: linear-gradient(135deg, var(--success-100), var(--success-50));
+            border: 2px solid var(--success-200);
+            color: var(--success-700);
+        }
+        
+        .table-item.available::before {
+            background: linear-gradient(135deg, var(--success-500), var(--success-600));
+            opacity: 0.1;
+        }
+        
+        .table-number {
+            font-size: var(--text-lg);
+            margin-bottom: var(--space-1);
+        }
+        
+        .table-status {
+            font-size: var(--text-xs);
+            opacity: 0.8;
+        }
+        
+        .system-info {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--space-4);
+            background: linear-gradient(135deg, var(--primary-50), var(--secondary-50));
+            border-radius: var(--radius-xl);
+            border: 1px solid var(--primary-200);
+        }
+        
+        .system-time {
+            font-size: var(--text-xl);
+            font-weight: 600;
+            color: var(--gray-800);
+        }
+        
+        .system-status {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            font-size: var(--text-sm);
+            color: var(--success-600);
+        }
+        
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            background: var(--success-500);
+            border-radius: var(--radius-full);
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+                gap: var(--space-6);
+            }
+            
+            .table-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 統一導航欄 -->
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="dashboard.html" class="nav-brand">
+                <i class="fas fa-utensils"></i>
+                <span>Tanawat Restaurant</span>
+            </a>
+            
+            <div class="nav-menu">
+                <button id="return-main" class="nav-link">
+                    <i class="fas fa-home"></i>
+                    <span>主系統</span>
+                </button>
+                <button id="return-dashboard" class="nav-link">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>儀表板</span>
+                </button>
+                <a href="dashboard.html" class="nav-link active">
+                    <i class="fas fa-chart-line"></i>
+                    <span>營運分析</span>
+                </a>
+                <a href="../pages/management/order-management-new.html" class="nav-link">
+                    <i class="fas fa-receipt"></i>
+                    <span>訂單管理</span>
+                </a>
+                <a href="reservation-management.html" class="nav-link">
+                    <i class="fas fa-calendar-check"></i>
+                    <span>訂位管理</span>
+                </a>
+                <a href="menu-management.html" class="nav-link">
+                    <i class="fas fa-utensils"></i>
+                    <span>菜單管理</span>
+                </a>
+                <a href="table-management.html" class="nav-link">
+                    <i class="fas fa-table"></i>
+                    <span>桌況管理</span>
+                </a>
+                <a href="purchase-management.html" class="nav-link">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span>採購管理</span>
+                </a>
+                <a href="recipe-management.html" class="nav-link">
+                    <i class="fas fa-book"></i>
+                    <span>食譜管理</span>
+                </a>
+                <a href="inventory-management.html" class="nav-link">
+                    <i class="fas fa-warehouse"></i>
+                    <span>庫存管理</span>
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要內容區域 -->
+    <main class="main-content">
+        <div class="container">
+            <!-- 系統資訊 -->
+            <div class="system-info mb-8">
+                <div>
+                    <h1 class="mb-2">餐廳營運儀表板</h1>
+                    <p class="text-muted">歡迎使用 Tanawat Restaurant 管理系統</p>
+                </div>
+                <div class="text-right">
+                    <div id="system-time" class="system-time"></div>
+                    <div class="system-status">
+                        <div class="status-indicator"></div>
+                        <span>系統運行正常</span>
+                    </div>
+        </div>
+    </nav>
+
+    <!-- 主要內容區域 -->
+    <main class="main-content">
+        <div class="container">
+            <!-- 系統資訊 -->
+            <div class="system-info mb-8">
+                <div>
+                    <h1 class="mb-2">餐廳營運儀表板</h1>
+                    <p class="text-muted">歡迎使用 Tanawat Restaurant 管理系統</p>
+                </div>
+                <div class="text-right">
+                    <div id="system-time" class="system-time"></div>
+                    <div class="system-status">
+                        <div class="status-indicator"></div>
+                        <span id="system-status">系統運行正常</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 主控台網格 -->
+            <div class="dashboard-grid">
+                <!-- 即時桌況監控 -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">
+                            <i class="fas fa-table text-primary-500"></i>
+                            即時桌況監控
+                        </h2>
+                        <button id="refresh-tables-btn" class="btn btn-secondary btn-sm">
+                            <i class="fas fa-sync"></i>
+                            <span>更新</span>
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div id="table-status" class="table-grid">
+                            <div class="flex justify-center items-center col-span-full py-16">
+                                <div class="loading-spinner mr-4"></div>
+                                <span class="text-muted">正在載入桌況...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 系統統計與快速操作 -->
+                <div class="space-y-6">
+                    <!-- 營收統計 -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-chart-line text-success-500"></i>
+                                營收統計
+                            </h3>
+                        </div>
+                        <div class="card-body space-y-4">
+                            <div class="text-center">
+                                <div id="daily-revenue" class="text-3xl font-bold text-success-600 mb-2">NT$ 0</div>
+                                <div class="text-sm text-muted">今日營收</div>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-muted">本月累計</span>
+                                <span id="monthly-revenue" class="font-medium">NT$ 0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 訂單統計 -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-receipt text-info-500"></i>
+                                訂單統計
+                            </h3>
+                        </div>
+                        <div class="card-body space-y-3">
+                            <div class="flex justify-between">
+                                <span class="text-muted">今日總單數</span>
+                                <span id="daily-orders" class="font-semibold text-info-600">0</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-muted">進行中</span>
+                                <span id="active-orders" class="font-semibold text-warning-600">0</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-muted">已完成</span>
+                                <span id="completed-orders" class="font-semibold text-success-600">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 即時訂單動態 -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-bell text-warning-500"></i>
+                                即時訂單
+                            </h3>
+                            <button id="refresh-orders-btn" class="btn btn-secondary btn-sm">
+                                <i class="fas fa-sync"></i>
+                                <span>更新</span>
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div id="order-feed" class="space-y-3 max-h-80 overflow-y-auto">
+                                <div class="text-center py-8 text-muted">尚無新訂單</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 快速操作 -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">
+                                <i class="fas fa-bolt text-warning-500"></i>
+                                快速操作
+                            </h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="grid grid-cols-2 gap-3">
+                                <button onclick="window.location.href='../pages/management/order-management-new.html'" class="btn btn-primary flex flex-col items-center py-4">
+                                    <i class="fas fa-plus text-xl mb-2"></i>
+                                    <span class="text-sm">新訂單</span>
+                                </button>
+                                <button onclick="window.location.href='reservation-management.html'" class="btn btn-secondary flex flex-col items-center py-4">
+                                    <i class="fas fa-calendar-plus text-xl mb-2"></i>
+                                    <span class="text-sm">新訂位</span>
+                                </button>
+                                <button onclick="window.location.href='table-management.html'" class="btn btn-info flex flex-col items-center py-4">
+                                    <i class="fas fa-table text-xl mb-2"></i>
+                                    <span class="text-sm">桌況</span>
+                                </button>
+                                <button onclick="window.location.href='menu-management.html'" class="btn btn-success flex flex-col items-center py-4">
+                                    <i class="fas fa-utensils text-xl mb-2"></i>
+                                    <span class="text-sm">菜單</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 桌號詳情模態框 -->
+    <div id="order-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title" class="modal-title">訂單詳情</h2>
+                <button id="modal-close-btn" class="modal-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="modal-body" class="modal-body">
+                <!-- 動態內容 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 統一通知系統 -->
+    <div id="notification-container" class="notification-container"></div>
+
+    <!-- 統一載入指示器 -->
+    <div id="loading-indicator" class="loading-overlay" style="display: none;">
+        <div class="loading-spinner"></div>
+        <p class="mt-4">載入中...</p>
+    </div>
+
+    <script>
+        // ===== 返回按鈕處理邏輯 =====
+        document.addEventListener('DOMContentLoaded', function() {
+            const returnMainBtn = document.getElementById('return-main');
+            const returnDashboardBtn = document.getElementById('return-dashboard');
+            
+            // 檢查是否在iframe中
+            const isInIframe = window.self !== window.top;
+            
+            if (returnMainBtn) {
+                returnMainBtn.addEventListener('click', function() {
+                    if (isInIframe) {
+                        // 在iframe中，通知父視窗切換到主系統
+                        window.parent.postMessage({ action: 'navigate', target: 'main' }, '*');
+                    } else {
+                        // 直接開啟，使用正常連結
+                        window.location.href = '../../index.html';
+                    }
+                });
+            }
+            
+            if (returnDashboardBtn) {
+                returnDashboardBtn.addEventListener('click', function() {
+                    if (isInIframe) {
+                        // 在iframe中，通知父視窗切換到儀表板
+                        window.parent.postMessage({ action: 'navigate', target: 'dashboard' }, '*');
+                    } else {
+                        // 直接開啟，使用正常連結
+                        window.location.href = '../../main-dashboard.html';
+                    }
+                });
+            }
+        });
+        
+        // 載入資料管理系統
+        const loadScript = (src) => {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        };
+
+        // 按順序載入必要的腳本
+        async function loadDataSystem() {
+            try {
+                await loadScript('../../config/config.js');
+                await loadScript('../../assets/js/data-manager.js');
+                await loadScript('../../assets/js/data-initializer.js');
+                console.log('資料管理系統載入完成');
+            } catch (error) {
+                console.error('資料管理系統載入失敗:', error);
+            }
+        }
+
+        // 頁面載入時初始化資料系統
+        document.addEventListener('DOMContentLoaded', loadDataSystem);
+
+        const config = {
+            tableWebhookUrl: 'https://hook.us2.make.com/5h275y5bqajl3x4eecvg9ve4im9bo4nd', 
+            fetchOrdersWebhookUrl: 'https://hook.us2.make.com/x38sw9p1gpwgv8lg4ysg6swywvdtjheh',
+        };
+
+        const dom = {
+            tableStatus: document.getElementById('table-status'),
+            orderFeed: document.getElementById('order-feed'),
+            systemTime: document.getElementById('system-time'),
+            systemStatus: document.getElementById('system-status'),
+            refreshTablesBtn: document.getElementById('refresh-tables-btn'),
+            refreshOrdersBtn: document.getElementById('refresh-orders-btn'),
+            orderModal: document.getElementById('order-modal'),
+            modalTitle: document.getElementById('modal-title'),
+            modalBody: document.getElementById('modal-body'),
+            modalCloseBtn: document.getElementById('modal-close-btn'),
+            dailyRevenue: document.getElementById('daily-revenue'),
+            monthlyRevenue: document.getElementById('monthly-revenue'),
+            dailyOrders: document.getElementById('daily-orders'),
+            activeOrders: document.getElementById('active-orders'),
+            completedOrders: document.getElementById('completed-orders'),
+        };
+
+        let lastOrdersJson = '[]';
+        let allOrders = [];
+
+        // 初始化系統
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchTableStatus();
+            fetchOrders();
+            
+            // 事件監聽器
+            dom.refreshTablesBtn.addEventListener('click', fetchTableStatus);
+            dom.refreshOrdersBtn.addEventListener('click', fetchOrders);
+            dom.modalCloseBtn.addEventListener('click', closeModal);
+            dom.orderModal.addEventListener('click', (e) => {
+                if (e.target === dom.orderModal) closeModal();
+            });
+            
+            // 啟動時間更新
+            updateTime();
+            setInterval(updateTime, 1000);
+            
+            // 定期自動更新
+            setInterval(fetchTableStatus, 30000); // 每30秒更新桌況
+            setInterval(fetchOrders, 15000); // 每15秒更新訂單
+        });
+
+        // 獲取桌況資料
+        async function fetchTableStatus() {
+            const btn = dom.refreshTablesBtn;
+            setButtonLoading(btn, true);
+            
+            try {
+                const response = await fetch(config.tableWebhookUrl);
+                if (!response.ok) throw new Error('Network response was not ok');
+                
+                const data = await response.json();
+                let tables = [];
+                
+                if (Array.isArray(data) && data.length > 0 && data[0].body && Array.isArray(data[0].body)) {
+                    tables = data[0].body;
+                } else if (Array.isArray(data) && data.length > 0 && data[0].properties_value) {
+                    tables = data;
+                }
+                
+                renderTables(tables);
+                updateSystemStatus(true);
+                showNotification('桌況更新成功', 'success');
+            } catch (error) {
+                console.error('Failed to fetch table status:', error);
+                dom.tableStatus.innerHTML = `
+                    <div class="col-span-full text-center py-16 text-error-500">
+                        <i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
+                        <p>讀取桌況失敗</p>
+                    </div>
+                `;
+                updateSystemStatus(false);
+                showNotification('桌況更新失敗', 'error');
+            } finally {
+                setButtonLoading(btn, false);
+            }
+        }
+
+        // 獲取訂單資料
+        async function fetchOrders() {
+            const btn = dom.refreshOrdersBtn;
+            setButtonLoading(btn, true);
+            
+            try {
+                const response = await fetch(config.fetchOrdersWebhookUrl);
+                if (!response.ok) throw new Error('Network response was not ok');
+                
+                const responseText = await response.text();
+                
+                if (responseText !== lastOrdersJson) {
+                    const data = JSON.parse(responseText);
+                    let newOrders = [];
+                    
+                    if (Array.isArray(data) && data.length > 0 && data[0].body && Array.isArray(data[0].body)) {
+                        newOrders = data[0].body;
+                    } else if (Array.isArray(data) && data.length > 0 && data[0].properties_value) {
+                        newOrders = data;
+                    }
+                    
+                    allOrders = newOrders;
+                    renderOrders(newOrders, true);
+                    updateOrderStatistics(newOrders);
+                    lastOrdersJson = responseText;
+                } else {
+                    renderOrders(allOrders, false);
+                }
+                
+                updateSystemStatus(true);
+                showNotification('訂單更新成功', 'success');
+            } catch (error) {
+                console.error('Failed to fetch orders:', error);
+                updateSystemStatus(false);
+                showNotification('訂單更新失敗', 'error');
+            } finally {
+                setButtonLoading(btn, false);
+            }
+        }
+
+        // 渲染桌況
+        function renderTables(tables) {
+            dom.tableStatus.innerHTML = '';
+            
+            if (!tables || tables.length === 0) {
+                dom.tableStatus.innerHTML = `
+                    <div class="col-span-full text-center py-16 text-muted">
+                        <i class="fas fa-table text-4xl mb-4 opacity-50"></i>
+                        <p>沒有設定任何桌號</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            tables.forEach(tableData => {
+                const props = tableData.properties_value || {};
+                const tableNumber = props['桌號']?.[0]?.plain_text;
+                const status = props['狀態']?.name;
+                
+                if (!tableNumber || !status) return;
+                
+                const tableDiv = document.createElement('div');
+                const isOccupied = status === '已佔用' || status === '用餐中';
+                
+                tableDiv.className = `table-item ${isOccupied ? 'occupied' : 'available'}`;
+                tableDiv.innerHTML = `
+                    <div class="table-number">${tableNumber}</div>
+                    <div class="table-status">${status}</div>
+                `;
+                
+                tableDiv.addEventListener('click', () => showTableOrderModal(tableNumber));
+                dom.tableStatus.appendChild(tableDiv);
+            });
+        }
+
+        // 解析訂單項目 JSON
+        function parseOrderItems(jsonString) {
+            if (!jsonString) return null;
+            
+            let data;
+            try {
+                data = JSON.parse(jsonString);
+            } catch (e) {
+                try {
+                    data = JSON.parse(`[${jsonString}]`);
+                } catch (e2) {
+                    console.error("Failed to parse order items JSON:", e2, "Original string:", jsonString);
+                    return null;
+                }
+            }
+            
+            if (data && data.text && typeof data.text.content === 'string') {
+                return parseOrderItems(data.text.content);
+            }
+            
+            if (Array.isArray(data)) {
+                return data;
+            } else if (typeof data === 'object' && data !== null) {
+                return [data];
+            }
+            
+            console.warn("Could not resolve order items from data:", data);
+            return null;
+        }
+
+        // 渲染訂單
+        function renderOrders(orders, isNew) {
+            if (!orders || !Array.isArray(orders) || orders.length === 0) {
+                dom.orderFeed.innerHTML = `
+                    <div class="text-center py-8 text-muted">
+                        <i class="fas fa-receipt text-4xl mb-4 opacity-50"></i>
+                        <p>尚無新訂單</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            dom.orderFeed.innerHTML = '';
+            
+            // 只顯示最近的5筆訂單
+            const recentOrders = orders.slice(0, 5);
+            
+            recentOrders.forEach((order, index) => {
+                const props = order.properties_value;
+                if (!props) return;
+                
+                const orderId = props['訂單ID']?.[0]?.plain_text || 'N/A';
+                const table = orderId.split('-')[0] || '未知桌號';
+                const status = props['訂單狀態']?.name || '未知狀態';
+                const timestamp = new Date(props['建立時間']).toLocaleTimeString('zh-TW');
+                const itemsJsonString = props['訂單內容(JSON)']?.[0]?.plain_text;
+                const items = itemsJsonString ? parseOrderItems(itemsJsonString) : [];
+                
+                if (!items) {
+                    console.error('Skipping order due to parsing failure:', orderId);
+                    return;
+                }
+                
+                const totalPrice = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                
+                const orderDiv = document.createElement('div');
+                orderDiv.className = `p-4 border rounded-lg hover:shadow-md transition-all cursor-pointer ${
+                    status === '已完成' ? 'border-success-200 bg-success-50' : 
+                    status === '進行中' ? 'border-warning-200 bg-warning-50' : 
+                    'border-gray-200 bg-gray-50'
+                }`;
+                
+                orderDiv.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <h4 class="font-semibold">桌號 ${table}</h4>
+                            <p class="text-xs text-muted">${orderId}</p>
+                        </div>
+                        <span class="badge ${
+                            status === '已完成' ? 'badge-success' : 
+                            status === '進行中' ? 'badge-warning' : 
+                            'badge-secondary'
+                        }">${status}</span>
+                    </div>
+                    <div class="text-sm text-muted mb-2">
+                        ${items.length} 項商品 • NT$ ${totalPrice}
+                    </div>
+                    <div class="text-xs text-muted text-right">${timestamp}</div>
+                `;
+                
+                orderDiv.addEventListener('click', () => showTableOrderModal(table));
+                dom.orderFeed.appendChild(orderDiv);
+            });
+        }
+
+        // 更新訂單統計
+        function updateOrderStatistics(orders) {
+            if (!orders || !Array.isArray(orders)) return;
+            
+            const today = new Date().toDateString();
+            const todayOrders = orders.filter(order => {
+                const orderDate = new Date(order.properties_value['建立時間']).toDateString();
+                return orderDate === today;
+            });
+            
+            const activeOrders = orders.filter(order => {
+                const status = order.properties_value['訂單狀態']?.name;
+                return status === '進行中' || status === '準備中';
+            });
+            
+            const completedOrders = orders.filter(order => {
+                const status = order.properties_value['訂單狀態']?.name;
+                return status === '已完成';
+            });
+            
+            // 計算今日營收
+            let dailyRevenue = 0;
+            todayOrders.forEach(order => {
+                const itemsJsonString = order.properties_value['訂單內容(JSON)']?.[0]?.plain_text;
+                const items = itemsJsonString ? parseOrderItems(itemsJsonString) : [];
+                if (items) {
+                    dailyRevenue += items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                }
+            });
+            
+            // 更新統計顯示
+            dom.dailyRevenue.textContent = `NT$ ${dailyRevenue.toLocaleString()}`;
+            dom.dailyOrders.textContent = todayOrders.length;
+            dom.activeOrders.textContent = activeOrders.length;
+            dom.completedOrders.textContent = completedOrders.length;
+        }
+
+        // 顯示桌號訂單詳情
+        function showTableOrderModal(tableNumber) {
+            dom.modalTitle.textContent = `桌號 ${tableNumber} 的訂單詳情`;
+            
+            const tableOrders = allOrders.filter(order => {
+                const orderId = order.properties_value['訂單ID']?.[0]?.plain_text;
+                return orderId && orderId.startsWith(tableNumber + '-');
+            });
+            
+            if (tableOrders.length === 0) {
+                dom.modalBody.innerHTML = `
+                    <div class="text-center py-8 text-muted">
+                        <i class="fas fa-receipt text-4xl mb-4 opacity-50"></i>
+                        <p>此桌尚無訂單</p>
+                    </div>
+                `;
+            } else {
+                dom.modalBody.innerHTML = '';
+                
+                tableOrders.forEach(order => {
+                    const props = order.properties_value;
+                    const orderId = props['訂單ID']?.[0]?.plain_text || 'N/A';
+                    const status = props['訂單狀態']?.name || '未知狀態';
+                    const timestamp = new Date(props['建立時間']).toLocaleString('zh-TW');
+                    const itemsJsonString = props['訂單內容(JSON)']?.[0]?.plain_text;
+                    const items = itemsJsonString ? parseOrderItems(itemsJsonString) : [];
+                    
+                    if (!items) return;
+                    
+                    const totalPrice = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                    
+                    const itemsHtml = items.map(item => {
+                        const note = item.note && Object.values(item.note).length > 0 ? 
+                            `<span class="text-xs text-info-600">(${Object.values(item.note).join(', ')})</span>` : '';
+                        return `
+                            <div class="flex justify-between text-sm">
+                                <span>${item.name} <span class="text-muted">x${item.quantity}</span> ${note}</span>
+                                <span class="font-medium">NT$ ${item.price * item.quantity}</span>
+                            </div>
+                        `;
+                    }).join('');
+                    
+                    const orderCardHtml = `
+                        <div class="card mb-4">
+                            <div class="card-body">
+                                <div class="flex justify-between items-start mb-3">
+                                    <div>
+                                        <p class="text-sm text-muted">${orderId}</p>
+                                        <p class="text-xs text-muted">${timestamp}</p>
+                                    </div>
+                                    <span class="badge ${
+                                        status === '已完成' ? 'badge-success' : 
+                                        status === '進行中' ? 'badge-warning' : 
+                                        'badge-secondary'
+                                    }">${status}</span>
+                                </div>
+                                <div class="space-y-2 mb-3">
+                                    ${itemsHtml}
+                                </div>
+                                <div class="border-t pt-3 flex justify-between items-center font-semibold">
+                                    <span>總計</span>
+                                    <span class="text-lg text-primary-600">NT$ ${totalPrice}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    dom.modalBody.innerHTML += orderCardHtml;
+                });
+            }
+            
+            dom.orderModal.style.display = 'flex';
+        }
+
+        // 關閉模態框
+        function closeModal() {
+            dom.orderModal.style.display = 'none';
+        }
+
+        // 更新時間顯示
+        function updateTime() {
+            const now = new Date();
+            dom.systemTime.textContent = now.toLocaleTimeString('zh-TW', { hour12: false });
+        }
+
+        // 更新系統狀態
+        function updateSystemStatus(isOnline) {
+            dom.systemStatus.textContent = isOnline ? '系統運行正常' : '連線異常';
+            const indicator = dom.systemStatus.parentElement.querySelector('.status-indicator');
+            if (indicator) {
+                indicator.style.background = isOnline ? 'var(--success-500)' : 'var(--error-500)';
+            }
+        }
+
+        // 設置按鈕載入狀態
+        function setButtonLoading(button, isLoading) {
+            if (!button) return;
+            
+            const icon = button.querySelector('i');
+            const text = button.querySelector('span');
+            
+            if (isLoading) {
+                button.disabled = true;
+                if (icon) icon.className = 'fas fa-spinner fa-spin';
+                if (text) text.textContent = '更新中...';
+            } else {
+                button.disabled = false;
+                if (icon) icon.className = 'fas fa-sync';
+                if (text) text.textContent = '更新';
+            }
+        }
+
+        // 顯示通知
+        function showNotification(message, type = 'info') {
+            const container = document.getElementById('notification-container');
+            if (!container) return;
+            
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.innerHTML = `
+                <div class="notification-content">
+                    <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i>
+                    <span>${message}</span>
+                </div>
+                <button class="notification-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            
+            // 添加關閉按鈕事件
+            notification.querySelector('.notification-close').addEventListener('click', () => {
+                notification.remove();
+            });
+            
+            container.appendChild(notification);
+            
+            // 自動移除通知
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

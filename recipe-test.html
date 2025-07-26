@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>配方管理測試 - TANAWAT POS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .test-result {
+            border-left: 4px solid #10b981;
+            background: #f0fdf4;
+            padding: 1rem;
+            margin: 0.5rem 0;
+        }
+        .test-error {
+            border-left: 4px solid #ef4444;
+            background: #fef2f2;
+        }
+        .loading {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto px-4 py-6">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6">
+            <i class="fas fa-flask text-blue-600 mr-3"></i>
+            配方管理 Notion API 測試
+        </h1>
+        
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-semibold">API 連接測試</h2>
+                <button id="start-test" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                    <i class="fas fa-play mr-2"></i>開始測試
+                </button>
+            </div>
+            
+            <div id="test-results" class="space-y-3">
+                <!-- 測試結果會在這裡顯示 -->
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-xl shadow-lg p-6">
+            <h2 class="text-xl font-semibold mb-4">資料預覽</h2>
+            <div id="data-preview" class="space-y-4">
+                <!-- 資料預覽會在這裡顯示 -->
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/js/recipe-notion-manager.js"></script>
+    <script>
+        let testManager;
+        
+        // 確保 RecipeNotionManager 載入
+        function waitForManager() {
+            return new Promise((resolve, reject) => {
+                if (typeof RecipeNotionManager !== 'undefined') {
+                    resolve();
+                    return;
+                }
+                
+                let attempts = 0;
+                const interval = setInterval(() => {
+                    attempts++;
+                    if (typeof RecipeNotionManager !== 'undefined') {
+                        clearInterval(interval);
+                        resolve();
+                    } else if (attempts > 50) { // 5秒後超時
+                        clearInterval(interval);
+                        reject(new Error('RecipeNotionManager 載入超時'));
+                    }
+                }, 100);
+            });
+        }
+        
+        document.getElementById('start-test').addEventListener('click', async () => {
+            const resultsContainer = document.getElementById('test-results');
+            const previewContainer = document.getElementById('data-preview');
+            
+            resultsContainer.innerHTML = '';
+            previewContainer.innerHTML = '';
+            
+            try {
+                // 等待 RecipeNotionManager 載入
+                addTestResult('⏳ 等待管理器載入...', 'loading');
+                await waitForManager();
+                addTestResult('✅ 管理器載入完成', 'success');
+                
+                // 測試 1: 初始化管理器
+                addTestResult('🔧 初始化配方管理器...', 'loading');
+                testManager = new RecipeNotionManager();
+                addTestResult('✅ 配方管理器初始化成功', 'success');
+                
+                // 測試 2: 載入半成品配方
+                addTestResult('📊 載入半成品配方資料庫...', 'loading');
+                const recipes = await testManager.loadRecipes();
+                addTestResult(`✅ 成功載入 ${recipes.length} 項半成品配方`, 'success');
+                
+                // 測試 3: 載入組成項目
+                addTestResult('🧩 載入半成品組成項目資料庫...', 'loading');
+                const ingredients = await testManager.loadIngredients();
+                addTestResult(`✅ 成功載入 ${ingredients.length} 項組成項目`, 'success');
+                
+                // 測試 4: 建立關聯
+                addTestResult('🔗 建立配方與組成項目關聯...', 'loading');
+                testManager.linkRecipesWithIngredients();
+                addTestResult('✅ 關聯建立完成', 'success');
+                
+                // 測試 5: 分析統計
+                addTestResult('📈 分析配方統計資料...', 'loading');
+                const producible = testManager.getProducibleRecipes();
+                const shortage = testManager.getShortageRecipes();
+                const avgCost = testManager.calculateAverageCost();
+                addTestResult(`✅ 統計完成: 可生產 ${producible.length} 項, 缺料 ${shortage.length} 項, 平均成本 $${avgCost}`, 'success');
+                
+                // 測試 6: 生成採購建議
+                addTestResult('🛒 生成採購建議...', 'loading');
+                const suggestions = testManager.generatePurchaseSuggestions();
+                addTestResult(`✅ 生成 ${suggestions.length} 項採購建議`, 'success');
+                
+                // 顯示資料預覽
+                showDataPreview(recipes, ingredients);
+                
+                addTestResult('🎉 所有測試完成！系統運行正常', 'success');
+                
+            } catch (error) {
+                console.error('測試失敗:', error);
+                addTestResult(`❌ 測試失敗: ${error.message}`, 'error');
+            }
+        });
+        
+        function addTestResult(message, type) {
+            const resultsContainer = document.getElementById('test-results');
+            const div = document.createElement('div');
+            
+            div.className = `test-result ${type === 'error' ? 'test-error' : ''}`;
+            
+            if (type === 'loading') {
+                div.innerHTML = `
+                    <div class="flex items-center">
+                        <i class="fas fa-spinner loading mr-3"></i>
+                        <span>${message}</span>
+                    </div>
+                `;
+            } else {
+                div.innerHTML = `<span>${message}</span>`;
+            }
+            
+            resultsContainer.appendChild(div);
+            div.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function showDataPreview(recipes, ingredients) {
+            const previewContainer = document.getElementById('data-preview');
+            
+            // 顯示前5項配方
+            const recipePreview = `
+                <div class="mb-6">
+                    <h3 class="text-lg font-semibold mb-3">配方預覽 (前5項)</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        ${recipes.slice(0, 5).map(recipe => `
+                            <div class="border rounded-lg p-4">
+                                <h4 class="font-semibold text-blue-600">${recipe.name}</h4>
+                                <div class="text-sm text-gray-600 mt-2">
+                                    <p>分類: ${recipe.category}</p>
+                                    <p>重量: ${recipe.weight}g</p>
+                                    <p>成本: $${recipe.unitCost.toFixed(2)}/100g</p>
+                                    <p>狀態: ${recipe.status}</p>
+                                    <p>可製作: ${recipe.maxProduction} 份</p>
+                                    <p>組成項目: ${recipe.ingredients?.length || 0} 項</p>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            
+            // 顯示前10項組成項目
+            const ingredientPreview = `
+                <div>
+                    <h3 class="text-lg font-semibold mb-3">組成項目預覽 (前10項)</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        ${ingredients.slice(0, 10).map(ingredient => `
+                            <div class="border rounded-lg p-3">
+                                <h4 class="font-medium text-green-600">${ingredient.name}</h4>
+                                <div class="text-sm text-gray-600 mt-1">
+                                    <p>用量: ${ingredient.usageAmount}g</p>
+                                    <p>成本: $${ingredient.itemCost.toFixed(2)}</p>
+                                    <p>庫存: ${ingredient.ingredientStock}g</p>
+                                    <p>可製作: ${ingredient.maxProduciblePieces} 份</p>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            
+            previewContainer.innerHTML = recipePreview + ingredientPreview;
+        }
+    </script>
+</body>
+</html>

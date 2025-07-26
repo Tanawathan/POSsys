@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>庫存管理 - TANAWAT POS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .status-safe { background-color: #10b981; }
+        .status-low { background-color: #f59e0b; }
+        .status-critical { background-color: #ef4444; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto px-4 py-6">
+        <!-- 返回導航按鈕 -->
+        <div class="mb-6 flex gap-3">
+            <a href="../../index.html" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm flex items-center">
+                ← 主系統
+            </a>
+            <a href="../../main-dashboard.html" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm flex items-center">
+                📊 儀表板
+            </a>
+        </div>
+        
+        <!-- 頁面標題 -->
+        <div class="mb-6">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">
+                <i class="fas fa-warehouse text-blue-600 mr-3"></i>
+                庫存管理系統
+            </h1>
+            <p class="text-gray-600">管理162項食材庫存，以公克為主要計量單位，監控安全庫存量，優化採購決策</p>
+        </div>
+
+        <!-- 統計儀表板 -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+            <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500 uppercase">總品項數</p>
+                        <p class="text-2xl font-bold text-gray-900" id="total-items">163</p>
+                    </div>
+                    <div class="bg-blue-100 p-3 rounded-full">
+                        <i class="fas fa-boxes text-blue-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500 uppercase">安全庫存</p>
+                        <p class="text-2xl font-bold text-green-600" id="safe-stock">0</p>
+                    </div>
+                    <div class="bg-green-100 p-3 rounded-full">
+                        <i class="fas fa-check-circle text-green-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-yellow-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500 uppercase">庫存偏低</p>
+                        <p class="text-2xl font-bold text-yellow-600" id="low-stock">0</p>
+                    </div>
+                    <div class="bg-yellow-100 p-3 rounded-full">
+                        <i class="fas fa-exclamation-triangle text-yellow-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-red-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500 uppercase">急需補貨</p>
+                        <p class="text-2xl font-bold text-red-600" id="critical-stock">0</p>
+                    </div>
+                    <div class="bg-red-100 p-3 rounded-full">
+                        <i class="fas fa-exclamation-circle text-red-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 控制面板 -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <div class="flex flex-wrap gap-4 items-center justify-between">
+                <div class="flex flex-wrap gap-4 items-center">
+                    <div class="relative">
+                        <input type="text" id="search-input" placeholder="搜尋食材名稱..." 
+                               class="pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 w-64">
+                        <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                    </div>
+                    
+                    <select id="supplier-filter" class="border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500">
+                        <option value="">所有供應商</option>
+                    </select>
+                    
+                    <select id="category-filter" class="border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500">
+                        <option value="">所有品項類別</option>
+                    </select>
+                    
+                    <select id="status-filter" class="border rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500">
+                        <option value="">庫存狀態</option>
+                        <option value="safe">安全庫存</option>
+                        <option value="low">庫存偏低</option>
+                        <option value="critical">急需補貨</option>
+                    </select>
+                </div>
+                
+                <div class="flex gap-3">
+                    <button id="refresh-btn" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors">
+                        <i class="fas fa-sync-alt mr-2"></i>重新整理
+                    </button>
+                    <button id="export-btn" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
+                        <i class="fas fa-download mr-2"></i>匯出清單
+                    </button>
+                    <button id="add-item-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-plus mr-2"></i>新增品項
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 庫存表格 -->
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+            <div class="p-6 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-800">食材庫存清單</h3>
+            </div>
+            
+            <div class="overflow-x-auto custom-scrollbar" style="max-height: 600px;">
+                <table class="w-full">
+                    <thead class="bg-gray-50 sticky top-0">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <input type="checkbox" id="select-all" class="rounded">
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">狀態</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">食材名稱</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">供應商</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">規格/單位</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">庫存量</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">安全庫存</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">單位成本</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">庫存價值</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">最後進貨</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inventory-table-body" class="bg-white divide-y divide-gray-200">
+                        <!-- 動態載入資料 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 分頁控制 -->
+        <div class="bg-white rounded-xl shadow-lg p-4 mt-6">
+            <div class="flex justify-between items-center">
+                <div class="text-sm text-gray-500">
+                    顯示 <span id="showing-start">1</span> 到 <span id="showing-end">20</span> 項，共 <span id="total-count">163</span> 項
+                </div>
+                <div class="flex space-x-2">
+                    <button id="prev-page" class="px-4 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <span id="page-info" class="px-4 py-2">第 1 頁，共 9 頁</span>
+                    <button id="next-page" class="px-4 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新增/編輯品項 Modal -->
+    <div id="item-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-screen overflow-y-auto">
+                <div class="p-6 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-800" id="modal-title">新增品項</h3>
+                </div>
+                
+                <form id="item-form" class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">食材名稱 *</label>
+                            <input type="text" id="item-name" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500" required>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">供應商 *</label>
+                            <select id="item-supplier" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500" required>
+                                <option value="">請選擇供應商</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">規格/單位</label>
+                            <input type="text" id="item-spec" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">品項ID</label>
+                            <input type="text" id="item-id" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">庫存量</label>
+                            <input type="number" id="item-stock" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500" min="0">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">安全庫存量</label>
+                            <input type="number" id="item-safety-stock" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500" min="0">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">進價</label>
+                            <input type="number" id="item-purchase-price" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500" min="0" step="0.01">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">單位成本</label>
+                            <input type="number" id="item-unit-cost" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500" min="0" step="0.01">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">品項類別</label>
+                            <input type="text" id="item-category" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">狀態</label>
+                            <select id="item-status" class="w-full border rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500">
+                                <option value="未開始">未開始</option>
+                                <option value="進行中">進行中</option>
+                                <option value="已完成">已完成</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end space-x-3 mt-6 pt-6 border-t border-gray-200">
+                        <button type="button" id="cancel-btn" class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                            取消
+                        </button>
+                        <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                            儲存
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 載入配置檔案和管理器 -->
+    <script src="../../config/config.js"></script>
+    <script src="../../assets/js/notion-manager.js"></script>
+    <script src="../../assets/js/inventory-management.js"></script>
+    
+    <script>
+        // 初始化庫存管理系統
+        let inventoryManager;
+        
+        // 等待 DOM 載入完成後初始化
+        document.addEventListener('DOMContentLoaded', async function() {
+            // 返回按鈕處理
+            const returnMainBtn = document.getElementById('return-main');
+            const returnDashboardBtn = document.getElementById('return-dashboard');
+            const isInIframe = window.self !== window.top;
+            
+            if (returnMainBtn) {
+                returnMainBtn.addEventListener('click', function() {
+                    if (isInIframe) {
+                        window.parent.postMessage({ action: 'navigate', target: 'main' }, '*');
+                    } else {
+                        window.location.href = '../../public/index.html';
+                    }
+                });
+            }
+            
+            if (returnDashboardBtn) {
+                returnDashboardBtn.addEventListener('click', function() {
+                    if (isInIframe) {
+                        window.parent.postMessage({ action: 'navigate', target: 'dashboard' }, '*');
+                    } else {
+                        window.location.href = '../../public/main-dashboard.html';
+                    }
+                });
+            }
+            
+            // 初始化庫存管理系統
+            try {
+                console.log('🚀 初始化庫存管理系統...');
+                
+                // 等待 InventoryManager 載入
+                let retries = 0;
+                while (typeof InventoryManager === 'undefined' && retries < 10) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                    retries++;
+                }
+                
+                if (typeof InventoryManager === 'undefined') {
+                    throw new Error('InventoryManager 類別未載入');
+                }
+                
+                // 初始化庫存管理器（禁用自動初始化）
+                inventoryManager = new InventoryManager(false);
+                
+                // 手動執行初始化以確保使用 Notion 資料
+                console.log('📡 嘗試從 Notion API 載入資料...');
+                try {
+                    await inventoryManager.loadFromNotion();
+                    inventoryManager.isNotionConnected = true;
+                    console.log('✅ Notion 資料載入成功，共載入', inventoryManager.inventoryData.length, '項');
+                    
+                    // 顯示前3項確認資料正確性
+                    const sampleNames = inventoryManager.inventoryData.slice(0, 3).map(item => item.name).join(', ');
+                    console.log('📋 載入的食材範例:', sampleNames);
+                    
+                } catch (notionError) {
+                    console.error('❌ Notion 載入失敗詳細錯誤:', notionError);
+                    
+                    // 顯示詳細錯誤訊息
+                    showErrorMessage(`Notion API 載入失敗: ${notionError.message}。請檢查網路連接和 API 設定。`);
+                    
+                    // 不使用本地資料，而是顯示錯誤狀態
+                    inventoryManager.inventoryData = [];
+                    inventoryManager.filteredData = [];
+                    document.getElementById('inventory-table-body').innerHTML = `
+                        <tr>
+                            <td colspan="11" class="px-6 py-8 text-center text-red-500">
+                                ❌ 無法載入 Notion 資料<br>
+                                <small>錯誤: ${notionError.message}</small><br>
+                                <button onclick="location.reload()" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                                    🔄 重新載入
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }
+                
+                // 初始化 UI
+                inventoryManager.bindEvents();
+                inventoryManager.renderTable();
+                inventoryManager.updateStatistics();
+                inventoryManager.populateFilters();
+                
+                console.log('✅ 庫存管理系統初始化完成');
+                
+            } catch (error) {
+                console.error('❌ 庫存管理系統初始化失敗:', error);
+                showErrorMessage('庫存系統載入失敗: ' + error.message);
+            }
+        });
+        
+        function showErrorMessage(message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'fixed top-4 right-4 bg-red-500 text-white p-4 rounded-lg shadow-lg z-50';
+            errorDiv.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas fa-exclamation-circle mr-2"></i>
+                    <span>${message}</span>
+                    <button onclick="this.parentElement.parentElement.remove()" class="ml-4 text-white hover:text-gray-200">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+            document.body.appendChild(errorDiv);
+            
+            setTimeout(() => {
+                if (errorDiv.parentNode) {
+                    errorDiv.remove();
+                }
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

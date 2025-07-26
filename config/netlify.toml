@@ -1,0 +1,46 @@
+[build]
+  # 構建設定
+  publish = "."
+  command = ""
+
+[build.environment]
+  # 環境變數
+  NODE_VERSION = "18"
+
+[[headers]]
+  # 設定所有頁面的安全標頭
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+    X-XSS-Protection = "1; mode=block"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+[[redirects]]
+  # SPA 路由支援 - 將所有路徑重定向到 index.html (移除 admin 條件，這會阻止正常訪問)
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# 表單處理設定（如果需要）
+[build.processing]
+  skip_processing = false
+
+[build.processing.css]
+  bundle = true
+  minify = true
+
+[build.processing.js]
+  bundle = false
+  minify = true
+
+[build.processing.html]
+  pretty_urls = true
+
+# 函數設定（如果使用 Netlify Functions）
+[functions]
+  directory = "netlify/functions"
+
+# 邊緣函數設定
+[edge_functions]
+  directory = "netlify/edge-functions"

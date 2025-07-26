@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>配方管理測試 - Debug版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50 p-8">
+    <div class="max-w-6xl mx-auto">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6">
+            配方管理 Debug 測試
+        </h1>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- 測試控制 -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold mb-4">測試控制</h2>
+                <div class="space-y-3">
+                    <button id="test-basic-api" class="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700">
+                        🔗 測試基本 API 連接
+                    </button>
+                    <button id="test-manager-load" class="w-full bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700">
+                        📊 測試管理器載入
+                    </button>
+                    <button id="test-full-system" class="w-full bg-purple-600 text-white py-2 px-4 rounded hover:bg-purple-700">
+                        🚀 完整系統測試
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 測試結果 -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold mb-4">測試結果</h2>
+                <div id="test-output" class="space-y-2 text-sm">
+                    準備開始測試...
+                </div>
+            </div>
+        </div>
+        
+        <!-- 資料展示 -->
+        <div class="mt-6 bg-white rounded-lg shadow p-6">
+            <h2 class="text-xl font-semibold mb-4">資料預覽</h2>
+            <div id="data-display" class="text-sm text-gray-600">
+                等待資料載入...
+            </div>
+        </div>
+    </div>
+
+    <!-- 內嵌 RecipeNotionManager -->
+    <script>
+        class RecipeNotionManager {
+            constructor() {
+                this.baseUrl = '/api/notion/databases';
+                this.recipesDbId = '237fd5adc30b80c09b59c03cd67c6432';
+                this.ingredientsDbId = '237fd5adc30b80f7aedfe94804d80218';
+                this.recipesData = [];
+                this.ingredientsData = [];
+                this.isDataLoaded = false;
+            }
+
+            async loadDatabaseData(databaseId, databaseName = '') {
+                console.log(`🔄 開始載入 ${databaseName} 資料庫...`);
+                
+                let allResults = [];
+                let hasMore = true;
+                let startCursor = null;
+                let pageCount = 0;
+                
+                try {
+                    while (hasMore) {
+                        pageCount++;
+                        console.log(`📄 載入 ${databaseName} 第 ${pageCount} 頁...`);
+                        
+                        const requestBody = {
+                            page_size: 100
+                        };
+                        
+                        // 只有當 startCursor 不為空時才添加到請求中
+                        if (startCursor) {
+                            requestBody.start_cursor = startCursor;
+                        }
+                        
+                        const response = await fetch(`${this.baseUrl}/${databaseId}/query?t=${Date.now()}`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Cache-Control': 'no-cache'
+                            },
+                            body: JSON.stringify(requestBody)
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        
+                        const pageData = await response.json();
+                        allResults = allResults.concat(pageData.results);
+                        hasMore = pageData.has_more;
+                        startCursor = pageData.next_cursor;
+                        
+                        addLog(`✅ ${databaseName} 第 ${pageCount} 頁載入完成，累計 ${allResults.length} 項`);
+                    }
+                    
+                    console.log(`🎉 ${databaseName} 資料載入完成，總計 ${allResults.length} 項`);
+                    return allResults;
+                    
+                } catch (error) {
+                    console.error(`❌ 載入 ${databaseName} 失敗:`, error);
+                    throw error;
+                }
+            }
+
+            async loadRecipes() {
+                const rawData = await this.loadDatabaseData(this.recipesDbId, '半成品配方資料庫');
+                
+                this.recipesData = rawData.map((item, index) => {
+                    const properties = item.properties;
+                    
+                    return {
+                        id: item.id,
+                        name: properties['名稱']?.title?.[0]?.plain_text || `配方-${index + 1}`,
+                        weight: properties['重量']?.rollup?.number || 0,
+                        totalCost: properties['總物料成本']?.rollup?.number || 0,
+                        unitCost: properties['元/100g']?.formula?.number || 0,
+                        currentStock: properties['實際庫存量']?.number || 0,
+                        maxProduction: properties['總可製作份數']?.rollup?.number || 0,
+                        category: this.extractCategoryFromName(properties['名稱']?.title?.[0]?.plain_text || ''),
+                        lastUpdated: item.last_edited_time
+                    };
+                });
+                
+                console.log(`✅ 半成品配方處理完成: ${this.recipesData.length} 項配方`);
+                return this.recipesData;
+            }
+
+            async loadIngredients() {
+                const rawData = await this.loadDatabaseData(this.ingredientsDbId, '半成品組成項目資料庫');
+                
+                this.ingredientsData = rawData.map((item, index) => {
+                    const properties = item.properties;
+                    
+                    return {
+                        id: item.id,
+                        name: properties['項目名稱']?.title?.[0]?.plain_text || `組成項目-${index + 1}`,
+                        usageAmount: properties['使用數量(克)']?.number || 0,
+                        itemCost: properties['項目成本']?.formula?.number || 0,
+                        ingredientStock: properties['食材庫存量']?.rollup?.number || 0,
+                        maxProduciblePieces: properties['單項可製作份數']?.formula?.number || 0,
+                        lastUpdated: item.last_edited_time
+                    };
+                });
+                
+                console.log(`✅ 半成品組成項目處理完成: ${this.ingredientsData.length} 項組成項目`);
+                return this.ingredientsData;
+            }
+
+            extractCategoryFromName(name) {
+                if (!name) return '其他';
+                
+                const categoryMap = {
+                    '醬': '醬料',
+                    '湯': '湯品', 
+                    '飯': '主菜',
+                    '麵': '主菜',
+                    '粉': '主菜'
+                };
+                
+                for (const [keyword, category] of Object.entries(categoryMap)) {
+                    if (name.includes(keyword)) {
+                        return category;
+                    }
+                }
+                
+                return '其他';
+            }
+
+            async loadAllData() {
+                try {
+                    console.log('🚀 開始載入配方管理系統資料...');
+                    this.isDataLoaded = false;
+                    
+                    const [recipes, ingredients] = await Promise.all([
+                        this.loadRecipes(),
+                        this.loadIngredients()
+                    ]);
+                    
+                    this.isDataLoaded = true;
+                    console.log('🎉 配方管理系統資料載入完成！');
+                    
+                    return {
+                        recipes: this.recipesData,
+                        ingredients: this.ingredientsData,
+                        summary: {
+                            totalRecipes: recipes.length,
+                            totalIngredients: ingredients.length
+                        }
+                    };
+                    
+                } catch (error) {
+                    console.error('❌ 配方資料載入失敗:', error);
+                    this.isDataLoaded = false;
+                    throw error;
+                }
+            }
+        }
+
+        // 測試函數
+        let testManager;
+
+        function addLog(message) {
+            const output = document.getElementById('test-output');
+            const div = document.createElement('div');
+            div.className = 'p-2 bg-gray-50 rounded border-l-4 border-blue-500';
+            div.textContent = `${new Date().toLocaleTimeString()} - ${message}`;
+            output.appendChild(div);
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function showData(data) {
+            const display = document.getElementById('data-display');
+            display.innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <h3 class="font-semibold text-lg mb-2">配方預覽 (前5項)</h3>
+                        ${data.recipes.slice(0, 5).map(recipe => `
+                            <div class="p-3 bg-blue-50 rounded border mb-2">
+                                <div class="font-medium text-blue-800">${recipe.name}</div>
+                                <div class="text-xs text-blue-600">
+                                    分類: ${recipe.category} | 重量: ${recipe.weight}g | 
+                                    成本: $${recipe.unitCost.toFixed(2)}/100g
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div>
+                        <h3 class="font-semibold text-lg mb-2">組成項目預覽 (前5項)</h3>
+                        ${data.ingredients.slice(0, 5).map(ingredient => `
+                            <div class="p-3 bg-green-50 rounded border mb-2">
+                                <div class="font-medium text-green-800">${ingredient.name}</div>
+                                <div class="text-xs text-green-600">
+                                    用量: ${ingredient.usageAmount}g | 成本: $${ingredient.itemCost.toFixed(2)} | 
+                                    庫存: ${ingredient.ingredientStock}g
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                <div class="mt-4 p-4 bg-gray-100 rounded">
+                    <strong>統計總結:</strong> 
+                    ${data.summary.totalRecipes} 項配方，${data.summary.totalIngredients} 項組成項目
+                </div>
+            `;
+        }
+
+        // 事件監聽器
+        document.getElementById('test-basic-api').addEventListener('click', async () => {
+            addLog('🔗 開始測試基本 API 連接...');
+            try {
+                const response = await fetch('/api/notion/databases/237fd5adc30b80c09b59c03cd67c6432/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ page_size: 3 })
+                });
+                
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const data = await response.json();
+                addLog(`✅ API 連接成功！返回 ${data.results.length} 項資料`);
+                addLog(`📝 第一項配方: ${data.results[0].properties.名稱.title[0].plain_text}`);
+                
+            } catch (error) {
+                addLog(`❌ API 連接失敗: ${error.message}`);
+            }
+        });
+
+        document.getElementById('test-manager-load').addEventListener('click', async () => {
+            addLog('📊 開始測試管理器載入...');
+            try {
+                testManager = new RecipeNotionManager();
+                addLog('✅ 管理器初始化成功');
+                
+                const recipes = await testManager.loadRecipes();
+                addLog(`✅ 配方載入完成: ${recipes.length} 項`);
+                
+                const ingredients = await testManager.loadIngredients();
+                addLog(`✅ 組成項目載入完成: ${ingredients.length} 項`);
+                
+            } catch (error) {
+                addLog(`❌ 管理器載入失敗: ${error.message}`);
+            }
+        });
+
+        document.getElementById('test-full-system').addEventListener('click', async () => {
+            addLog('🚀 開始完整系統測試...');
+            try {
+                testManager = new RecipeNotionManager();
+                const data = await testManager.loadAllData();
+                
+                addLog('🎉 完整系統測試成功！');
+                showData(data);
+                
+            } catch (error) {
+                addLog(`❌ 完整系統測試失敗: ${error.message}`);
+            }
+        });
+    </script>
+</body>
+</html>

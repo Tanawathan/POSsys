@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notion 資料庫設定助手</title>
+    <style>
+        body { 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            line-height: 1.6; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container { 
+            max-width: 900px; 
+            margin: 0 auto; 
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        .content {
+            padding: 30px;
+        }
+        .database-card { 
+            border: 2px solid #e9ecef; 
+            margin: 25px 0; 
+            border-radius: 12px; 
+            background: #f8f9fa;
+            transition: all 0.3s ease;
+            overflow: hidden;
+        }
+        .database-card.completed {
+            border-color: #28a745;
+            background: #d4edda;
+        }
+        .database-header {
+            background: #007bff;
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .database-card.completed .database-header {
+            background: #28a745;
+        }
+        .database-body {
+            padding: 20px;
+        }
+        .property { 
+            background: white; 
+            padding: 12px; 
+            margin: 8px 0; 
+            border-radius: 8px; 
+            border-left: 4px solid #007bff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .property-info {
+            flex-grow: 1;
+        }
+        .property-name {
+            font-weight: bold;
+            color: #333;
+        }
+        .property-type {
+            color: #666;
+            font-size: 0.9em;
+            background: #e9ecef;
+            padding: 2px 8px;
+            border-radius: 12px;
+            margin: 0 8px;
+        }
+        .copy-btn { 
+            background: #28a745; 
+            color: white; 
+            border: none; 
+            padding: 8px 15px; 
+            border-radius: 6px; 
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+        }
+        .copy-btn:hover { 
+            background: #218838;
+            transform: translateY(-2px);
+        }
+        .primary-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            margin: 10px 5px;
+            transition: all 0.3s ease;
+        }
+        .primary-btn:hover {
+            background: #0056b3;
+            transform: translateY(-2px);
+        }
+        .success-btn {
+            background: #28a745;
+        }
+        .success-btn:hover {
+            background: #218838;
+        }
+        .step { 
+            margin: 25px 0; 
+            padding: 20px; 
+            background: #e3f2fd; 
+            border-radius: 12px;
+            border-left: 5px solid #2196f3;
+        }
+        .progress-container {
+            background: #f0f0f0;
+            border-radius: 20px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+        .progress-bar { 
+            height: 30px; 
+            background: linear-gradient(90deg, #28a745, #20c997); 
+            border-radius: 20px; 
+            width: 0%; 
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        .database-id-input {
+            width: 100%;
+            max-width: 400px;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.9em;
+            margin: 10px 0;
+        }
+        .database-id-input.valid {
+            border-color: #28a745;
+            background: #d4edda;
+        }
+        .database-id-input.invalid {
+            border-color: #dc3545;
+            background: #f8d7da;
+        }
+        .completion-step { 
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            border: none;
+            text-align: center;
+            padding: 30px;
+            border-radius: 12px;
+            margin: 30px 0;
+        }
+        .alert {
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 8px;
+            border-left: 5px solid;
+        }
+        .alert-info {
+            background: #d1ecf1;
+            border-color: #17a2b8;
+            color: #0c5460;
+        }
+        .alert-success {
+            background: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+        .instructions {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Notion 資料庫設定助手</h1>
+            <p>半自動化設定工具，讓您快速完成所有資料庫建立</p>
+        </div>
+        
+        <div class="content">
+            <!-- 進度顯示 -->
+            <div class="progress-container">
+                <div class="progress-bar" id="progressBar">0/5 完成</div>
+            </div>
+            <p id="progressText" style="text-align: center; font-weight: bold;">進度: 0/5 個資料庫完成</p>
+
+            <!-- 設定流程說明 -->
+            <div class="step">
+                <h3>📋 設定流程</h3>
+                <div class="instructions">
+                    <ol>
+                        <li><strong>點擊「建立新資料庫」</strong> - 在新分頁中開啟 Notion</li>
+                        <li><strong>複製屬性名稱</strong> - 使用複製按鈕快速複製屬性名稱</li>
+                        <li><strong>在 Notion 中添加屬性</strong> - 按照指定的類型建立屬性</li>
+                        <li><strong>設定 Integration 權限</strong> - 將您的 Integration 加入資料庫</li>
+                        <li><strong>複製資料庫 ID</strong> - 從 URL 中複製 32 字元的 ID</li>
+                        <li><strong>驗證 ID</strong> - 貼上 ID 並點擊驗證按鈕</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="alert alert-info">
+                <strong>💡 小提示：</strong> 建立資料庫時，請確保將您的 Integration <code>Tanawat Restaurant API</code> 加入到每個資料庫的連線中，否則系統無法存取資料。
+            </div>
+
+            <!-- 菜單資料庫 -->
+            <div class="database-card" id="menuCard">
+                <div class="database-header">
+                    <h2>🍽️ 1. 菜單資料庫 (Menu Database)</h2>
+                    <button onclick="openNotionNewDatabase()" class="primary-btn">📝 建立新資料庫</button>
+                </div>
+                <div class="database-body">
+                    <h4>需要添加的屬性：</h4>
+                    <div class="property">
+                        <div class="property-info">
+                            <span class="property-name">名稱</span>
+                            <span class="property-type">Title</span>
+                            <span>菜品名稱 (主要標題)</span>
+                        </div>
+                        <button onclick="copyToClipboard('名稱')" class="copy-btn">📋 複製</button>
+                    </div>
+                    <div class="property">
+                        <div class="property-info">
+                            <span class="property-name">分類</span>
+                            <span class="property-type">Select</span>
+                            <span>主食/飲品/甜點/開胃菜</span>
+                        </div>
+                        <button onclick="copyToClipboard('分類')" class="copy-btn">📋 複製</button>
+                    </div>
+                    <div class="property">
+                        <div class="property-info">
+                            <span class="property-name">價格</span>
+                            <span class="property-type">Number</span>
+                            <span>價格</span>
+                        </div>
+                        <button onclick="copyToClipboard('價格')" class="copy-btn">📋 複製</button>
+                    </div>
+                    <div class="property">
+                        <div class="property-info">
+                            <span class="property-name">描述</span>
+                            <span class="property-type">Text</span>
+                            <span>菜品描述</span>
+                        </div>
+                        <button onclick="copyToClipboard('描述')" class="copy-btn">📋 複製</button>
+                    </div>
+                    <div class="property">
+                        <div class="property-info">
+                            <span class="property-name">供應狀態</span>
+                            <span class="property-type">Checkbox</span>
+                            <span>是否供應中</span>
+                        </div>
+                        <button onclick="copyToClipboard('供應狀態')" class="copy-btn">📋 複製</button>
+                    </div>
+                    
+                    <div style="margin-top: 20px;">
+                        <label><strong>📍 資料庫 ID：</strong></label>
+                        <input type="text" id="menuDbId" class="database-id-input" placeholder="貼上 32 字元的資料庫 ID">
+                        <button onclick="validateDatabaseId('menuDbId', 'menu', 'menuCard')" class="primary-btn">✓ 驗證 ID</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 訂單資料庫 -->
+            <div class="database-card" id="ordersCard">
+                <div class="database-header">
+                    <h2>📝 2. 訂單資料庫 (Orders Database)</h2>
+                    <button onclick="openNotionNewDatabase()" class="primary-btn">📝 建立新資料庫</button>
+                </div>
+                <div class="database-body">
+                    <h4>需要添加的屬性：</h4>
+                    <div class="property">
+                        <div class="property-info">
+                            <span class="property-name">訂單編號</span>
+                            <span class="property-type">Title</span>
+                            <span>唯一訂單編號</span>
+                        </div>
+                        <button onclick="copyToClipboard('訂單編號')" class="copy-btn">📋 複製</button>
+                    </div>
+                    <div class="property">
+                        <div class="property-info">
+                            <span class="property-name">桌號</span>
+                            <span class="property-type">Number</span>
+                            <span>桌位編號</span>
+                        </div>
+                        <button onclick="copyToClipboard('桌號')" class="copy-btn">📋 複製</button>
+                    </div>
+                    <div class="property">
+                        <div class="property-info">
+                            <span class="property-name">狀態</span>
+                            <span class="property-type">Select</span>
+                            <span>待處理/製作中/已完成/已取消</span>
+                        </div>
+                        <button onclick="copyToClipboard('狀態')" class="copy-btn">📋 複製</button>
+                    </div>
+                    <div class="property">
+                        <div class="property-info">
+                            <span class="property-name">總金額</span>
+                            <span class="property-type">Number</span>
+                            <span>訂單總金額</span>
+                        </div>
+                        <button onclick="copyToClipboard('總金額')" class="copy-btn">📋 複製</button>
+                    </div>
+                    <div class="property">
+                        <div class="property-info">
+                            <span class="property-name">訂單項目</span>
+                            <span class="property-type">Text</span>
+                            <span>JSON 格式訂單明細</span>
+                        </div>
+                        <button onclick="copyToClipboard('訂單項目')" class="copy-btn">📋 複製</button>
+                    </div>
+                    <div class="property">
+                        <div class="property-info">
+                            <span class="property-name">建立時間</span>
+                            <span class="property-type">Created time</span>
+                            <span>自動記錄</span>
+                        </div>
+                        <button onclick="copyToClipboard('建立時間')" class="copy-btn">📋 複製</button>
+                    </div>
+                    
+                    <div style="margin-top: 20px;">
+                        <label><strong>📍 資料庫 ID：</strong></label>
+                        <input type="text" id="ordersDbId" class="database-id-input" placeholder="貼上 32 字元的資料庫 ID">
+                        <button onclick="validateDatabaseId('ordersDbId', 'orders', 'ordersCard')" class="primary-btn">✓ 驗證 ID</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 桌況資料庫 -->
+            <div class="database-card" id="tablesCard">
+                <div class="database-header">
+                    <h2>🪑 3. 桌況資料庫 (Tables Database)</h2>
+                    <button onclick="openNotionNewDatabase()" class="primary-btn">📝 建立新資料庫</button>
+                </div>
+                <div class="database-body">
+                    <h4>需要添加的屬性：</h4>
+                    <div class="property">
+                        <div class="property-info">
+                            <span class="property-name">桌號</span>
+                            <span class="property-type">Title</span>
+                            <span>桌位編號</span>
+                        </div>
+                        <button onclick="copyToClipboard('桌號')" class="copy-btn">📋 複製</button>
+                    </div>
+                    <div class="property">
+                        <div class="property-info">
+                            <span class="property-name">狀態</span>
+                            <span class="property-type">Select</span>
+                            <span>空桌/使用中/清潔中/維修中</span>
+                        </div>
+                        <button onclick="copyToClipboard('狀態')" class="copy-btn">📋 複製</button>
+                    </div>
+                    <div class="property">
+                        <div class="property-info">
+                            <span class="property-name">容納人數</span>
+                            <span class="property-type">Number</span>
+                            <span>最大座位數</span>
+                        </div>
+                        <button onclick="copyToClipboard('容納人數')" class="copy-btn">📋 複製</button>
+                    </div>
+                    <div class="property">
+                        <div class="property-info">
+                            <span class="property-name">位置</span>
+                            <span class="property-type">Text</span>
+                            <span>桌位位置說明</span>
+                        </div>
+                        <button onclick="copyToClipboard('位置')" class="copy-btn">📋 複製</button>
+                    </div>
+                    
+                    <div style="margin-top: 20px;">
+                        <label><strong>📍 資料庫 ID：</strong></label>
+                        <input type="text" id="tablesDbId" class="database-id-input" placeholder="貼上 32 字元的資料庫 ID">
+                        <button onclick="validateDatabaseId('tablesDbId', 'tables', 'tablesCard')" class="primary-btn">✓ 驗證 ID</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 預約資料庫 -->
+            <div class="database-card" id="reservationsCard">
+                <div class="database-header">
+                    <h2>📅 4. 預約資料庫 (Reservations Database)</h2>
+                    <button onclick="openNotionNewDatabase()" class="primary-btn">📝 建立新資料庫</button>
+                </div>
+                <div class="database-body">
+                    <h4>需要添加的屬性：</h4>
+                    <div class="property">
+                        <div class="property-info">
+                            <span class="property-name">預約編號</span>
+                            <span class="property-type">Title</span>
+                            <span>唯一預約編號</span>
+                        </div>
+                        <button onclick="copyToClipboard('預約編號')" class="copy-btn">📋 複製</button>
+                    </div>
+                    <div class="property">
+                        <div class="property-info">
+                            <span class="property-name">客戶姓名</span>
+                            <span class="property-type">Text</span>
+                            <span>預約人姓名</span>
+                        </div>
+                        <button onclick="copyToClipboard('客戶姓名')" class="copy-btn">📋 複製</button>
+                    </div>
+                    <div class="property">
+                        <div class="property-info">
+                            <span class="property-name">聯絡電話</span>
+                            <span class="property-type">Phone</span>
+                            <span>聯絡方式</span>
+                        </div>
+                        <button onclick="copyToClipboard('聯絡電話')" class="copy-btn">📋 複製</button>
+                    </div>
+                    <div class="property">
+                        <div class="property-info">
+                            <span class="property-name">預約日期</span>
+                            <span class="property-type">Date</span>
+                            <span>預約用餐日期</span>
+                        </div>
+                        <button onclick="copyToClipboard('預約日期')" class="copy-btn">📋 複製</button>
+                    </div>
+                    <div class="property">
+                        <div class="property-info">
+                            <span class="property-name">預約時間</span>
+                            <span class="property-type">Text</span>
+                            <span>用餐時間</span>
+                        </div>
+                        <button onclick="copyToClipboard('預約時間')" class="copy-btn">📋 複製</button>
+                    </div>
+                    <div class="property">
+                        <div class="property-info">
+                            <span class="property-name">人數</span>
+                            <span class="property-type">Number</span>
+                            <span>用餐人數</span>
+                        </div>
+                        <button onclick="copyToClipboard('人數')" class="copy-btn">📋 複製</button>
+                    </div>
+                    <div class="property">
+                        <div class="property-info">
+                            <span class="property-name">狀態</span>
+                            <span class="property-type">Select</span>
+                            <span>已確認/待確認/已取消/已完成</span>
+                        </div>
+                        <button onclick="copyToClipboard('狀態')" class="copy-btn">📋 複製</button>
+                    </div>
+                    
+                    <div style="margin-top: 20px;">
+                        <label><strong>📍 資料庫 ID：</strong></label>
+                        <input type="text" id="reservationsDbId" class="database-id-input" placeholder="貼上 32 字元的資料庫 ID">
+                        <button onclick="validateDatabaseId('reservationsDbId', 'reservations', 'reservationsCard')" class="primary-btn">✓ 驗證 ID</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 員工資料庫 -->
+            <div class="database-card" id="staffCard">
+                <div class="database-header">
+                    <h2>👥 5. 員工資料庫 (Staff Database)</h2>
+                    <button onclick="openNotionNewDatabase()" class="primary-btn">📝 建立新資料庫</button>
+                </div>
+                <div class="database-body">
+                    <h4>需要添加的屬性：</h4>
+                    <div class="property">
+                        <div class="property-info">
+                            <span class="property-name">員工姓名</span>
+                            <span class="property-type">Title</span>
+                            <span>員工姓名</span>
+                        </div>
+                        <button onclick="copyToClipboard('員工姓名')" class="copy-btn">📋 複製</button>
+                    </div>
+                    <div class="property">
+                        <div class="property-info">
+                            <span class="property-name">職位</span>
+                            <span class="property-type">Select</span>
+                            <span>經理/服務生/廚師/收銀員</span>
+                        </div>
+                        <button onclick="copyToClipboard('職位')" class="copy-btn">📋 複製</button>
+                    </div>
+                    <div class="property">
+                        <div class="property-info">
+                            <span class="property-name">班次</span>
+                            <span class="property-type">Select</span>
+                            <span>早班/晚班/假日班</span>
+                        </div>
+                        <button onclick="copyToClipboard('班次')" class="copy-btn">📋 複製</button>
+                    </div>
+                    <div class="property">
+                        <div class="property-info">
+                            <span class="property-name">聯絡電話</span>
+                            <span class="property-type">Phone</span>
+                            <span>聯絡方式</span>
+                        </div>
+                        <button onclick="copyToClipboard('聯絡電話')" class="copy-btn">📋 複製</button>
+                    </div>
+                    <div class="property">
+                        <div class="property-info">
+                            <span class="property-name">到職日期</span>
+                            <span class="property-type">Date</span>
+                            <span>入職日期</span>
+                        </div>
+                        <button onclick="copyToClipboard('到職日期')" class="copy-btn">📋 複製</button>
+                    </div>
+                    <div class="property">
+                        <div class="property-info">
+                            <span class="property-name">在職狀態</span>
+                            <span class="property-type">Checkbox</span>
+                            <span>是否在職</span>
+                        </div>
+                        <button onclick="copyToClipboard('在職狀態')" class="copy-btn">📋 複製</button>
+                    </div>
+                    
+                    <div style="margin-top: 20px;">
+                        <label><strong>📍 資料庫 ID：</strong></label>
+                        <input type="text" id="staffDbId" class="database-id-input" placeholder="貼上 32 字元的資料庫 ID">
+                        <button onclick="validateDatabaseId('staffDbId', 'staff', 'staffCard')" class="primary-btn">✓ 驗證 ID</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 完成設定 -->
+            <div class="completion-step" id="completionStep" style="display: none;">
+                <h3>🎉 恭喜！所有資料庫設定完成</h3>
+                <p>您已經成功設定了所有 5 個 Notion 資料庫</p>
+                <button onclick="generateEnvFile()" class="primary-btn success-btn">📥 產生 .env 設定檔</button>
+                <button onclick="testConnections()" class="primary-btn">🧪 測試所有連線</button>
+                <button onclick="goToMainDashboard()" class="primary-btn">🏠 前往主控台</button>
+            </div>
+
+            <!-- 說明文件連結 -->
+            <div class="alert alert-info">
+                <h4>📚 需要更多協助？</h4>
+                <p>
+                    <a href="../docs/Notion-API-設定指南.md" target="_blank">📖 完整設定指南</a> |
+                    <a href="https://www.notion.so/my-integrations" target="_blank">🔗 Notion Integrations</a> |
+                    <a href="notion-setup.html" target="_blank">🧪 連線測試工具</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let completedDatabases = 0;
+        const databaseIds = {};
+        
+        // 音效提示
+        function playSuccessSound() {
+            // 創建音效（可選）
+            try {
+                const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmAXBDh+0e8AABBB');
+                audio.play();
+            } catch (e) {
+                // 忽略音效錯誤
+            }
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // 視覺反饋
+                showNotification(`✅ 已複製: ${text}`, 'success');
+            }).catch(() => {
+                // 備用複製方法
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                showNotification(`✅ 已複製: ${text}`, 'success');
+            });
+        }
+
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 15px 20px;
+                border-radius: 8px;
+                color: white;
+                font-weight: bold;
+                z-index: 10000;
+                animation: slideIn 0.3s ease;
+                ${type === 'success' ? 'background: #28a745;' : 'background: #007bff;'}
+            `;
+            notification.textContent = message;
+            
+            // 添加動畫樣式
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes slideIn {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+            `;
+            document.head.appendChild(style);
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+                style.remove();
+            }, 3000);
+        }
+
+        function openNotionNewDatabase() {
+            showNotification('🚀 正在開啟 Notion 新資料庫頁面...', 'info');
+            window.open('https://www.notion.so/new', '_blank');
+        }
+
+        function validateDatabaseId(inputId, dbType, cardId) {
+            const input = document.getElementById(inputId);
+            const card = document.getElementById(cardId);
+            const id = input.value.trim();
+            
+            // 重置樣式
+            input.className = 'database-id-input';
+            
+            if (id.length !== 32) {
+                input.className = 'database-id-input invalid';
+                showNotification('❌ 資料庫 ID 必須是 32 字元長度', 'error');
+                return;
+            }
+            
+            if (!/^[a-f0-9]{32}$/.test(id)) {
+                input.className = 'database-id-input invalid';
+                showNotification('❌ 資料庫 ID 格式不正確', 'error');
+                return;
+            }
+            
+            // 驗證成功
+            input.className = 'database-id-input valid';
+            card.classList.add('completed');
+            databaseIds[dbType] = id;
+            
+            // 如果是第一次完成這個資料庫
+            if (!databaseIds[dbType + '_completed']) {
+                databaseIds[dbType + '_completed'] = true;
+                completedDatabases++;
+                playSuccessSound();
+            }
+            
+            updateProgress();
+            showNotification(`✅ ${getDatabaseDisplayName(dbType)} 資料庫 ID 驗證成功！`, 'success');
+        }
+
+        function getDatabaseDisplayName(dbType) {
+            const names = {
+                'menu': '菜單',
+                'orders': '訂單',
+                'tables': '桌況',
+                'reservations': '預約',
+                'staff': '員工'
+            };
+            return names[dbType] || dbType;
+        }
+
+        function updateProgress() {
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            
+            const percentage = (completedDatabases / 5) * 100;
+            progressBar.style.width = percentage + '%';
+            progressBar.textContent = `${completedDatabases}/5 完成`;
+            progressText.textContent = `進度: ${completedDatabases}/5 個資料庫完成`;
+            
+            if (completedDatabases === 5) {
+                document.getElementById('completionStep').style.display = 'block';
+                showNotification('🎉 所有資料庫設定完成！', 'success');
+                
+                // 滾動到完成區域
+                setTimeout(() => {
+                    document.getElementById('completionStep').scrollIntoView({ 
+                        behavior: 'smooth' 
+                    });
+                }, 500);
+            }
+        }
+
+        function generateEnvFile() {
+            const envContent = `# Notion API 設定
+NOTION_API_KEY=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
+
+# 伺服器設定
+PORT=3000
+NODE_ENV=development
+
+# 餐廳資訊
+RESTAURANT_NAME=Tanawat Restaurant
+RESTAURANT_TIMEZONE=Asia/Taipei
+
+# Notion 資料庫 ID
+MENU_DB_ID=${databaseIds.menu || 'your-menu-database-id'}
+ORDERS_DB_ID=${databaseIds.orders || 'your-orders-database-id'}
+TABLES_DB_ID=${databaseIds.tables || 'your-tables-database-id'}
+RESERVATIONS_DB_ID=${databaseIds.reservations || 'your-reservations-database-id'}
+STAFF_DB_ID=${databaseIds.staff || 'your-staff-database-id'}`;
+
+            // 下載 .env 檔案
+            const blob = new Blob([envContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = '.env';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showNotification('📥 .env 檔案已下載！請將它放到專案根目錄', 'success');
+        }
+
+        function testConnections() {
+            showNotification('🧪 正在開啟連線測試工具...', 'info');
+            window.open('notion-setup.html', '_blank');
+        }
+
+        function goToMainDashboard() {
+            showNotification('🏠 正在前往主控台...', 'info');
+            window.open('../main-dashboard.html', '_blank');
+        }
+
+        // 頁面載入時的歡迎訊息
+        window.addEventListener('load', () => {
+            showNotification('🎯 歡迎使用 Notion 資料庫設定助手！', 'info');
+        });
+
+        // 自動儲存進度到 localStorage
+        function saveProgress() {
+            localStorage.setItem('notionSetupProgress', JSON.stringify({
+                completedDatabases,
+                databaseIds
+            }));
+        }
+
+        function loadProgress() {
+            const saved = localStorage.getItem('notionSetupProgress');
+            if (saved) {
+                const progress = JSON.parse(saved);
+                completedDatabases = progress.completedDatabases || 0;
+                Object.assign(databaseIds, progress.databaseIds || {});
+                
+                // 恢復輸入欄位的值
+                Object.entries(databaseIds).forEach(([key, value]) => {
+                    if (!key.endsWith('_completed')) {
+                        const input = document.getElementById(key + 'DbId');
+                        if (input && value && value !== 'your-' + key + '-database-id') {
+                            input.value = value;
+                            input.className = 'database-id-input valid';
+                            document.getElementById(key + 'Card').classList.add('completed');
+                        }
+                    }
+                });
+                
+                updateProgress();
+            }
+        }
+
+        // 頁面載入時恢復進度
+        loadProgress();
+
+        // 定期保存進度
+        setInterval(saveProgress, 5000);
+    </script>
+</body>
+</html>

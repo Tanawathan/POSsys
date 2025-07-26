@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TANAWAT 餐廳管理系統</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .dashboard-card {
+            transition: all 0.3s ease;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        .dashboard-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+        .dashboard-card:hover::before {
+            left: 100%;
+        }
+        .dashboard-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+        .stats-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .nav-item {
+            transition: all 0.3s ease;
+        }
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(5px);
+        }
+        .floating-action {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 1000;
+        }
+        .alert-pulse {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-lg">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 bg-gradient-to-r from-purple-500 to-blue-600 rounded-lg flex items-center justify-center mr-3">
+                        <i class="fas fa-utensils text-white text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-800">TANAWAT 餐廳管理系統</h1>
+                        <p class="text-sm text-gray-600">智能化餐廳營運解決方案</p>
+                    </div>
+                </div>
+                
+                <!-- 實時狀態指示器 -->
+                <div class="flex items-center space-x-4">
+                    <div class="stats-card rounded-lg px-4 py-2">
+                        <div class="flex items-center">
+                            <div class="w-3 h-3 bg-green-400 rounded-full mr-2 animate-pulse"></div>
+                            <span class="text-white text-sm">系統正常</span>
+                        </div>
+                        <div class="text-white text-xs mt-1" id="current-time"></div>
+                    </div>
+                    
+                    <!-- 警報按鈕 -->
+                    <button id="alert-btn" class="relative bg-red-500 text-white p-3 rounded-full hover:bg-red-600 transition-colors alert-pulse hidden">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span id="alert-count" class="absolute -top-2 -right-2 bg-yellow-500 text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold">0</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主要內容區域 -->
+    <main class="container mx-auto px-6 py-8">
+        <!-- 系統總覽儀表板 -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">
+                <i class="fas fa-tachometer-alt mr-2 text-blue-600"></i>
+                系統總覽
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                <!-- 庫存狀態 -->
+                <div class="stats-card rounded-xl p-6 text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm opacity-80">總庫存項目</p>
+                            <p class="text-3xl font-bold" id="total-inventory">163</p>
+                            <p class="text-xs opacity-70 mt-1">9 個供應商</p>
+                        </div>
+                        <div class="bg-white bg-opacity-20 p-3 rounded-full">
+                            <i class="fas fa-boxes text-2xl"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-white border-opacity-20">
+                        <div class="flex justify-between text-sm">
+                            <span>低庫存警報</span>
+                            <span id="low-stock-count" class="font-bold">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 配方狀態 -->
+                <div class="stats-card rounded-xl p-6 text-white" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm opacity-80">配方總數</p>
+                            <p class="text-3xl font-bold" id="total-recipes">20</p>
+                            <p class="text-xs opacity-70 mt-1">半成品配方</p>
+                        </div>
+                        <div class="bg-white bg-opacity-20 p-3 rounded-full">
+                            <i class="fas fa-book-open text-2xl"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-white border-opacity-20">
+                        <div class="flex justify-between text-sm">
+                            <span>可生產配方</span>
+                            <span id="producible-recipes" class="font-bold">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 生產計畫 -->
+                <div class="stats-card rounded-xl p-6 text-white" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm opacity-80">今日生產</p>
+                            <p class="text-3xl font-bold" id="today-production">0</p>
+                            <p class="text-xs opacity-70 mt-1">份半成品</p>
+                        </div>
+                        <div class="bg-white bg-opacity-20 p-3 rounded-full">
+                            <i class="fas fa-industry text-2xl"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-white border-opacity-20">
+                        <div class="flex justify-between text-sm">
+                            <span>生產效率</span>
+                            <span id="production-efficiency" class="font-bold">95%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 成本控制 -->
+                <div class="stats-card rounded-xl p-6 text-white" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm opacity-80">平均成本</p>
+                            <p class="text-3xl font-bold">$<span id="avg-cost">12.50</span></p>
+                            <p class="text-xs opacity-70 mt-1">每100g</p>
+                        </div>
+                        <div class="bg-white bg-opacity-20 p-3 rounded-full">
+                            <i class="fas fa-chart-line text-2xl"></i>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-white border-opacity-20">
+                        <div class="flex justify-between text-sm">
+                            <span>本月節省</span>
+                            <span id="monthly-savings" class="font-bold">$1,250</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 快速操作面板 -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">
+                <i class="fas fa-bolt mr-2 text-yellow-500"></i>
+                快速操作
+            </h2>
+            
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <button onclick="openModule('inventory')" class="dashboard-card text-white p-6 rounded-xl text-center hover:shadow-lg transition-all">
+                    <i class="fas fa-warehouse text-3xl mb-3"></i>
+                    <h3 class="text-lg font-semibold">庫存管理</h3>
+                    <p class="text-sm opacity-80">查看和更新庫存</p>
+                </button>
+
+                <button onclick="openModule('recipe')" class="dashboard-card text-white p-6 rounded-xl text-center hover:shadow-lg transition-all">
+                    <i class="fas fa-clipboard-list text-3xl mb-3"></i>
+                    <h3 class="text-lg font-semibold">配方管理</h3>
+                    <p class="text-sm opacity-80">配方和生產計畫</p>
+                </button>
+
+                <button onclick="openModule('supplier')" class="dashboard-card text-white p-6 rounded-xl text-center hover:shadow-lg transition-all">
+                    <i class="fas fa-truck text-3xl mb-3"></i>
+                    <h3 class="text-lg font-semibold">供應商</h3>
+                    <p class="text-sm opacity-80">供應商管理</p>
+                </button>
+
+                <button onclick="openModule('cost')" class="dashboard-card text-white p-6 rounded-xl text-center hover:shadow-lg transition-all">
+                    <i class="fas fa-calculator text-3xl mb-3"></i>
+                    <h3 class="text-lg font-semibold">成本分析</h3>
+                    <p class="text-sm opacity-80">成本控制分析</p>
+                </button>
+
+                <button onclick="openModule('production')" class="dashboard-card text-white p-6 rounded-xl text-center hover:shadow-lg transition-all">
+                    <i class="fas fa-cogs text-3xl mb-3"></i>
+                    <h3 class="text-lg font-semibold">生產計畫</h3>
+                    <p class="text-sm opacity-80">智能生產規劃</p>
+                </button>
+
+                <button onclick="openModule('pos')" class="dashboard-card text-white p-6 rounded-xl text-center hover:shadow-lg transition-all">
+                    <i class="fas fa-cash-register text-3xl mb-3"></i>
+                    <h3 class="text-lg font-semibold">POS 系統</h3>
+                    <p class="text-sm opacity-80">點餐和結帳</p>
+                </button>
+            </div>
+        </section>
+
+        <!-- 重要通知和警報 -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">
+                <i class="fas fa-bell mr-2 text-orange-500"></i>
+                重要通知
+            </h2>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- 庫存警報 -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-800">
+                            <i class="fas fa-exclamation-triangle text-yellow-500 mr-2"></i>
+                            庫存警報
+                        </h3>
+                        <span id="stock-alert-badge" class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">0 項</span>
+                    </div>
+                    <div id="stock-alerts" class="space-y-3 max-h-48 overflow-y-auto">
+                        <div class="text-center text-gray-500 py-8">
+                            <i class="fas fa-check-circle text-green-500 text-3xl mb-2"></i>
+                            <p>所有庫存正常</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 配方生產建議 -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-800">
+                            <i class="fas fa-lightbulb text-blue-500 mr-2"></i>
+                            生產建議
+                        </h3>
+                        <span id="production-suggestion-badge" class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">0 項</span>
+                    </div>
+                    <div id="production-suggestions" class="space-y-3 max-h-48 overflow-y-auto">
+                        <div class="text-center text-gray-500 py-8">
+                            <i class="fas fa-cogs text-blue-500 text-3xl mb-2"></i>
+                            <p>暫無生產建議</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 最近活動 -->
+        <section>
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">
+                <i class="fas fa-history mr-2 text-green-500"></i>
+                最近活動
+            </h2>
+            
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <div id="recent-activities" class="space-y-4">
+                    <div class="flex items-center p-3 bg-gray-50 rounded-lg">
+                        <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-4">
+                            <i class="fas fa-plus text-green-600"></i>
+                        </div>
+                        <div class="flex-1">
+                            <p class="font-medium text-gray-800">系統初始化完成</p>
+                            <p class="text-sm text-gray-600">載入 163 項庫存和 20 個配方</p>
+                        </div>
+                        <span class="text-sm text-gray-500">剛剛</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 浮動操作按鈕 -->
+    <div class="floating-action">
+        <button id="quick-add-btn" class="bg-gradient-to-r from-purple-500 to-blue-600 text-white p-4 rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-110">
+            <i class="fas fa-plus text-xl"></i>
+        </button>
+    </div>
+
+    <!-- 快速添加 Modal -->
+    <div id="quick-add-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl shadow-2xl max-w-md w-full">
+                <div class="p-6 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-800">快速添加</h3>
+                </div>
+                <div class="p-6 space-y-4">
+                    <button onclick="openModule('inventory')" class="w-full p-4 text-left bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                        <i class="fas fa-plus-circle text-blue-600 mr-3"></i>
+                        添加庫存項目
+                    </button>
+                    <button onclick="openModule('recipe')" class="w-full p-4 text-left bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                        <i class="fas fa-clipboard-list text-green-600 mr-3"></i>
+                        創建新配方
+                    </button>
+                    <button onclick="openModule('supplier')" class="w-full p-4 text-left bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                        <i class="fas fa-truck text-purple-600 mr-3"></i>
+                        添加供應商
+                    </button>
+                </div>
+                <div class="p-4 border-t border-gray-200">
+                    <button onclick="closeQuickAddModal()" class="w-full py-2 px-4 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors">
+                        取消
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局變量
+        let inventoryManager = null;
+        let recipeManager = null;
+        let systemInitialized = false;
+
+        // 頁面載入完成後初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('頁面載入完成，開始初始化系統...');
+            
+            // 延遲初始化以確保所有腳本載入完成
+            setTimeout(async () => {
+                try {
+                    // 初始化系統管理器
+                    await initializeManagers();
+                    
+                    // 更新儀表板數據
+                    updateDashboard();
+                    
+                    // 檢查警報
+                    checkAlerts();
+                    
+                    // 載入最近活動
+                    loadRecentActivities();
+                    
+                    // 標記系統已初始化
+                    systemInitialized = true;
+                    
+                    // 啟動定時更新
+                    setInterval(updateDashboard, 30000); // 每30秒更新一次
+                    
+                    console.log('餐廳管理系統初始化完成');
+                    showNotification('系統初始化完成', 'success');
+                } catch (error) {
+                    console.error('系統初始化失敗:', error);
+                    showNotification('系統初始化失敗，請重新整理頁面', 'error');
+                }
+            }, 500);
+        });
+
+        // 初始化管理器
+        async function initializeManagers() {
+            console.log('開始初始化管理器...');
+            
+            // 檢查並載入庫存管理器
+            try {
+                if (typeof InventoryManager !== 'undefined') {
+                    console.log('初始化庫存管理器...');
+                    inventoryManager = new InventoryManager();
+                    console.log('庫存管理器初始化完成');
+                } else {
+                    console.warn('InventoryManager 類別未找到');
+                }
+            } catch (error) {
+                console.error('庫存管理器初始化失敗:', error);
+            }
+            
+            // 檢查並載入配方管理器
+            try {
+                if (typeof RecipeManager !== 'undefined') {
+                    console.log('初始化配方管理器...');
+                    recipeManager = new RecipeManager();
+                    console.log('配方管理器初始化完成');
+                    
+                    // 建立管理器之間的連結
+                    if (inventoryManager && recipeManager) {
+                        if (typeof recipeManager.setInventoryManager === 'function') {
+                            recipeManager.setInventoryManager(inventoryManager);
+                        }
+                        if (typeof inventoryManager.setRecipeManager === 'function') {
+                            inventoryManager.setRecipeManager(recipeManager);
+                        }
+                        console.log('管理器連結建立完成');
+                    }
+                } else {
+                    console.warn('RecipeManager 類別未找到');
+                }
+            } catch (error) {
+                console.error('配方管理器初始化失敗:', error);
+            }
+        }
+
+        // 更新儀表板數據
+        function updateDashboard() {
+            updateTimeDisplay();
+            updateInventoryStats();
+            updateRecipeStats();
+            updateProductionStats();
+            updateCostStats();
+        }
+
+        // 更新時間顯示
+        function updateTimeDisplay() {
+            const now = new Date();
+            const timeString = now.toLocaleString('zh-TW', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            
+            const timeElement = document.getElementById('current-time');
+            if (timeElement) {
+                timeElement.textContent = timeString;
+            }
+        }
+
+        // 更新庫存統計
+        function updateInventoryStats() {
+            try {
+                if (inventoryManager && inventoryManager.inventoryData) {
+                    const lowStockItems = inventoryManager.getLowStockAlerts();
+                    const totalItems = inventoryManager.inventoryData.length;
+                    
+                    document.getElementById('total-inventory').textContent = totalItems;
+                    document.getElementById('low-stock-count').textContent = lowStockItems.length;
+                } else {
+                    // 使用默認值
+                    document.getElementById('total-inventory').textContent = '163';
+                    document.getElementById('low-stock-count').textContent = '0';
+                }
+            } catch (error) {
+                console.error('更新庫存統計失敗:', error);
+                document.getElementById('total-inventory').textContent = '163';
+                document.getElementById('low-stock-count').textContent = '0';
+            }
+        }
+
+        // 更新配方統計
+        function updateRecipeStats() {
+            try {
+                if (recipeManager) {
+                    // 這裡可以從配方管理器獲取統計數據
+                    document.getElementById('total-recipes').textContent = '20';
+                    // document.getElementById('producible-recipes').textContent = producibleCount;
+                } else {
+                    document.getElementById('total-recipes').textContent = '20';
+                    document.getElementById('producible-recipes').textContent = '15';
+                }
+            } catch (error) {
+                console.error('更新配方統計失敗:', error);
+                document.getElementById('total-recipes').textContent = '20';
+                document.getElementById('producible-recipes').textContent = '15';
+            }
+        }
+
+        // 更新生產統計
+        function updateProductionStats() {
+            document.getElementById('today-production').textContent = '0';
+            document.getElementById('production-efficiency').textContent = '95%';
+        }
+
+        // 更新成本統計
+        function updateCostStats() {
+            document.getElementById('avg-cost').textContent = '12.50';
+            document.getElementById('monthly-savings').textContent = '$1,250';
+        }
+
+        // 檢查警報
+        function checkAlerts() {
+            let alertCount = 0;
+            
+            try {
+                // 檢查庫存警報
+                if (inventoryManager && typeof inventoryManager.getLowStockAlerts === 'function') {
+                    const lowStockItems = inventoryManager.getLowStockAlerts();
+                    const outOfStockItems = inventoryManager.getOutOfStockItems();
+                    
+                    alertCount += lowStockItems.length + outOfStockItems.length;
+                    
+                    updateStockAlerts(lowStockItems, outOfStockItems);
+                } else {
+                    // 模擬一些警報數據
+                    const mockLowStock = [
+                        { name: '南薑', supplier: '泓潔', stock: 0, safetyStock: 300 },
+                        { name: '檸檬葉', supplier: '泓潔', stock: 0, safetyStock: 300 }
+                    ];
+                    const mockOutOfStock = [
+                        { name: '透抽', supplier: '坎仔頂', stock: 0, safetyStock: 300 }
+                    ];
+                    
+                    alertCount = mockLowStock.length + mockOutOfStock.length;
+                    updateStockAlerts(mockLowStock, mockOutOfStock);
+                }
+            } catch (error) {
+                console.error('檢查警報失敗:', error);
+                alertCount = 0;
+            }
+            
+            // 更新警報按鈕
+            const alertBtn = document.getElementById('alert-btn');
+            const alertCountEl = document.getElementById('alert-count');
+            
+            if (alertCount > 0) {
+                alertBtn.classList.remove('hidden');
+                alertCountEl.textContent = alertCount;
+            } else {
+                alertBtn.classList.add('hidden');
+            }
+        }
+
+        // 更新庫存警報顯示
+        function updateStockAlerts(lowStockItems, outOfStockItems) {
+            const alertsContainer = document.getElementById('stock-alerts');
+            const alertBadge = document.getElementById('stock-alert-badge');
+            
+            const totalAlerts = lowStockItems.length + outOfStockItems.length;
+            alertBadge.textContent = `${totalAlerts} 項`;
+            
+            if (totalAlerts === 0) {
+                alertsContainer.innerHTML = `
+                    <div class="text-center text-gray-500 py-8">
+                        <i class="fas fa-check-circle text-green-500 text-3xl mb-2"></i>
+                        <p>所有庫存正常</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let alertsHTML = '';
+            
+            // 缺貨項目
+            outOfStockItems.forEach(item => {
+                alertsHTML += `
+                    <div class="flex items-center p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <i class="fas fa-times-circle text-red-500 mr-3"></i>
+                        <div class="flex-1">
+                            <p class="font-medium text-red-800">${item.name}</p>
+                            <p class="text-sm text-red-600">缺貨 - 供應商: ${item.supplier}</p>
+                        </div>
+                        <button onclick="openModule('inventory')" class="text-red-600 hover:text-red-700">
+                            <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                `;
+            });
+            
+            // 低庫存項目
+            lowStockItems.forEach(item => {
+                if (item.stock > 0) {  // 排除已經在缺貨列表中的項目
+                    alertsHTML += `
+                        <div class="flex items-center p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                            <i class="fas fa-exclamation-triangle text-yellow-500 mr-3"></i>
+                            <div class="flex-1">
+                                <p class="font-medium text-yellow-800">${item.name}</p>
+                                <p class="text-sm text-yellow-600">低庫存: ${item.stock} (安全庫存: ${item.safetyStock})</p>
+                            </div>
+                            <button onclick="openModule('inventory')" class="text-yellow-600 hover:text-yellow-700">
+                                <i class="fas fa-arrow-right"></i>
+                            </button>
+                        </div>
+                    `;
+                }
+            });
+            
+            alertsContainer.innerHTML = alertsHTML;
+        }
+
+        // 載入最近活動
+        function loadRecentActivities() {
+            const activitiesContainer = document.getElementById('recent-activities');
+            
+            // 模擬最近活動數據
+            const activities = [
+                {
+                    icon: 'fa-plus',
+                    color: 'green',
+                    title: '系統初始化完成',
+                    description: '載入 163 項庫存和 20 個配方',
+                    time: '剛剛'
+                }
+            ];
+            
+            activitiesContainer.innerHTML = activities.map(activity => `
+                <div class="flex items-center p-3 bg-gray-50 rounded-lg">
+                    <div class="w-10 h-10 bg-${activity.color}-100 rounded-full flex items-center justify-center mr-4">
+                        <i class="fas ${activity.icon} text-${activity.color}-600"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-medium text-gray-800">${activity.title}</p>
+                        <p class="text-sm text-gray-600">${activity.description}</p>
+                    </div>
+                    <span class="text-sm text-gray-500">${activity.time}</span>
+                </div>
+            `).join('');
+        }
+
+        // 打開模組
+        function openModule(moduleName) {
+            const moduleUrls = {
+                inventory: 'inventory-management.html',
+                recipe: 'recipe-management.html',
+                supplier: 'supplier-management.html',
+                cost: 'cost-analysis.html',
+                production: 'recipe-management.html',
+                pos: 'index.html'
+            };
+            
+            const url = moduleUrls[moduleName];
+            if (url) {
+                window.open(url, '_blank');
+            }
+            
+            // 關閉快速添加 modal（如果打開的話）
+            closeQuickAddModal();
+        }
+
+        // 快速添加模態框控制
+        document.getElementById('quick-add-btn').addEventListener('click', () => {
+            document.getElementById('quick-add-modal').classList.remove('hidden');
+        });
+
+        function closeQuickAddModal() {
+            document.getElementById('quick-add-modal').classList.add('hidden');
+        }
+
+        // 點擊背景關閉 modal
+        document.getElementById('quick-add-modal').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) {
+                closeQuickAddModal();
+            }
+        });
+
+        // 顯示通知
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg max-w-sm transform transition-all duration-300 translate-x-full opacity-0`;
+            
+            const colors = {
+                success: 'bg-green-500 text-white',
+                error: 'bg-red-500 text-white',
+                warning: 'bg-yellow-500 text-white',
+                info: 'bg-blue-500 text-white'
+            };
+            
+            notification.className += ` ${colors[type] || colors.info}`;
+            notification.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-times-circle' : type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle'} mr-2"></i>
+                    <span>${message}</span>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // 動畫顯示
+            setTimeout(() => {
+                notification.classList.remove('translate-x-full', 'opacity-0');
+            }, 100);
+            
+            // 自動移除
+            setTimeout(() => {
+                notification.classList.add('translate-x-full', 'opacity-0');
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }, 3000);
+        }
+
+        // 警報按鈕點擊事件
+        document.getElementById('alert-btn').addEventListener('click', () => {
+            openModule('inventory');
+        });
+    </script>
+
+    <!-- 載入必要的 JavaScript 庫 -->
+    <script src="assets/js/inventory-management.js"></script>
+    <script src="assets/js/recipe-manager.js"></script>
+</body>
+</html>

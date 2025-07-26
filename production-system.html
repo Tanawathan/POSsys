@@ -1,0 +1,1698 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>半成品製作系統 - Tanawat餐廳</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .status-available { color: #22c55e; }
+        .status-insufficient { color: #ef4444; }
+        .status-warning { color: #f59e0b; }
+        .recipe-card { transition: all 0.3s ease; }
+        .recipe-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.15); }
+        .production-log { max-height: 300px; overflow-y: auto; }
+        .ingredient-item { transition: all 0.2s ease; }
+        .ingredient-item:hover { background-color: #f3f4f6; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- 頂部導航 -->
+    <nav class="bg-green-600 text-white p-4 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold">
+                <i class="fas fa-industry mr-2"></i>
+                半成品製作系統
+            </h1>
+            <div class="flex space-x-4">
+                <button onclick="loadAllData()" class="bg-green-500 hover:bg-green-700 px-4 py-2 rounded">
+                    <i class="fas fa-sync-alt mr-2"></i>重新載入
+                </button>
+                <button onclick="showProductionLog()" class="bg-blue-500 hover:bg-blue-700 px-4 py-2 rounded">
+                    <i class="fas fa-history mr-2"></i>製作記錄
+                </button>
+                <button onclick="showInventoryStatus()" class="bg-yellow-500 hover:bg-yellow-700 px-4 py-2 rounded">
+                    <i class="fas fa-warehouse mr-2"></i>庫存狀況
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 統計面板 -->
+    <div class="container mx-auto mt-6 px-4">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="bg-white p-4 rounded-lg shadow">
+                <div class="flex items-center">
+                    <i class="fas fa-flask text-green-500 text-2xl mr-3"></i>
+                    <div>
+                        <p class="text-sm text-gray-600">可製作半成品</p>
+                        <p class="text-2xl font-bold" id="availableRecipes">0</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow">
+                <div class="flex items-center">
+                    <i class="fas fa-exclamation-triangle text-yellow-500 text-2xl mr-3"></i>
+                    <div>
+                        <p class="text-sm text-gray-600">材料不足</p>
+                        <p class="text-2xl font-bold status-warning" id="insufficientRecipes">0</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow">
+                <div class="flex items-center">
+                    <i class="fas fa-check-circle text-blue-500 text-2xl mr-3"></i>
+                    <div>
+                        <p class="text-sm text-gray-600">今日製作</p>
+                        <p class="text-2xl font-bold" id="todayProduction">0</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow">
+                <div class="flex items-center">
+                    <i class="fas fa-boxes text-purple-500 text-2xl mr-3"></i>
+                    <div>
+                        <p class="text-sm text-gray-600">總半成品</p>
+                        <p class="text-2xl font-bold" id="totalRecipes">0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 篩選控制 -->
+        <div class="bg-white p-4 rounded-lg shadow mb-6">
+            <div class="flex flex-wrap gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">製作狀態</label>
+                    <select id="statusFilter" class="border rounded px-3 py-2" onchange="filterRecipes()">
+                        <option value="">全部狀態</option>
+                        <option value="available">可製作</option>
+                        <option value="insufficient">材料不足</option>
+                        <option value="partial">部分可製作</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">半成品類型</label>
+                    <select id="categoryFilter" class="border rounded px-3 py-2" onchange="filterRecipes()">
+                        <option value="">全部類型</option>
+                        <option value="醬料">醬料</option>
+                        <option value="配菜">配菜</option>
+                        <option value="湯底">湯底</option>
+                        <option value="其他">其他</option>
+                    </select>
+                </div>
+                <div class="flex-1">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">搜尋半成品</label>
+                    <input type="text" id="searchInput" placeholder="輸入半成品名稱..." 
+                           class="w-full border rounded px-3 py-2" onkeyup="filterRecipes()">
+                </div>
+                <div class="flex items-end">
+                    <button onclick="showBatchProduction()" class="bg-indigo-500 hover:bg-indigo-700 text-white px-4 py-2 rounded">
+                        <i class="fas fa-layer-group mr-2"></i>批量製作
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 半成品製作列表 -->
+        <div id="recipeGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- 半成品卡片將在此動態生成 -->
+        </div>
+
+        <!-- 載入指示器 -->
+        <div id="loadingIndicator" class="text-center py-8">
+            <i class="fas fa-spinner fa-spin text-2xl text-green-500"></i>
+            <p class="mt-2 text-gray-600">載入中...</p>
+        </div>
+    </div>
+
+    <!-- 製作詳情模態框 -->
+    <div id="productionModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-2xl font-bold" id="modalRecipeName">製作詳情</h2>
+                        <button onclick="closeProductionModal()" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                    <div id="modalContent">
+                        <!-- 詳情內容將在此動態生成 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 製作確認模態框 -->
+    <div id="confirmModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg max-w-md w-full">
+                <div class="p-6">
+                    <div class="flex items-center mb-4">
+                        <i class="fas fa-exclamation-triangle text-yellow-500 text-2xl mr-3"></i>
+                        <h3 class="text-lg font-bold">確認製作</h3>
+                    </div>
+                    <div id="confirmContent">
+                        <!-- 確認內容將在此動態生成 -->
+                    </div>
+                    <div class="flex justify-end space-x-3 mt-6">
+                        <button onclick="closeConfirmModal()" class="bg-gray-500 hover:bg-gray-700 text-white px-4 py-2 rounded">
+                            取消
+                        </button>
+                        <button onclick="executeProduction()" class="bg-green-500 hover:bg-green-700 text-white px-4 py-2 rounded">
+                            <i class="fas fa-play mr-2"></i>開始製作
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 製作進度模態框 -->
+    <div id="progressModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-lg max-w-md w-full">
+                <div class="p-6">
+                    <div class="flex items-center mb-4">
+                        <i class="fas fa-cog fa-spin text-blue-500 text-2xl mr-3"></i>
+                        <h3 class="text-lg font-bold">製作進行中</h3>
+                    </div>
+                    
+                    <!-- 進度條 -->
+                    <div class="mb-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm font-medium text-gray-700">製作進度</span>
+                            <span id="progressPercent" class="text-sm font-medium text-blue-600">0%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2.5">
+                            <div id="progressBar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- 當前步驟 -->
+                    <div id="currentStep" class="text-sm text-gray-600 mb-4">
+                        準備開始製作...
+                    </div>
+                    
+                    <!-- 步驟列表 -->
+                    <div class="space-y-2">
+                        <div id="step1" class="flex items-center text-sm">
+                            <i class="fas fa-circle text-gray-300 mr-2"></i>
+                            <span>增加半成品庫存</span>
+                        </div>
+                        <div id="step2" class="flex items-center text-sm">
+                            <i class="fas fa-circle text-gray-300 mr-2"></i>
+                            <span>扣除食材庫存</span>
+                        </div>
+                        <div id="step3" class="flex items-center text-sm">
+                            <i class="fas fa-circle text-gray-300 mr-2"></i>
+                            <span>記錄製作歷史</span>
+                        </div>
+                        <div id="step4" class="flex items-center text-sm">
+                            <i class="fas fa-circle text-gray-300 mr-2"></i>
+                            <span>重新載入資料</span>
+                        </div>
+                    </div>
+                    
+                    <!-- 警告文字 -->
+                    <div class="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+                        <p class="text-xs text-yellow-700">
+                            <i class="fas fa-exclamation-triangle mr-1"></i>
+                            製作進行中，請勿關閉瀏覽器或重新整理頁面
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 半成品製作系統核心類別
+        class ProductionSystem {
+            constructor() {
+                this.recipes = [];           // 半成品
+                this.ingredients = [];       // 半成品組成項目
+                this.inventory = [];         // 食材庫
+                this.filteredRecipes = [];   // 篩選後的半成品
+                this.productionLog = [];     // 製作記錄
+                this.currentProduction = null; // 當前製作項目
+                
+                // Notion API 設定
+                this.apiKey = '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';
+                this.apiVersion = '2022-06-28';
+                
+                // 資料庫 IDs
+                this.databaseIds = {
+                    inventory: '237fd5adc30b808cbba3c03f8f2065fd',        // 食材庫
+                    ingredients: '237fd5adc30b80f7aedfe94804d80218',     // 半成品組成項目
+                    recipes: '237fd5adc30b80c09b59c03cd67c6432',          // 半成品
+                    productionRecords: '23bfd5adc30b81a3a8e2e8cb68a4b2bd' // 製作記錄
+                };
+            }
+
+            // 載入所有資料
+            async loadAllData() {
+                try {
+                    document.getElementById('loadingIndicator').style.display = 'block';
+                    
+                    console.log('🔄 開始載入製作系統資料...');
+                    
+                    // 並行載入所有資料庫
+                    const [inventory, ingredients, recipes] = await Promise.all([
+                        this.loadDatabase(this.databaseIds.inventory, '食材庫'),
+                        this.loadDatabase(this.databaseIds.ingredients, '半成品組成項目'),
+                        this.loadDatabase(this.databaseIds.recipes, '半成品')
+                    ]);
+                    
+                    this.ingredientInventory = inventory;  // 食材庫存數據
+                    this.ingredients = ingredients;       // 半成品組成項目
+                    this.recipes = recipes;               // 半成品資料
+                    
+                    console.log('📊 資料載入完成:');
+                    console.log(`  - 食材庫: ${this.ingredientInventory.length} 項`);
+                    console.log(`  - 半成品組成: ${this.ingredients.length} 項`);
+                    console.log(`  - 半成品: ${this.recipes.length} 項`);
+                    
+                    // 計算製作狀態
+                    this.calculateProductionStatus();
+                    
+                    // 顯示半成品列表
+                    this.displayRecipes();
+                    this.updateStatistics();
+                    
+                } catch (error) {
+                    console.error('❌ 載入資料失敗:', error);
+                    alert('載入資料失敗，請檢查網路連線或稍後再試');
+                } finally {
+                    document.getElementById('loadingIndicator').style.display = 'none';
+                }
+            }
+
+            // 載入單一資料庫
+            async loadDatabase(databaseId, name) {
+                const allResults = [];
+                let cursor = undefined;
+                
+                try {
+                    do {
+                        const requestBody = {
+                            page_size: 100
+                        };
+                        
+                        if (cursor) {
+                            requestBody.start_cursor = cursor;
+                        }
+                        
+                        const response = await fetch(`/api/notion/databases/${databaseId}/query`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(requestBody)
+                        });
+                        
+                        if (!response.ok) {
+                            const errorText = await response.text();
+                            throw new Error(`載入 ${name} 失敗: ${response.status} - ${errorText}`);
+                        }
+                        
+                        const data = await response.json();
+                        allResults.push(...data.results);
+                        cursor = data.next_cursor;
+                        
+                    } while (cursor);
+                    
+                    console.log(`✅ ${name} 載入完成: ${allResults.length} 筆`);
+                    return allResults;
+                    
+                } catch (error) {
+                    console.error(`❌ 載入 ${name} 時發生錯誤:`, error);
+                    throw error;
+                }
+            }
+
+            // 計算製作狀態
+            calculateProductionStatus() {
+                this.recipes.forEach(recipe => {
+                    const recipeId = recipe.id;
+                    const recipeName = this.getPropertyTitle(recipe, '名稱');
+                    
+                    // 取得此半成品所需的原料
+                    const requiredIngredients = this.getRecipeIngredients(recipeId);
+                    
+                    let canProduce = true;
+                    let maxProducible = Infinity;
+                    let insufficientIngredients = [];
+                    
+                    requiredIngredients.forEach(ingredient => {
+                        const ingredientName = this.getPropertyTitle(ingredient, '項目名稱');
+                        const requiredAmount = this.getPropertyNumber(ingredient, '使用數量(克)');
+                        
+                        if (requiredAmount && requiredAmount > 0) {
+                            const availableStock = this.getIngredientStock(ingredientName);
+                            const possibleBatches = Math.floor(availableStock / requiredAmount);
+                            
+                            if (possibleBatches <= 0) {
+                                canProduce = false;
+                                insufficientIngredients.push({
+                                    name: ingredientName,
+                                    required: requiredAmount,
+                                    available: availableStock,
+                                    shortage: requiredAmount - availableStock
+                                });
+                            } else {
+                                maxProducible = Math.min(maxProducible, possibleBatches);
+                            }
+                        }
+                    });
+                    
+                    // 設定製作狀態
+                    recipe.productionStatus = {
+                        canProduce: canProduce,
+                        maxProducible: maxProducible === Infinity ? 0 : maxProducible,
+                        insufficientIngredients: insufficientIngredients,
+                        requiredIngredients: requiredIngredients
+                    };
+                });
+            }
+
+            // 取得半成品所需原料
+            getRecipeIngredients(recipeId) {
+                // 標準化 ID 格式（移除短橫線進行比較）
+                const normalizedRecipeId = recipeId.replace(/-/g, '');
+                
+                return this.ingredients.filter(ingredient => {
+                    const relations = this.getPropertyRelation(ingredient, '食譜/菜單資料庫');
+                    return relations.some(rel => {
+                        const normalizedRelationId = rel.id.replace(/-/g, '');
+                        return normalizedRelationId === normalizedRecipeId;
+                    });
+                });
+            }
+
+            // 取得食材庫存量
+            getIngredientStock(ingredientName) {
+                // 清理食材名稱，移除前綴（如"酸辣湯底-酸辣湯塊" → "酸辣湯塊"）
+                const cleanedName = ingredientName.includes('-') ? 
+                    ingredientName.split('-').pop().trim() : 
+                    ingredientName.trim();
+                
+                console.log(`🔍 搜尋食材: "${ingredientName}" -> 清理後: "${cleanedName}"`);
+                console.log(`📋 食材庫總數: ${this.ingredientInventory?.length || 0} 項`);
+                
+                if (!this.ingredientInventory || this.ingredientInventory.length === 0) {
+                    console.warn('❌ 食材庫數據為空');
+                    return 0;
+                }
+                
+                // 先列出前幾個食材名稱來調試
+                console.log('📋 食材庫前10項:');
+                this.ingredientInventory.slice(0, 10).forEach((item, index) => {
+                    console.log(`  ${index + 1}. 完整項目數據:`, item);
+                    console.log(`  ${index + 1}. Properties:`, item.properties);
+                    
+                    // 嘗試多種可能的欄位名稱
+                    const possibleNameFields = ['名稱', 'Name', '食材名稱', '品項名稱', 'title'];
+                    const possibleStockFields = ['實際庫存量', '庫存量', '數量', 'Stock', 'Quantity'];
+                    
+                    let itemName = '';
+                    let stock = 0;
+                    
+                    // 尋找名稱欄位
+                    for (const field of possibleNameFields) {
+                        if (item.properties?.[field]) {
+                            if (item.properties[field].title?.[0]?.plain_text) {
+                                itemName = item.properties[field].title[0].plain_text;
+                                console.log(`  找到名稱欄位 "${field}": "${itemName}"`);
+                                break;
+                            }
+                            if (item.properties[field].rich_text?.[0]?.plain_text) {
+                                itemName = item.properties[field].rich_text[0].plain_text;
+                                console.log(`  找到名稱欄位 "${field}" (rich_text): "${itemName}"`);
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // 尋找庫存欄位
+                    for (const field of possibleStockFields) {
+                        if (item.properties?.[field]?.number !== undefined) {
+                            stock = item.properties[field].number;
+                            console.log(`  找到庫存欄位 "${field}": ${stock}g`);
+                            break;
+                        }
+                    }
+                    
+                    console.log(`  ${index + 1}. 解析結果: "${itemName}" - 庫存: ${stock}g`);
+                });
+                
+                const inventoryItem = this.ingredientInventory.find(item => {
+                    const itemName = item.properties?.['食材名稱']?.rich_text?.[0]?.plain_text || '';
+                    
+                    // 詳細的匹配邏輯
+                    const exactMatch = itemName === ingredientName;
+                    const cleanMatch = itemName === cleanedName;
+                    const containsMatch = itemName.includes(cleanedName);
+                    const reverseMatch = cleanedName.includes(itemName);
+                    const noSpaceMatch = itemName.replace(/\s+/g, '') === cleanedName.replace(/\s+/g, '');
+                    
+                    // 特殊匹配：去除特殊字符後比較
+                    const normalizedItem = itemName.replace(/[^\u4e00-\u9fa5\w]/g, '').toLowerCase();
+                    const normalizedSearch = cleanedName.replace(/[^\u4e00-\u9fa5\w]/g, '').toLowerCase();
+                    const normalizedMatch = normalizedItem === normalizedSearch || 
+                                          normalizedItem.includes(normalizedSearch) || 
+                                          normalizedSearch.includes(normalizedItem);
+                    
+                    console.log(`🔍 比較 "${itemName}" vs "${cleanedName}":`);
+                    console.log(`  - 完全匹配: ${exactMatch}`);
+                    console.log(`  - 清理匹配: ${cleanMatch}`);
+                    console.log(`  - 包含匹配: ${containsMatch}`);
+                    console.log(`  - 反向匹配: ${reverseMatch}`);
+                    console.log(`  - 標準化匹配: ${normalizedMatch} (${normalizedItem} vs ${normalizedSearch})`);
+                    
+                    return exactMatch || cleanMatch || containsMatch || reverseMatch || normalizedMatch;
+                });
+                
+                if (!inventoryItem) {
+                    console.warn(`⚠️ 找不到食材庫存: "${ingredientName}" (清理後: "${cleanedName}")`);
+                    return 0;
+                }
+                
+                const itemName = inventoryItem.properties?.['食材名稱']?.rich_text?.[0]?.plain_text || '';
+                const stock = inventoryItem.properties?.['庫存量']?.number || 0;
+                
+                console.log(`✅ 找到匹配: "${ingredientName}" <-> "${itemName}"`);
+                console.log(`📦 ${itemName} 庫存: ${stock}g`);
+                return stock;
+            }
+
+            // 顯示半成品列表
+            displayRecipes() {
+                this.filteredRecipes = [...this.recipes];
+                this.renderRecipeGrid();
+            }
+
+            // 渲染半成品網格
+            renderRecipeGrid() {
+                const grid = document.getElementById('recipeGrid');
+                
+                if (this.filteredRecipes.length === 0) {
+                    grid.innerHTML = `
+                        <div class="col-span-full text-center py-8">
+                            <i class="fas fa-search text-4xl text-gray-400 mb-4"></i>
+                            <p class="text-gray-600">沒有找到符合條件的半成品</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                grid.innerHTML = this.filteredRecipes.map(recipe => this.createRecipeCard(recipe)).join('');
+            }
+
+            // 創建半成品卡片
+            createRecipeCard(recipe) {
+                const name = this.getPropertyTitle(recipe, '名稱');
+                const category = this.getPropertySelect(recipe, '類別') || this.getPropertySelect(recipe, '分類') || '未分類';
+                const currentStock = this.getPropertyNumber(recipe, '實際庫存量') || this.getPropertyNumber(recipe, '動態庫存量') || 0;
+                const unit = this.getPropertyRichText(recipe, '單位') || '份';
+                const status = recipe.productionStatus;
+                
+                const statusConfig = this.getProductionStatusConfig(status);
+                
+                return `
+                    <div class="recipe-card bg-white rounded-lg shadow-md overflow-hidden">
+                        <div class="p-6">
+                            <div class="flex justify-between items-start mb-3">
+                                <h3 class="text-lg font-bold text-gray-800">${name || '未命名半成品'}</h3>
+                                <span class="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded">${category}</span>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-sm text-gray-600">目前庫存</span>
+                                    <span class="font-medium">${currentStock} ${unit}</span>
+                                </div>
+                                
+                                <div class="flex justify-between items-center">
+                                    <span class="text-sm text-gray-600">可製作數量</span>
+                                    <span class="font-medium ${statusConfig.color}">${status.maxProducible} ${unit}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <div class="flex items-center mb-2">
+                                    <i class="fas ${statusConfig.icon} ${statusConfig.color} mr-2"></i>
+                                    <span class="text-sm ${statusConfig.color}">${statusConfig.text}</span>
+                                </div>
+                                ${status.insufficientIngredients.length > 0 ? `
+                                    <div class="text-xs text-red-600">
+                                        缺少: ${status.insufficientIngredients.slice(0, 2).map(ing => ing.name).join(', ')}
+                                        ${status.insufficientIngredients.length > 2 ? '...' : ''}
+                                    </div>
+                                ` : ''}
+                            </div>
+                            
+                            <div class="flex justify-between space-x-2">
+                                <button onclick="showProductionDetail('${recipe.id}')" 
+                                        class="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded text-sm">
+                                    <i class="fas fa-info-circle mr-1"></i>詳情
+                                </button>
+                                
+                                <button onclick="startProduction('${recipe.id}')" 
+                                        class="flex-1 ${status.canProduce ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-400 cursor-not-allowed'} text-white px-3 py-2 rounded text-sm"
+                                        ${!status.canProduce ? 'disabled' : ''}>
+                                    <i class="fas fa-play mr-1"></i>製作
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 取得製作狀態配置
+            getProductionStatusConfig(status) {
+                if (!status.canProduce) {
+                    return {
+                        icon: 'fa-times-circle',
+                        color: 'status-insufficient',
+                        text: '材料不足'
+                    };
+                } else if (status.maxProducible <= 5) {
+                    return {
+                        icon: 'fa-exclamation-triangle',
+                        color: 'status-warning',
+                        text: '可製作量少'
+                    };
+                } else {
+                    return {
+                        icon: 'fa-check-circle',
+                        color: 'status-available',
+                        text: '可以製作'
+                    };
+                }
+            }
+
+            // 顯示製作詳情
+            showProductionDetail(recipeId) {
+                const recipe = this.recipes.find(r => r.id === recipeId);
+                if (!recipe) return;
+                
+                const name = this.getPropertyTitle(recipe, '品項名稱') || this.getPropertyTitle(recipe, '名稱');
+                const status = recipe.productionStatus;
+                
+                document.getElementById('modalRecipeName').textContent = name || '未命名半成品';
+                document.getElementById('modalContent').innerHTML = this.createProductionDetailContent(recipe);
+                document.getElementById('productionModal').classList.remove('hidden');
+            }
+
+            // 創建製作詳情內容
+            createProductionDetailContent(recipe) {
+                const name = this.getPropertyTitle(recipe, '名稱');
+                const category = this.getPropertySelect(recipe, '類別') || this.getPropertySelect(recipe, '分類') || '未分類';
+                const currentStock = this.getPropertyNumber(recipe, '實際庫存量') || this.getPropertyNumber(recipe, '動態庫存量') || 0;
+                const unit = this.getPropertyRichText(recipe, '單位') || '份';
+                const status = recipe.productionStatus;
+                const statusConfig = this.getProductionStatusConfig(status);
+                
+                let ingredientsList = '';
+                if (status.requiredIngredients.length > 0) {
+                    ingredientsList = status.requiredIngredients.map(ingredient => {
+                        const ingName = this.getPropertyTitle(ingredient, '項目名稱');
+                        const requiredAmount = this.getPropertyNumber(ingredient, '使用數量(克)');
+                        const availableStock = this.getIngredientStock(ingName);
+                        const isInsufficient = availableStock < requiredAmount;
+                        
+                        return `
+                            <tr class="border-b ingredient-item">
+                                <td class="py-3 px-4">${ingName || '未命名食材'}</td>
+                                <td class="py-3 px-4">${requiredAmount || 0}g</td>
+                                <td class="py-3 px-4 ${isInsufficient ? 'status-insufficient' : 'status-available'}">${availableStock}g</td>
+                                <td class="py-3 px-4">
+                                    ${isInsufficient ? 
+                                        `<span class="status-insufficient">不足 ${requiredAmount - availableStock}g</span>` : 
+                                        `<span class="status-available">充足</span>`
+                                    }
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                } else {
+                    ingredientsList = '<tr><td colspan="4" class="py-4 text-center text-gray-500">暫無原料資料</td></tr>';
+                }
+                
+                return `
+                    <div class="space-y-6">
+                        <!-- 基本資訊 -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <h3 class="font-semibold text-gray-700 mb-2">基本資訊</h3>
+                                <div class="space-y-2">
+                                    <p><span class="font-medium">類別:</span> ${category || '未分類'}</p>
+                                    <p><span class="font-medium">目前庫存:</span> ${currentStock} ${unit}</p>
+                                    <p><span class="font-medium">單位:</span> ${unit}</p>
+                                </div>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-gray-700 mb-2">製作狀態</h3>
+                                <div class="flex items-center mb-2">
+                                    <i class="fas ${statusConfig.icon} ${statusConfig.color} mr-2"></i>
+                                    <span class="${statusConfig.color} font-medium">${statusConfig.text}</span>
+                                </div>
+                                <p class="text-sm text-gray-600">最多可製作: ${status.maxProducible} ${unit}</p>
+                            </div>
+                        </div>
+                        
+                        <!-- 所需原料 -->
+                        <div>
+                            <h3 class="font-semibold text-gray-700 mb-2">所需原料</h3>
+                            <div class="overflow-x-auto">
+                                <table class="w-full border-collapse border border-gray-200">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="border border-gray-200 py-2 px-4 text-left">原料名稱</th>
+                                            <th class="border border-gray-200 py-2 px-4 text-left">需要數量</th>
+                                            <th class="border border-gray-200 py-2 px-4 text-left">現有庫存</th>
+                                            <th class="border border-gray-200 py-2 px-4 text-left">狀態</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${ingredientsList}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <!-- 製作選項 -->
+                        ${status.canProduce ? `
+                            <div class="bg-green-50 p-4 rounded-lg">
+                                <h3 class="font-semibold text-green-700 mb-2">製作選項</h3>
+                                <div class="flex items-center space-x-4">
+                                    <label class="text-sm font-medium text-gray-700">製作數量:</label>
+                                    <input type="number" id="productionQuantity" min="1" max="${status.maxProducible}" value="1" 
+                                           class="border rounded px-3 py-1 w-20">
+                                    <span class="text-sm text-gray-600">${unit} (最多 ${status.maxProducible})</span>
+                                    <button onclick="confirmProduction('${recipe.id}')" 
+                                            class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm">
+                                        <i class="fas fa-play mr-2"></i>開始製作
+                                    </button>
+                                </div>
+                            </div>
+                        ` : `
+                            <div class="bg-red-50 p-4 rounded-lg">
+                                <h3 class="font-semibold text-red-700 mb-2">無法製作</h3>
+                                <p class="text-sm text-red-600">請補充以下原料:</p>
+                                <ul class="list-disc list-inside text-sm text-red-600 mt-2">
+                                    ${status.insufficientIngredients.map(ing => 
+                                        `<li>${ing.name}: 缺少 ${ing.shortage}g</li>`
+                                    ).join('')}
+                                </ul>
+                            </div>
+                        `}
+                    </div>
+                `;
+            }
+
+            // 開始製作流程
+            startProduction(recipeId) {
+                const recipe = this.recipes.find(r => r.id === recipeId);
+                if (!recipe || !recipe.productionStatus.canProduce) return;
+                
+                this.showProductionDetail(recipeId);
+            }
+
+            // 確認製作
+            confirmProduction(recipeId) {
+                const recipe = this.recipes.find(r => r.id === recipeId);
+                if (!recipe) return;
+                
+                const quantity = parseInt(document.getElementById('productionQuantity').value) || 1;
+                const maxProducible = recipe.productionStatus.maxProducible;
+                
+                if (quantity > maxProducible) {
+                    alert(`製作數量不能超過 ${maxProducible}`);
+                    return;
+                }
+                
+                this.currentProduction = {
+                    recipe: recipe,
+                    quantity: quantity
+                };
+                
+                const name = this.getPropertyTitle(recipe, '品項名稱') || this.getPropertyTitle(recipe, '名稱');
+                const unit = this.getPropertyRichText(recipe, '單位') || '份';
+                
+                document.getElementById('confirmContent').innerHTML = `
+                    <p class="mb-4">確定要製作以下半成品嗎？</p>
+                    <div class="bg-gray-50 p-4 rounded">
+                        <p><strong>半成品:</strong> ${name}</p>
+                        <p><strong>製作數量:</strong> ${quantity} ${unit}</p>
+                        <p class="text-sm text-gray-600 mt-2">此操作將：</p>
+                        <ul class="text-sm text-gray-600 list-disc list-inside">
+                            <li>增加半成品庫存 ${quantity} ${unit}</li>
+                            <li>扣除相應的原料庫存</li>
+                            <li>記錄製作歷史</li>
+                        </ul>
+                    </div>
+                `;
+                
+                document.getElementById('productionModal').classList.add('hidden');
+                document.getElementById('confirmModal').classList.remove('hidden');
+            }
+
+            // 執行製作（完整的製作流程）
+            async executeProduction() {
+                if (!this.currentProduction) return;
+                
+                // 禁用執行按鈕，防止重複點擊
+                const executeButton = document.querySelector('button[onclick="executeProduction()"]');
+                if (executeButton) {
+                    executeButton.disabled = true;
+                    executeButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>處理中...';
+                    executeButton.classList.add('opacity-50', 'cursor-not-allowed');
+                }
+                
+                // 關閉確認模態框，顯示進度模態框
+                this.closeConfirmModal();
+                this.showProgressModal();
+                
+                try {
+                    const { recipe, quantity } = this.currentProduction;
+                    const name = this.getPropertyTitle(recipe, '品項名稱') || this.getPropertyTitle(recipe, '名稱');
+                    
+                    console.log(`🔄 開始製作流程: ${name} x${quantity}`);
+                    
+                    // 1. 更新半成品庫存 (在半成品資料庫：237fd5adc30b80c09b59c03cd67c6432 增加實際庫存量)
+                    this.updateProgress(1, '增加半成品庫存中...', 25);
+                    await this.updateRecipeStock(recipe, quantity);
+                    
+                    // 2. 扣除原料庫存 (從食材庫：237fd5adc30b808cbba3c03f8f2065fd 扣除食材庫存)
+                    this.updateProgress(2, '扣除食材庫存中...', 50);
+                    await this.deductIngredientStock(recipe, quantity);
+                    
+                    // 3. 記錄製作歷史
+                    this.updateProgress(3, '記錄製作歷史中...', 75);
+                    await this.logProduction(recipe, quantity);
+                    
+                    // 4. 重新載入資料
+                    this.updateProgress(4, '重新載入資料中...', 90);
+                    await this.loadAllData();
+                    
+                    // 完成
+                    this.updateProgress(0, '製作完成！', 100);
+                    
+                    console.log(`✅ 製作流程完成！`);
+                    
+                    // 延遲一秒後顯示成功訊息並關閉進度條
+                    setTimeout(() => {
+                        this.hideProgressModal();
+                        alert(`✅ 製作完成！${name} +${quantity}\n\n✓ 半成品庫存已增加\n✓ 食材庫存已扣除\n✓ 製作記錄已保存`);
+                    }, 1000);
+                    
+                } catch (error) {
+                    console.error('❌ 製作失敗:', error);
+                    this.hideProgressModal();
+                    alert(`製作過程中發生錯誤：${error.message}\n\n請檢查:\n• 網路連線\n• 資料庫權限\n• 庫存數量是否足夠`);
+                } finally {
+                    // 恢復執行按鈕
+                    if (executeButton) {
+                        executeButton.disabled = false;
+                        executeButton.innerHTML = '<i class="fas fa-play mr-2"></i>開始製作';
+                        executeButton.classList.remove('opacity-50', 'cursor-not-allowed');
+                    }
+                    this.currentProduction = null;
+                }
+            }
+
+            // 更新半成品庫存（在半成品資料庫：237fd5adc30b80c09b59c03cd67c6432 增加實際庫存量）
+            async updateRecipeStock(recipe, quantity) {
+                const recipeName = this.getPropertyTitle(recipe, '品項名稱') || this.getPropertyTitle(recipe, '名稱');
+                const currentStock = this.getPropertyNumber(recipe, '實際庫存量') || this.getPropertyNumber(recipe, '動態庫存量') || 0;
+                const newStock = currentStock + quantity;
+                
+                console.log(`🔄 更新半成品庫存: ${recipeName}`);
+                console.log(`📊 庫存變化: ${currentStock} → ${newStock} (增加: ${quantity})`);
+                
+                const updateData = {
+                    properties: {
+                        '實際庫存量': {
+                            number: newStock
+                        }
+                    }
+                };
+                
+                const response = await fetch(`/api/notion/pages/${recipe.id}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(updateData)
+                });
+                
+                if (!response.ok) {
+                    const errorDetails = await response.text();
+                    console.error(`❌ 更新半成品庫存失敗: ${response.status}`, errorDetails);
+                    throw new Error(`更新半成品庫存失敗: ${response.status} - ${errorDetails}`);
+                }
+                
+                console.log(`✅ 半成品庫存更新成功: ${recipeName} ${currentStock} → ${newStock}`);
+            }
+
+            // 扣除原料庫存（從食材庫：237fd5adc30b808cbba3c03f8f2065fd）
+            async deductIngredientStock(recipe, quantity) {
+                const requiredIngredients = recipe.productionStatus.requiredIngredients;
+                
+                console.log(`🔄 開始扣除食材庫存，製作數量: ${quantity}`);
+                console.log(`📋 所需原料清單:`, requiredIngredients.map(ing => ({
+                    name: this.getPropertyTitle(ing, '項目名稱'),
+                    amount: this.getPropertyNumber(ing, '使用數量(克)')
+                })));
+                
+                for (const ingredient of requiredIngredients) {
+                    const ingredientName = this.getPropertyTitle(ingredient, '項目名稱');
+                    const requiredAmount = this.getPropertyNumber(ingredient, '使用數量(克)');
+                    const totalDeduction = requiredAmount * quantity;
+                    
+                    console.log(`🔍 處理食材: ${ingredientName}, 單次用量: ${requiredAmount}g, 總扣除: ${totalDeduction}g`);
+                    
+                    // 從食材庫（ingredientInventory）中尋找對應的食材
+                    const inventoryItem = this.ingredientInventory.find(item => {
+                        const itemName = this.getPropertyRichText(item, '食材名稱') || 
+                                        this.getPropertyTitle(item, '品項名稱') || 
+                                        this.getPropertyTitle(item, '名稱');
+                        
+                        // 多種匹配方式
+                        const exactMatch = itemName === ingredientName;
+                        const containsMatch = itemName.includes(ingredientName) || ingredientName.includes(itemName);
+                        const cleanMatch = itemName.replace(/\s+/g, '') === ingredientName.replace(/\s+/g, '');
+                        
+                        console.log(`🔍 比較食材: "${itemName}" vs "${ingredientName}"`);
+                        console.log(`  - 完全匹配: ${exactMatch}`);
+                        console.log(`  - 包含匹配: ${containsMatch}`);
+                        console.log(`  - 清理匹配: ${cleanMatch}`);
+                        
+                        return exactMatch || containsMatch || cleanMatch;
+                    });
+                    
+                    if (inventoryItem) {
+                        const currentStock = this.getPropertyNumber(inventoryItem, '庫存量') || 0;
+                        const newStock = Math.max(0, currentStock - totalDeduction);
+                        
+                        console.log(`📦 找到食材: ${ingredientName}`);
+                        console.log(`📊 庫存變化: ${currentStock}g → ${newStock}g (扣除: ${totalDeduction}g)`);
+                        
+                        const updateData = {
+                            properties: {
+                                '庫存量': {
+                                    number: newStock
+                                }
+                            }
+                        };
+                        
+                        const response = await fetch(`/api/notion/pages/${inventoryItem.id}`, {
+                            method: 'PATCH',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(updateData)
+                        });
+                        
+                        if (!response.ok) {
+                            const errorDetails = await response.text();
+                            console.error(`❌ 更新食材庫存失敗: ${response.status}`, errorDetails);
+                            throw new Error(`更新食材庫存失敗: ${response.status} - ${errorDetails}`);
+                        }
+                        
+                        console.log(`✅ 食材庫存更新成功 ${ingredientName}: ${currentStock}g → ${newStock}g`);
+                    } else {
+                        console.warn(`⚠️ 找不到食材庫存項目: ${ingredientName}`);
+                        console.log(`📋 食材庫中的所有項目:`, this.ingredientInventory.map(item => ({
+                            name: this.getPropertyRichText(item, '食材名稱') || this.getPropertyTitle(item, '名稱'),
+                            id: item.id
+                        })));
+                    }
+                }
+            }
+
+            // 記錄製作歷史
+            async logProduction(recipe, quantity) {
+                const name = this.getPropertyTitle(recipe, '名稱');
+                const unit = this.getPropertyRichText(recipe, '單位') || '份';
+                const now = new Date();
+                
+                // 1. 本地記錄 (用於快速顯示)
+                this.productionLog.unshift({
+                    timestamp: now,
+                    recipeName: name,
+                    quantity: quantity,
+                    unit: unit,
+                    id: recipe.id
+                });
+                
+                // 保留最近100筆記錄
+                if (this.productionLog.length > 100) {
+                    this.productionLog = this.productionLog.slice(0, 100);
+                }
+                
+                // 2. 保存到 Notion 製作記錄資料庫
+                try {
+                    await this.saveProductionRecord(recipe, quantity, now);
+                } catch (error) {
+                    console.warn('⚠️ 製作記錄保存失敗:', error);
+                }
+            }
+
+            // 保存製作記錄到 Notion
+            async saveProductionRecord(recipe, quantity, timestamp) {
+                const name = this.getPropertyTitle(recipe, '名稱');
+                const recordId = `PR-${timestamp.getFullYear()}${String(timestamp.getMonth() + 1).padStart(2, '0')}${String(timestamp.getDate()).padStart(2, '0')}-${String(timestamp.getHours()).padStart(2, '0')}${String(timestamp.getMinutes()).padStart(2, '0')}`;
+                
+                const recordData = {
+                    parent: {
+                        database_id: this.databaseIds.productionRecords
+                    },
+                    properties: {
+                        '製作記錄ID': {
+                            title: [
+                                {
+                                    text: {
+                                        content: recordId
+                                    }
+                                }
+                            ]
+                        },
+                        '製作日期': {
+                            date: {
+                                start: timestamp.toISOString()
+                            }
+                        },
+                        '半成品名稱': {
+                            relation: [
+                                {
+                                    id: recipe.id
+                                }
+                            ]
+                        },
+                        '製作數量': {
+                            number: quantity
+                        },
+                        '製作狀態': {
+                            select: {
+                                name: '已完成'
+                            }
+                        },
+                        '完成時間': {
+                            date: {
+                                start: timestamp.toISOString()
+                            }
+                        },
+                        '製作備註': {
+                            rich_text: [
+                                {
+                                    text: {
+                                        content: `自動製作記錄 - ${name} ${quantity}份`
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                };
+
+                const response = await fetch('/api/notion/pages', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(recordData)
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(`保存製作記錄失敗: ${error.message || response.status}`);
+                }
+
+                const result = await response.json();
+                console.log(`✅ 製作記錄已保存: ${recordId}`);
+                return result;
+            }
+
+            // 篩選半成品
+            filterRecipes() {
+                const statusFilter = document.getElementById('statusFilter').value;
+                const categoryFilter = document.getElementById('categoryFilter').value;
+                const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+                
+                this.filteredRecipes = this.recipes.filter(recipe => {
+                    const name = this.getPropertyTitle(recipe, '名稱');
+                    const category = this.getPropertySelect(recipe, '類別') || this.getPropertySelect(recipe, '分類');
+                    const status = recipe.productionStatus;
+                    
+                    // 狀態篩選
+                    let statusMatch = true;
+                    if (statusFilter === 'available') {
+                        statusMatch = status.canProduce && status.maxProducible > 5;
+                    } else if (statusFilter === 'insufficient') {
+                        statusMatch = !status.canProduce;
+                    } else if (statusFilter === 'partial') {
+                        statusMatch = status.canProduce && status.maxProducible <= 5;
+                    }
+                    
+                    return statusMatch &&
+                           (!categoryFilter || category === categoryFilter) &&
+                           (!searchTerm || name.toLowerCase().includes(searchTerm));
+                });
+                
+                this.renderRecipeGrid();
+                this.updateStatistics();
+            }
+
+            // 更新統計資料
+            updateStatistics() {
+                const available = this.filteredRecipes.filter(r => r.productionStatus.canProduce && r.productionStatus.maxProducible > 5).length;
+                const insufficient = this.filteredRecipes.filter(r => !r.productionStatus.canProduce).length;
+                const today = this.productionLog.filter(log => {
+                    const today = new Date();
+                    const logDate = new Date(log.timestamp);
+                    return logDate.toDateString() === today.toDateString();
+                }).length;
+                
+                document.getElementById('availableRecipes').textContent = available;
+                document.getElementById('insufficientRecipes').textContent = insufficient;
+                document.getElementById('todayProduction').textContent = today;
+                document.getElementById('totalRecipes').textContent = this.filteredRecipes.length;
+            }
+
+            // 顯示製作記錄
+            async showProductionLog() {
+                try {
+                    // 顯示載入中
+                    document.getElementById('modalRecipeName').textContent = '製作記錄';
+                    document.getElementById('modalContent').innerHTML = `
+                        <div class="text-center py-8">
+                            <i class="fas fa-spinner fa-spin text-2xl text-gray-400 mb-4"></i>
+                            <p class="text-gray-500">載入製作記錄中...</p>
+                        </div>
+                    `;
+                    document.getElementById('productionModal').classList.remove('hidden');
+
+                    // 從 Notion 載入製作記錄
+                    const records = await this.loadProductionRecords();
+                    
+                    const logContent = records.length > 0 ? 
+                        records.map(record => {
+                            const recordId = record.properties?.['製作記錄ID']?.title?.[0]?.plain_text || 'N/A';
+                            const productionDate = record.properties?.['製作日期']?.date?.start || '';
+                            const quantity = record.properties?.['製作數量']?.number || 0;
+                            const status = record.properties?.['製作狀態']?.select?.name || '未知';
+                            const completionTime = record.properties?.['完成時間']?.date?.start || '';
+                            const notes = record.properties?.['製作備註']?.rich_text?.[0]?.plain_text || '';
+                            
+                            // 獲取關聯的半成品名稱
+                            const relatedRecipe = record.properties?.['半成品名稱']?.relation?.[0];
+                            let recipeName = '未知半成品';
+                            if (relatedRecipe) {
+                                const recipe = this.recipes.find(r => r.id === relatedRecipe.id);
+                                if (recipe) {
+                                    recipeName = this.getPropertyTitle(recipe, '名稱') || '未知半成品';
+                                }
+                            }
+                            
+                            const statusColor = status === '已完成' ? 'text-green-600' : 
+                                              status === '製作中' ? 'text-orange-600' : 
+                                              status === '準備中' ? 'text-blue-600' : 'text-gray-600';
+                            
+                            return `
+                                <div class="border-b border-gray-200 py-3" id="record-${record.id}">
+                                    <div class="flex justify-between items-start mb-2">
+                                        <div>
+                                            <span class="font-medium text-lg">${recipeName}</span>
+                                            <span class="ml-2 text-sm text-gray-500">${recordId}</span>
+                                        </div>
+                                        <div class="flex items-center space-x-2">
+                                            <span class="text-sm ${statusColor} font-medium" id="status-${record.id}">${status}</span>
+                                            <button onclick="editRecordStatus('${record.id}', '${status}')" 
+                                                    class="text-blue-500 hover:text-blue-700 text-xs">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-4 text-sm text-gray-600">
+                                        <div>
+                                            <i class="fas fa-calendar mr-1"></i>
+                                            製作時間: ${new Date(productionDate).toLocaleString()}
+                                        </div>
+                                        <div>
+                                            <i class="fas fa-calculator mr-1"></i>
+                                            數量: ${quantity} 份
+                                        </div>
+                                        ${completionTime ? `
+                                            <div>
+                                                <i class="fas fa-check mr-1"></i>
+                                                完成時間: ${new Date(completionTime).toLocaleString()}
+                                            </div>
+                                        ` : ''}
+                                        ${notes ? `
+                                            <div class="col-span-2">
+                                                <i class="fas fa-sticky-note mr-1"></i>
+                                                備註: ${notes}
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                    
+                                    <!-- 狀態編輯區域（預設隱藏） -->
+                                    <div id="edit-${record.id}" class="mt-3 p-3 bg-gray-50 rounded-lg hidden">
+                                        <div class="flex items-center space-x-3">
+                                            <label class="text-sm font-medium text-gray-700">狀態:</label>
+                                            <select id="status-select-${record.id}" class="border rounded px-2 py-1 text-sm">
+                                                <option value="準備中" ${status === '準備中' ? 'selected' : ''}>準備中</option>
+                                                <option value="製作中" ${status === '製作中' ? 'selected' : ''}>製作中</option>
+                                                <option value="已完成" ${status === '已完成' ? 'selected' : ''}>已完成</option>
+                                                <option value="暫停" ${status === '暫停' ? 'selected' : ''}>暫停</option>
+                                                <option value="取消" ${status === '取消' ? 'selected' : ''}>取消</option>
+                                            </select>
+                                            <button onclick="saveRecordStatus('${record.id}')" 
+                                                    class="bg-green-500 hover:bg-green-700 text-white px-3 py-1 rounded text-xs">
+                                                <i class="fas fa-save mr-1"></i>儲存
+                                            </button>
+                                            <button onclick="cancelEditStatus('${record.id}')" 
+                                                    class="bg-gray-500 hover:bg-gray-700 text-white px-3 py-1 rounded text-xs">
+                                                <i class="fas fa-times mr-1"></i>取消
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('') : 
+                        '<p class="text-gray-500 text-center py-8">暫無製作記錄</p>';
+                    
+                    // 更新內容
+                    document.getElementById('modalContent').innerHTML = `
+                        <div class="mb-4">
+                            <div class="flex justify-between items-center">
+                                <h3 class="text-lg font-semibold">最近製作記錄</h3>
+                                <div class="flex items-center space-x-3">
+                                    <span class="text-sm text-gray-500">共 ${records.length} 筆記錄</span>
+                                    <button onclick="refreshProductionLog()" 
+                                            class="bg-blue-500 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs">
+                                        <i class="fas fa-sync-alt mr-1"></i>重新整理
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                <p class="text-xs text-blue-700">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    點擊製作記錄右側的編輯按鈕 <i class="fas fa-edit text-blue-500"></i> 可以修改狀態
+                                </p>
+                            </div>
+                        </div>
+                        <div class="production-log max-h-96 overflow-y-auto">
+                            ${logContent}
+                        </div>
+                    `;
+                    
+                } catch (error) {
+                    console.error('❌ 載入製作記錄失敗:', error);
+                    document.getElementById('modalContent').innerHTML = `
+                        <div class="text-center py-8">
+                            <i class="fas fa-exclamation-triangle text-2xl text-red-400 mb-4"></i>
+                            <p class="text-red-500">載入製作記錄失敗</p>
+                            <p class="text-sm text-gray-500 mt-2">${error.message}</p>
+                        </div>
+                    `;
+                }
+            }
+
+            // 載入製作記錄
+            async loadProductionRecords(limit = 20) {
+                try {
+                    // 使用基本的 Notion API 直接查詢
+                    const queryData = {
+                        sorts: [
+                            {
+                                property: '製作日期',
+                                direction: 'descending'
+                            }
+                        ],
+                        page_size: limit
+                    };
+
+                    const response = await fetch('/api/notion/pages', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            parent: { database_id: this.databaseIds.productionRecords },
+                            ...queryData
+                        })
+                    });
+
+                    if (!response.ok) {
+                        // 嘗試替代方法
+                        console.log('🔄 嘗試替代查詢方法...');
+                        const altResponse = await this.loadDatabase(this.databaseIds.productionRecords, '製作記錄');
+                        return altResponse || [];
+                    }
+
+                    const data = await response.json();
+                    return data.results || [];
+                    
+                } catch (error) {
+                    console.warn('⚠️ 主要查詢方法失敗，嘗試備用方法:', error);
+                    try {
+                        // 備用方法：使用現有的 loadDatabase 方法
+                        const records = await this.loadDatabase(this.databaseIds.productionRecords, '製作記錄');
+                        return records || [];
+                    } catch (backupError) {
+                        console.error('❌ 備用查詢方法也失敗:', backupError);
+                        return [];
+                    }
+                }
+            }
+
+            // 顯示庫存狀況
+            showInventoryStatus() {
+                const lowStockItems = this.inventory.filter(item => {
+                    const stock = this.getPropertyNumber(item, '庫存量') || 0;
+                    const safeStock = this.getPropertyNumber(item, '安全庫存量') || 10;
+                    return stock <= safeStock;
+                });
+                
+                const statusContent = lowStockItems.length > 0 ?
+                    lowStockItems.map(item => {
+                        const name = this.getPropertyTitle(item, '品項名稱') || this.getPropertyTitle(item, '名稱');
+                        const stock = this.getPropertyNumber(item, '庫存量') || 0;
+                        const safeStock = this.getPropertyNumber(item, '安全庫存量') || 10;
+                        
+                        return `
+                            <div class="border-b border-gray-200 py-2">
+                                <div class="flex justify-between items-center">
+                                    <span class="font-medium">${name}</span>
+                                    <span class="text-sm ${stock <= 0 ? 'status-insufficient' : 'status-warning'}">
+                                        ${stock}g / ${safeStock}g
+                                    </span>
+                                </div>
+                            </div>
+                        `;
+                    }).join('') :
+                    '<p class="text-green-600 text-center py-4">所有食材庫存充足</p>';
+                
+                document.getElementById('modalRecipeName').textContent = '庫存警示';
+                document.getElementById('modalContent').innerHTML = `
+                    <div class="space-y-4">
+                        <p class="text-gray-600">以下食材庫存不足或接近安全庫存量：</p>
+                        <div>${statusContent}</div>
+                    </div>
+                `;
+                document.getElementById('productionModal').classList.remove('hidden');
+            }
+
+            // 批量製作
+            showBatchProduction() {
+                const availableRecipes = this.recipes.filter(r => r.productionStatus.canProduce);
+                
+                if (availableRecipes.length === 0) {
+                    alert('目前沒有可製作的半成品');
+                    return;
+                }
+                
+                const batchContent = availableRecipes.map(recipe => {
+                    const name = this.getPropertyTitle(recipe, '品項名稱') || this.getPropertyTitle(recipe, '名稱');
+                    const maxProducible = recipe.productionStatus.maxProducible;
+                    const unit = this.getPropertyRichText(recipe, '單位') || '份';
+                    
+                    return `
+                        <div class="border border-gray-200 rounded p-3 mb-3">
+                            <div class="flex justify-between items-center">
+                                <span class="font-medium">${name}</span>
+                                <div class="flex items-center space-x-2">
+                                    <input type="number" min="0" max="${maxProducible}" value="0" 
+                                           class="w-16 border rounded px-2 py-1 text-sm" 
+                                           id="batch_${recipe.id}">
+                                    <span class="text-sm text-gray-500">${unit} (最多 ${maxProducible})</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                
+                document.getElementById('modalRecipeName').textContent = '批量製作';
+                document.getElementById('modalContent').innerHTML = `
+                    <div class="space-y-4">
+                        <p class="text-gray-600">選擇要批量製作的半成品及數量：</p>
+                        <div>${batchContent}</div>
+                        <button onclick="executeBatchProduction()" 
+                                class="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded">
+                            <i class="fas fa-play mr-2"></i>開始批量製作
+                        </button>
+                    </div>
+                `;
+                document.getElementById('productionModal').classList.remove('hidden');
+            }
+
+            // 執行批量製作
+            async executeBatchProduction() {
+                const availableRecipes = this.recipes.filter(r => r.productionStatus.canProduce);
+                const batchJobs = [];
+                
+                for (const recipe of availableRecipes) {
+                    const quantityInput = document.getElementById(`batch_${recipe.id}`);
+                    const quantity = parseInt(quantityInput.value) || 0;
+                    
+                    if (quantity > 0) {
+                        batchJobs.push({ recipe, quantity });
+                    }
+                }
+                
+                if (batchJobs.length === 0) {
+                    alert('請至少選擇一項要製作的半成品');
+                    return;
+                }
+                
+                try {
+                    document.getElementById('productionModal').classList.add('hidden');
+                    
+                    for (const job of batchJobs) {
+                        this.currentProduction = job;
+                        await this.executeProduction();
+                    }
+                    
+                    alert(`✅ 批量製作完成！共製作 ${batchJobs.length} 項半成品`);
+                    
+                } catch (error) {
+                    console.error('❌ 批量製作失敗:', error);
+                    alert('批量製作過程中發生錯誤，請檢查結果');
+                }
+            }
+
+            // 關閉模態框
+            closeProductionModal() {
+                document.getElementById('productionModal').classList.add('hidden');
+            }
+
+            closeConfirmModal() {
+                document.getElementById('confirmModal').classList.add('hidden');
+            }
+
+            // 顯示進度模態框
+            showProgressModal() {
+                // 重設進度條
+                this.updateProgress(0, '準備開始製作...', 0);
+                document.getElementById('progressModal').classList.remove('hidden');
+            }
+
+            // 隱藏進度模態框
+            hideProgressModal() {
+                document.getElementById('progressModal').classList.add('hidden');
+            }
+
+            // 更新進度
+            updateProgress(stepNumber, message, percentage) {
+                // 更新進度條
+                document.getElementById('progressBar').style.width = `${percentage}%`;
+                document.getElementById('progressPercent').textContent = `${percentage}%`;
+                
+                // 更新當前步驟訊息
+                document.getElementById('currentStep').textContent = message;
+                
+                // 重設所有步驟圖示
+                for (let i = 1; i <= 4; i++) {
+                    const stepElement = document.getElementById(`step${i}`);
+                    const icon = stepElement.querySelector('i');
+                    const text = stepElement.querySelector('span');
+                    
+                    if (i < stepNumber) {
+                        // 已完成的步驟
+                        icon.className = 'fas fa-check-circle text-green-500 mr-2';
+                        text.classList.add('text-green-600');
+                    } else if (i === stepNumber) {
+                        // 進行中的步驟
+                        icon.className = 'fas fa-spinner fa-spin text-blue-500 mr-2';
+                        text.classList.remove('text-green-600');
+                        text.classList.add('text-blue-600');
+                    } else {
+                        // 尚未開始的步驟
+                        icon.className = 'fas fa-circle text-gray-300 mr-2';
+                        text.classList.remove('text-green-600', 'text-blue-600');
+                    }
+                }
+                
+                // 如果是完成狀態，標記所有步驟為完成
+                if (percentage === 100) {
+                    for (let i = 1; i <= 4; i++) {
+                        const stepElement = document.getElementById(`step${i}`);
+                        const icon = stepElement.querySelector('i');
+                        const text = stepElement.querySelector('span');
+                        
+                        icon.className = 'fas fa-check-circle text-green-500 mr-2';
+                        text.classList.add('text-green-600');
+                        text.classList.remove('text-blue-600');
+                    }
+                }
+            }
+
+            // 編輯製作記錄狀態
+            editRecordStatus(recordId, currentStatus) {
+                // 隱藏所有其他的編輯區域
+                document.querySelectorAll('[id^="edit-"]').forEach(el => {
+                    el.classList.add('hidden');
+                });
+                
+                // 顯示當前記錄的編輯區域
+                const editArea = document.getElementById(`edit-${recordId}`);
+                if (editArea) {
+                    editArea.classList.remove('hidden');
+                }
+            }
+
+            // 取消編輯狀態
+            cancelEditStatus(recordId) {
+                const editArea = document.getElementById(`edit-${recordId}`);
+                if (editArea) {
+                    editArea.classList.add('hidden');
+                }
+            }
+
+            // 儲存製作記錄狀態
+            async saveRecordStatus(recordId) {
+                try {
+                    const selectElement = document.getElementById(`status-select-${recordId}`);
+                    const newStatus = selectElement.value;
+                    
+                    console.log(`🔄 更新製作記錄狀態: ${recordId} -> ${newStatus}`);
+                    
+                    // 顯示載入狀態
+                    const saveButton = document.querySelector(`button[onclick="saveRecordStatus('${recordId}')"]`);
+                    const originalText = saveButton.innerHTML;
+                    saveButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i>儲存中...';
+                    saveButton.disabled = true;
+                    
+                    // 準備更新資料
+                    const updateData = {
+                        properties: {
+                            '製作狀態': {
+                                select: {
+                                    name: newStatus
+                                }
+                            }
+                        }
+                    };
+                    
+                    // 如果狀態改為已完成，同時更新完成時間
+                    if (newStatus === '已完成') {
+                        updateData.properties['完成時間'] = {
+                            date: {
+                                start: new Date().toISOString()
+                            }
+                        };
+                    }
+                    
+                    // 發送 API 請求更新狀態
+                    const response = await fetch(`/api/notion/pages/${recordId}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(updateData)
+                    });
+                    
+                    if (!response.ok) {
+                        const errorDetails = await response.text();
+                        throw new Error(`更新狀態失敗: ${response.status} - ${errorDetails}`);
+                    }
+                    
+                    // 更新界面顯示
+                    const statusElement = document.getElementById(`status-${recordId}`);
+                    if (statusElement) {
+                        // 更新狀態文字和顏色
+                        const statusColor = newStatus === '已完成' ? 'text-green-600' : 
+                                          newStatus === '製作中' ? 'text-orange-600' : 
+                                          newStatus === '準備中' ? 'text-blue-600' : 
+                                          newStatus === '暫停' ? 'text-yellow-600' :
+                                          newStatus === '取消' ? 'text-red-600' : 'text-gray-600';
+                        
+                        statusElement.className = `text-sm ${statusColor} font-medium`;
+                        statusElement.textContent = newStatus;
+                    }
+                    
+                    // 隱藏編輯區域
+                    this.cancelEditStatus(recordId);
+                    
+                    console.log(`✅ 製作記錄狀態更新成功: ${recordId} -> ${newStatus}`);
+                    
+                    // 顯示成功訊息
+                    this.showStatusMessage(`✅ 狀態已更新為「${newStatus}」`, 'success');
+                    
+                } catch (error) {
+                    console.error('❌ 更新製作記錄狀態失敗:', error);
+                    this.showStatusMessage(`❌ 狀態更新失敗: ${error.message}`, 'error');
+                } finally {
+                    // 恢復按鈕狀態
+                    const saveButton = document.querySelector(`button[onclick="saveRecordStatus('${recordId}')"]`);
+                    if (saveButton) {
+                        saveButton.innerHTML = '<i class="fas fa-save mr-1"></i>儲存';
+                        saveButton.disabled = false;
+                    }
+                }
+            }
+
+            // 顯示狀態訊息
+            showStatusMessage(message, type = 'info') {
+                // 創建訊息元素
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `fixed top-4 right-4 z-50 px-4 py-2 rounded-lg shadow-lg transition-all duration-300 ${
+                    type === 'success' ? 'bg-green-500 text-white' :
+                    type === 'error' ? 'bg-red-500 text-white' :
+                    type === 'warning' ? 'bg-yellow-500 text-white' :
+                    'bg-blue-500 text-white'
+                }`;
+                messageDiv.innerHTML = message;
+                
+                // 添加到頁面
+                document.body.appendChild(messageDiv);
+                
+                // 3秒後自動移除
+                setTimeout(() => {
+                    messageDiv.style.opacity = '0';
+                    messageDiv.style.transform = 'translateX(100%)';
+                    setTimeout(() => {
+                        if (messageDiv.parentNode) {
+                            messageDiv.parentNode.removeChild(messageDiv);
+                        }
+                    }, 300);
+                }, 3000);
+            }
+
+            // Notion 屬性取得方法
+            getPropertyTitle(item, propertyName) {
+                return item.properties[propertyName]?.title?.[0]?.plain_text || '';
+            }
+
+            getPropertyRichText(item, propertyName) {
+                return item.properties[propertyName]?.rich_text?.[0]?.plain_text || '';
+            }
+
+            getPropertyNumber(item, propertyName) {
+                return item.properties[propertyName]?.number || null;
+            }
+
+            getPropertySelect(item, propertyName) {
+                return item.properties[propertyName]?.select?.name || '';
+            }
+
+            getPropertyRelation(item, propertyName) {
+                return item.properties[propertyName]?.relation || [];
+            }
+        }
+
+        // 全域實例
+        let productionSystem;
+
+        // 初始化系統
+        document.addEventListener('DOMContentLoaded', function() {
+            productionSystem = new ProductionSystem();
+            loadAllData();
+        });
+
+        // 全域函數
+        function loadAllData() {
+            productionSystem.loadAllData();
+        }
+
+        function filterRecipes() {
+            productionSystem.filterRecipes();
+        }
+
+        function showProductionDetail(recipeId) {
+            productionSystem.showProductionDetail(recipeId);
+        }
+
+        function startProduction(recipeId) {
+            productionSystem.startProduction(recipeId);
+        }
+
+        function confirmProduction(recipeId) {
+            productionSystem.confirmProduction(recipeId);
+        }
+
+        function executeProduction() {
+            productionSystem.executeProduction();
+        }
+
+        function executeBatchProduction() {
+            productionSystem.executeBatchProduction();
+        }
+
+        function showProductionLog() {
+            productionSystem.showProductionLog();
+        }
+
+        function editRecordStatus(recordId, currentStatus) {
+            productionSystem.editRecordStatus(recordId, currentStatus);
+        }
+
+        function cancelEditStatus(recordId) {
+            productionSystem.cancelEditStatus(recordId);
+        }
+
+        function saveRecordStatus(recordId) {
+            productionSystem.saveRecordStatus(recordId);
+        }
+
+        function refreshProductionLog() {
+            productionSystem.showProductionLog();
+        }
+
+        function showInventoryStatus() {
+            productionSystem.showInventoryStatus();
+        }
+
+        function showBatchProduction() {
+            productionSystem.showBatchProduction();
+        }
+
+        function closeProductionModal() {
+            productionSystem.closeProductionModal();
+        }
+
+        function closeConfirmModal() {
+            productionSystem.closeConfirmModal();
+        }
+
+        // 點擊背景關閉模態框
+        document.getElementById('productionModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeProductionModal();
+            }
+        });
+
+        document.getElementById('confirmModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeConfirmModal();
+            }
+        });
+    </script>
+</body>
+</html>

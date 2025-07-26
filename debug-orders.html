@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>訂單映射調試</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .debug-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
+        .debug-title { font-weight: bold; color: #2563eb; margin-bottom: 10px; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 4px; overflow: auto; }
+        .order-card { background: white; border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 8px; }
+        .loading { color: #666; font-style: italic; }
+        .error { color: #dc2626; }
+        .success { color: #16a34a; }
+    </style>
+</head>
+<body>
+    <h1>🔍 訂單映射調試工具</h1>
+    
+    <div class="debug-section">
+        <div class="debug-title">Notion API 狀態</div>
+        <div id="api-status" class="loading">檢查API連線中...</div>
+    </div>
+    
+    <div class="debug-section">
+        <div class="debug-title">原始 Notion 資料</div>
+        <pre id="raw-data">載入中...</pre>
+    </div>
+    
+    <div class="debug-section">
+        <div class="debug-title">屬性映射分析</div>
+        <div id="property-analysis">分析中...</div>
+    </div>
+    
+    <div class="debug-section">
+        <div class="debug-title">映射後的訂單</div>
+        <div id="mapped-orders">處理中...</div>
+    </div>
+    
+    <script>
+        const NOTION_CONFIG = {
+            databaseIds: {
+                orders: '23afd5adc30b80c39e71d1a640ccfb5d'
+            }
+        };
+        
+        async function debugOrderMapping() {
+            const apiStatus = document.getElementById('api-status');
+            const rawData = document.getElementById('raw-data');
+            const propertyAnalysis = document.getElementById('property-analysis');
+            const mappedOrders = document.getElementById('mapped-orders');
+            
+            try {
+                apiStatus.innerHTML = '<span class="loading">連接 Notion API...</span>';
+                
+                // 查詢 Notion 訂單資料庫
+                const response = await fetch('/api/notion/databases/' + NOTION_CONFIG.databaseIds.orders + '/query', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        page_size: 5,
+                        sorts: [
+                            {
+                                property: '建立時間',
+                                direction: 'descending'
+                            }
+                        ]
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`API錯誤: ${response.status} ${response.statusText}`);
+                }
+                
+                const notionData = await response.json();
+                apiStatus.innerHTML = `<span class="success">✅ API連線成功 - 找到 ${notionData.results?.length || 0} 筆訂單</span>`;
+                
+                // 顯示原始資料
+                rawData.textContent = JSON.stringify(notionData, null, 2);
+                
+                // 分析屬性
+                if (notionData.results && notionData.results.length > 0) {
+                    const firstOrder = notionData.results[0];
+                    const properties = firstOrder.properties || {};
+                    const propertyNames = Object.keys(properties);
+                    
+                    let analysisHTML = `
+                        <div><strong>📋 可用屬性 (${propertyNames.length} 個):</strong></div>
+                        <ul style="margin: 10px 0; padding-left: 20px;">
+                    `;
+                    
+                    propertyNames.forEach(propName => {
+                        const prop = properties[propName];
+                        const type = prop.type;
+                        let value = '無資料';
+                        
+                        try {
+                            if (prop.title && prop.title[0]) value = prop.title[0].text.content;
+                            else if (prop.rich_text && prop.rich_text[0]) value = prop.rich_text[0].text.content;
+                            else if (prop.select) value = prop.select.name;
+                            else if (prop.number !== undefined) value = prop.number;
+                            else if (prop.date) value = prop.date.start;
+                            else value = JSON.stringify(prop).substring(0, 50) + '...';
+                        } catch (e) {
+                            value = '解析錯誤';
+                        }
+                        
+                        analysisHTML += `<li><strong>${propName}</strong> (${type}): ${value}</li>`;
+                    });
+                    
+                    analysisHTML += '</ul>';
+                    propertyAnalysis.innerHTML = analysisHTML;
+                    
+                    // 映射訂單
+                    const mappedOrdersArray = notionData.results.map((orderRecord, index) => {
+                        const props = orderRecord.properties || {};
+                        
+                        // 使用強化的映射邏輯
+                        const orderNumber = props['訂單編號']?.title?.[0]?.text?.content || 
+                                          props['Order Number']?.title?.[0]?.text?.content ||
+                                          props['Name']?.title?.[0]?.text?.content ||
+                                          `訂單-${orderRecord.id.slice(-8)}`;
+                        
+                        const tableNumber = props['桌號']?.rich_text?.[0]?.text?.content || 
+                                          props['桌號']?.number ||
+                                          props['Table']?.rich_text?.[0]?.text?.content ||
+                                          props['Table']?.number ||
+                                          props['table_number']?.rich_text?.[0]?.text?.content ||
+                                          props['table_number']?.number ||
+                                          props['桌位']?.select?.name ||
+                                          '未知桌號';
+                        
+                        const status = props['狀態']?.select?.name || 
+                                     props['Status']?.select?.name ||
+                                     props['status']?.select?.name ||
+                                     '未知狀態';
+                        
+                        const totalAmount = props['總金額']?.number || 
+                                          props['Total']?.number ||
+                                          props['total_amount']?.number ||
+                                          props['總計']?.number ||
+                                          0;
+                        
+                        const items = props['訂單項目']?.rich_text?.[0]?.text?.content ||
+                                    props['Items']?.rich_text?.[0]?.text?.content ||
+                                    props['items']?.rich_text?.[0]?.text?.content ||
+                                    props['菜品']?.rich_text?.[0]?.text?.content ||
+                                    '';
+                        
+                        const createTime = props['建立時間']?.date?.start ||
+                                         props['Create Time']?.date?.start ||
+                                         props['created_time']?.date?.start ||
+                                         props['Date']?.date?.start ||
+                                         orderRecord.created_time ||
+                                         '';
+                        
+                        return {
+                            index: index + 1,
+                            id: orderRecord.id,
+                            orderNumber: orderNumber,
+                            tableNumber: tableNumber,
+                            status: status,
+                            totalAmount: totalAmount,
+                            items: items,
+                            createTime: createTime,
+                            mappingSuccess: orderNumber !== `訂單-${orderRecord.id.slice(-8)}` && 
+                                          tableNumber !== '未知桌號' && 
+                                          status !== '未知狀態'
+                        };
+                    });
+                    
+                    // 顯示映射結果
+                    let ordersHTML = `<div><strong>📊 映射結果 (${mappedOrdersArray.length} 筆):</strong></div>`;
+                    
+                    mappedOrdersArray.forEach(order => {
+                        const statusClass = order.mappingSuccess ? 'success' : 'error';
+                        const statusIcon = order.mappingSuccess ? '✅' : '❌';
+                        
+                        ordersHTML += `
+                            <div class="order-card">
+                                <div class="${statusClass}">
+                                    ${statusIcon} 訂單 #${order.index} - ${order.mappingSuccess ? '映射成功' : '映射不完整'}
+                                </div>
+                                <div style="margin-top: 10px;">
+                                    <strong>訂單編號:</strong> ${order.orderNumber}<br>
+                                    <strong>桌號:</strong> ${order.tableNumber}<br>
+                                    <strong>狀態:</strong> ${order.status}<br>
+                                    <strong>金額:</strong> NT$${order.totalAmount}<br>
+                                    <strong>項目:</strong> ${order.items || '無項目資料'}<br>
+                                    <strong>時間:</strong> ${order.createTime || '無時間資料'}
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    mappedOrders.innerHTML = ordersHTML;
+                } else {
+                    propertyAnalysis.innerHTML = '<div class="error">❌ 沒有找到訂單資料</div>';
+                    mappedOrders.innerHTML = '<div class="error">❌ 無法進行訂單映射</div>';
+                }
+                
+            } catch (error) {
+                console.error('調試失敗:', error);
+                apiStatus.innerHTML = `<span class="error">❌ API連線失敗: ${error.message}</span>`;
+                rawData.textContent = `錯誤: ${error.message}`;
+                propertyAnalysis.innerHTML = '<div class="error">❌ 無法分析屬性</div>';
+                mappedOrders.innerHTML = '<div class="error">❌ 映射失敗</div>';
+            }
+        }
+        
+        // 頁面載入時開始調試
+        document.addEventListener('DOMContentLoaded', debugOrderMapping);
+    </script>
+</body>
+</html>

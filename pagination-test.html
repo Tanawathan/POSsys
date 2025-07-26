@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>分頁載入測試</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-6xl mx-auto">
+        <h1 class="text-3xl font-bold text-gray-900 mb-6">📋 食材庫分頁載入測試</h1>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold mb-4">📊 載入進度</h2>
+                <div id="loading-progress" class="space-y-2">
+                    <div class="text-gray-600">點擊按鈕開始測試...</div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold mb-4">📈 統計資訊</h2>
+                <div id="statistics" class="space-y-2">
+                    <div class="text-gray-600">等待載入...</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">🔧 測試選項</h2>
+            <div class="flex gap-4">
+                <button onclick="testPaginationLoad()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">
+                    🔄 測試分頁載入
+                </button>
+                <button onclick="testInventoryManager()" class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700">
+                    📦 測試庫存管理器
+                </button>
+                <button onclick="showSampleData()" class="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700">
+                    👁️ 顯示範例資料
+                </button>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-xl font-semibold mb-4">📋 載入的食材清單（前20項）</h2>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">食材名稱</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">供應商</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">規格/單位</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">庫存量</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">狀態</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sample-table" class="bg-white divide-y divide-gray-200">
+                        <tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">點擊測試按鈕載入資料</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let loadedData = [];
+        
+        async function testPaginationLoad() {
+            const progressDiv = document.getElementById('loading-progress');
+            const statsDiv = document.getElementById('statistics');
+            
+            progressDiv.innerHTML = '<div class="text-blue-600">🔄 開始載入...</div>';
+            
+            try {
+                let allResults = [];
+                let hasMore = true;
+                let startCursor = null;
+                let pageCount = 0;
+                
+                while (hasMore) {
+                    pageCount++;
+                    progressDiv.innerHTML += `<div>📄 載入第 ${pageCount} 頁...</div>`;
+                    
+                    const requestBody = startCursor ? 
+                        JSON.stringify({ start_cursor: startCursor }) : 
+                        JSON.stringify({});
+                    
+                    const response = await fetch('/api/notion/databases/237fd5adc30b808cbba3c03f8f2065fd/query', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: requestBody
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const pageData = await response.json();
+                    allResults = allResults.concat(pageData.results);
+                    hasMore = pageData.has_more;
+                    startCursor = pageData.next_cursor;
+                    
+                    progressDiv.innerHTML += `<div class="text-green-600">✅ 第 ${pageCount} 頁完成: ${pageData.results.length} 項，累計: ${allResults.length} 項</div>`;
+                }
+                
+                loadedData = allResults;
+                progressDiv.innerHTML += `<div class="text-green-600 font-bold">🎉 所有資料載入完成！</div>`;
+                
+                // 更新統計
+                updateStatistics(allResults);
+                
+            } catch (error) {
+                progressDiv.innerHTML += `<div class="text-red-600">❌ 載入失敗: ${error.message}</div>`;
+            }
+        }
+        
+        async function testInventoryManager() {
+            const progressDiv = document.getElementById('loading-progress');
+            
+            progressDiv.innerHTML = '<div class="text-blue-600">🔄 測試庫存管理器...</div>';
+            
+            try {
+                // 等待 InventoryManager 載入
+                if (typeof InventoryManager === 'undefined') {
+                    progressDiv.innerHTML += '<div class="text-red-600">❌ InventoryManager 未載入</div>';
+                    return;
+                }
+                
+                const manager = new InventoryManager(false);
+                await manager.loadFromNotion();
+                
+                loadedData = manager.inventoryData;
+                progressDiv.innerHTML += `<div class="text-green-600">✅ 庫存管理器測試完成: ${manager.inventoryData.length} 項</div>`;
+                
+                updateStatistics(manager.inventoryData);
+                showSampleData(manager.inventoryData);
+                
+            } catch (error) {
+                progressDiv.innerHTML += `<div class="text-red-600">❌ 測試失敗: ${error.message}</div>`;
+            }
+        }
+        
+        function updateStatistics(data) {
+            const statsDiv = document.getElementById('statistics');
+            
+            const total = data.length;
+            const suppliers = [...new Set(data.map(item => 
+                item.properties?.['供應商']?.select?.name || 
+                item.supplier || '未知'
+            ))];
+            
+            const stockStatus = data.reduce((acc, item) => {
+                const stock = item.properties?.['庫存量']?.number || item.stock || 0;
+                const safetyStock = item.properties?.['安全庫存量']?.number || item.safetyStock || 100;
+                
+                if (stock === 0) acc.critical++;
+                else if (stock <= safetyStock) acc.low++;
+                else acc.safe++;
+                
+                return acc;
+            }, { safe: 0, low: 0, critical: 0 });
+            
+            statsDiv.innerHTML = `
+                <div><strong>總項目數:</strong> ${total}</div>
+                <div><strong>供應商數量:</strong> ${suppliers.length}</div>
+                <div><strong>安全庫存:</strong> <span class="text-green-600">${stockStatus.safe}</span></div>
+                <div><strong>庫存偏低:</strong> <span class="text-yellow-600">${stockStatus.low}</span></div>
+                <div><strong>急需補貨:</strong> <span class="text-red-600">${stockStatus.critical}</span></div>
+                <div class="mt-2"><strong>供應商:</strong> ${suppliers.join(', ')}</div>
+            `;
+        }
+        
+        function showSampleData(data = loadedData) {
+            const tableBody = document.getElementById('sample-table');
+            
+            if (!data || data.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">無資料</td></tr>';
+                return;
+            }
+            
+            const sample = data.slice(0, 20);
+            
+            tableBody.innerHTML = sample.map((item, index) => {
+                const name = item.properties ? 
+                    (item.properties['食材名稱']?.rich_text?.[0]?.text?.content || 
+                     item.properties['品項ID']?.title?.[0]?.text?.content) :
+                    item.name;
+                
+                const supplier = item.properties ? 
+                    item.properties['供應商']?.select?.name :
+                    item.supplier;
+                
+                const spec = item.properties ? 
+                    item.properties['規格/單位']?.rich_text?.[0]?.text?.content :
+                    item.specification;
+                
+                const stock = item.properties ? 
+                    item.properties['庫存量']?.number :
+                    item.stock;
+                
+                const status = stock === 0 ? '缺貨' : stock <= 100 ? '偏低' : '正常';
+                const statusColor = stock === 0 ? 'text-red-600' : stock <= 100 ? 'text-yellow-600' : 'text-green-600';
+                
+                return `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-3 text-sm">${index + 1}</td>
+                        <td class="px-4 py-3 font-medium">${name || '未命名'}</td>
+                        <td class="px-4 py-3 text-sm">${supplier || '未知'}</td>
+                        <td class="px-4 py-3 text-sm">${spec || '-'}</td>
+                        <td class="px-4 py-3 text-sm">${stock || 0}</td>
+                        <td class="px-4 py-3 text-sm ${statusColor}">${status}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+    </script>
+    
+    <!-- 載入庫存管理器用於測試 -->
+    <script src="/config/config.js"></script>
+    <script src="/assets/js/notion-manager.js"></script>
+    <script src="/assets/js/inventory-management.js"></script>
+</body>
+</html>

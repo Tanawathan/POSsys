@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>庫存系統診斷工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold text-gray-900 mb-6">🔧 庫存系統診斷工具</h1>
+        
+        <div class="space-y-6">
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold mb-4">📡 API 連接測試</h2>
+                <div id="api-test" class="text-gray-600">正在測試...</div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold mb-4">📂 JavaScript 文件載入狀態</h2>
+                <div id="js-status" class="text-gray-600">檢查中...</div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold mb-4">🔍 實際載入的資料來源</h2>
+                <div id="data-source" class="text-gray-600">分析中...</div>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold mb-4">🏷️ 前3個項目對比</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <h3 class="font-semibold text-green-600">Notion API 資料</h3>
+                        <pre id="notion-data" class="bg-gray-50 p-3 text-sm overflow-auto max-h-48"></pre>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold text-blue-600">系統顯示資料</h3>
+                        <pre id="system-data" class="bg-gray-50 p-3 text-sm overflow-auto max-h-48"></pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-6 text-center">
+            <button onclick="runDiagnostics()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">
+                🔄 重新診斷
+            </button>
+        </div>
+    </div>
+
+    <script>
+        async function runDiagnostics() {
+            // 1. API 連接測試
+            try {
+                const response = await fetch('/api/notion/databases/237fd5adc30b808cbba3c03f8f2065fd/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('api-test').innerHTML = 
+                        `<span class="text-green-600">✅ API 正常 - 取得 ${data.results.length} 個項目</span>`;
+                    
+                    // 顯示 Notion 真實資料
+                    const notionSample = data.results.slice(0, 3).map(item => ({
+                        食材名稱: item.properties['食材名稱']?.rich_text?.[0]?.text?.content,
+                        供應商: item.properties['供應商']?.select?.name,
+                        庫存量: item.properties['庫存量']?.number,
+                        規格: item.properties['規格/單位']?.rich_text?.[0]?.text?.content
+                    }));
+                    document.getElementById('notion-data').textContent = JSON.stringify(notionSample, null, 2);
+                } else {
+                    document.getElementById('api-test').innerHTML = 
+                        `<span class="text-red-600">❌ API 錯誤 - 狀態碼: ${response.status}</span>`;
+                }
+            } catch (error) {
+                document.getElementById('api-test').innerHTML = 
+                    `<span class="text-red-600">❌ 連接失敗: ${error.message}</span>`;
+            }
+            
+            // 2. JavaScript 文件載入狀態
+            let jsStatus = [];
+            
+            // 檢查 InventoryManager 是否存在
+            if (typeof InventoryManager !== 'undefined') {
+                jsStatus.push('✅ InventoryManager 類別已載入');
+            } else {
+                jsStatus.push('❌ InventoryManager 類別未載入');
+            }
+            
+            // 檢查配置文件
+            if (typeof window.config !== 'undefined') {
+                jsStatus.push('✅ config.js 已載入');
+            } else {
+                jsStatus.push('❌ config.js 未載入');
+            }
+            
+            document.getElementById('js-status').innerHTML = jsStatus.join('<br>');
+            
+            // 3. 模擬庫存管理器載入測試
+            try {
+                // 模擬 InventoryManager 初始化
+                if (typeof InventoryManager !== 'undefined') {
+                    const testManager = new InventoryManager();
+                    
+                    // 檢查是否使用 Notion 資料
+                    if (testManager.isNotionConnected) {
+                        document.getElementById('data-source').innerHTML = 
+                            '<span class="text-green-600">✅ 使用 Notion API 資料</span>';
+                    } else {
+                        document.getElementById('data-source').innerHTML = 
+                            '<span class="text-yellow-600">⚠️ 使用本地備用資料</span>';
+                    }
+                    
+                    // 顯示系統實際資料
+                    const systemSample = testManager.inventoryData.slice(0, 3).map(item => ({
+                        食材名稱: item.name,
+                        供應商: item.supplier,
+                        庫存量: item.stock,
+                        規格: item.specification || item.spec
+                    }));
+                    document.getElementById('system-data').textContent = JSON.stringify(systemSample, null, 2);
+                } else {
+                    document.getElementById('data-source').innerHTML = 
+                        '<span class="text-red-600">❌ 無法建立 InventoryManager</span>';
+                }
+            } catch (error) {
+                document.getElementById('data-source').innerHTML = 
+                    `<span class="text-red-600">❌ 初始化失敗: ${error.message}</span>`;
+                
+                // 顯示錯誤詳情
+                document.getElementById('system-data').textContent = 
+                    `錯誤詳情: ${error.stack || error.message}`;
+            }
+        }
+        
+        // 頁面載入時自動執行診斷
+        document.addEventListener('DOMContentLoaded', runDiagnostics);
+    </script>
+    
+    <!-- 載入相同的文件以進行測試 -->
+    <script src="/config/config.js"></script>
+    <script src="/assets/js/notion-manager.js"></script>
+    <script src="/assets/js/inventory-management.js"></script>
+</body>
+</html>

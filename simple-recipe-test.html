@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>配方 API 簡易測試</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-2xl font-bold mb-4">配方 API 測試</h1>
+        
+        <button id="test-btn" class="bg-blue-600 text-white px-4 py-2 rounded mb-4">
+            測試 API 連接
+        </button>
+        
+        <div id="results" class="bg-white p-4 rounded shadow">
+            點擊上方按鈕開始測試...
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('test-btn').addEventListener('click', async () => {
+            const results = document.getElementById('results');
+            results.innerHTML = '🔄 正在測試...';
+            
+            try {
+                // 測試第一個資料庫
+                results.innerHTML += '<br>📊 測試半成品資料庫...';
+                
+                const response1 = await fetch('/api/notion/databases/237fd5adc30b80c09b59c03cd67c6432/query', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ page_size: 5 })
+                });
+                
+                if (!response1.ok) {
+                    throw new Error(`API 1 失敗: ${response1.status}`);
+                }
+                
+                const data1 = await response1.json();
+                results.innerHTML += `<br>✅ 半成品資料庫: ${data1.results.length} 項`;
+                results.innerHTML += `<br>📝 第一項: ${data1.results[0].properties.名稱.title[0].plain_text}`;
+                
+                // 測試第二個資料庫
+                results.innerHTML += '<br>🧩 測試組成項目資料庫...';
+                
+                const response2 = await fetch('/api/notion/databases/237fd5adc30b80f7aedfe94804d80218/query', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ page_size: 5 })
+                });
+                
+                if (!response2.ok) {
+                    throw new Error(`API 2 失敗: ${response2.status}`);
+                }
+                
+                const data2 = await response2.json();
+                results.innerHTML += `<br>✅ 組成項目資料庫: ${data2.results.length} 項`;
+                results.innerHTML += `<br>📝 第一項: ${data2.results[0].properties.項目名稱.title[0].plain_text}`;
+                
+                results.innerHTML += '<br><br>🎉 <strong>所有 API 測試成功！</strong>';
+                
+            } catch (error) {
+                console.error('測試失敗:', error);
+                results.innerHTML += `<br>❌ <strong>測試失敗:</strong> ${error.message}`;
+            }
+        });
+    </script>
+</body>
+</html>

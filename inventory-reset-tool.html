@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>庫存系統重置工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-2xl mx-auto">
+        <h1 class="text-3xl font-bold text-gray-900 mb-6">🔄 庫存系統重置工具</h1>
+        
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">當前狀態檢查</h2>
+            <div id="status-check" class="space-y-2">
+                <div>🔍 檢查中...</div>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">重置選項</h2>
+            <div class="space-y-4">
+                <button onclick="clearCacheAndReload()" class="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700">
+                    🗑️ 清除快取並重新載入
+                </button>
+                <button onclick="forceNotionReload()" class="w-full bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700">
+                    📡 強制重新載入 Notion 資料
+                </button>
+                <button onclick="openInventoryPage()" class="w-full bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700">
+                    📋 開啟庫存管理頁面（新分頁）
+                </button>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-xl font-semibold mb-4">操作記錄</h2>
+            <div id="operation-log" class="bg-gray-50 p-4 rounded text-sm max-h-64 overflow-y-auto">
+                <div>系統已就緒，等待操作...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function log(message) {
+            const logDiv = document.getElementById('operation-log');
+            const time = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `<div>[${time}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        async function checkStatus() {
+            const statusDiv = document.getElementById('status-check');
+            const checks = [];
+            
+            // 檢查 API 連接
+            try {
+                const response = await fetch('/api/notion/databases/237fd5adc30b808cbba3c03f8f2065fd/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    checks.push(`✅ Notion API 正常 (${data.results.length} 項)`);
+                } else {
+                    checks.push(`❌ Notion API 錯誤 (${response.status})`);
+                }
+            } catch (error) {
+                checks.push(`❌ API 連接失敗: ${error.message}`);
+            }
+            
+            // 檢查伺服器
+            try {
+                const response = await fetch('/api/health');
+                if (response.ok) {
+                    checks.push('✅ 伺服器正常運行');
+                } else {
+                    checks.push('❌ 伺服器狀態異常');
+                }
+            } catch (error) {
+                checks.push('❌ 伺服器連接失敗');
+            }
+            
+            statusDiv.innerHTML = checks.join('<br>');
+        }
+        
+        function clearCacheAndReload() {
+            log('開始清除瀏覽器快取...');
+            
+            // 清除 localStorage
+            localStorage.clear();
+            log('✅ 清除 localStorage');
+            
+            // 清除 sessionStorage
+            sessionStorage.clear();
+            log('✅ 清除 sessionStorage');
+            
+            // 強制重新載入頁面（繞過快取）
+            log('🔄 重新載入頁面...');
+            setTimeout(() => {
+                window.location.href = '/pages/management/inventory-management.html?t=' + Date.now();
+            }, 1000);
+        }
+        
+        async function forceNotionReload() {
+            log('🔄 強制重新載入 Notion 資料...');
+            
+            try {
+                const response = await fetch('/api/notion/databases/237fd5adc30b808cbba3c03f8f2065fd/query', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Cache-Control': 'no-cache'
+                    },
+                    body: JSON.stringify({})
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`✅ 成功載入 ${data.results.length} 項 Notion 資料`);
+                    
+                    // 顯示前3項資料
+                    const sample = data.results.slice(0, 3).map(item => 
+                        item.properties['食材名稱']?.rich_text?.[0]?.text?.content
+                    ).filter(Boolean);
+                    
+                    log(`📋 範例項目: ${sample.join(', ')}`);
+                    
+                    setTimeout(() => {
+                        window.location.href = '/pages/management/inventory-management.html?force=1&t=' + Date.now();
+                    }, 2000);
+                } else {
+                    log(`❌ Notion API 錯誤: ${response.status}`);
+                }
+            } catch (error) {
+                log(`❌ 載入失敗: ${error.message}`);
+            }
+        }
+        
+        function openInventoryPage() {
+            log('🔗 開啟庫存管理頁面（新分頁）...');
+            window.open('/pages/management/inventory-management.html?new=1&t=' + Date.now(), '_blank');
+        }
+        
+        // 頁面載入時檢查狀態
+        document.addEventListener('DOMContentLoaded', () => {
+            checkStatus();
+            log('頁面載入完成，開始狀態檢查');
+        });
+    </script>
+</body>
+</html>

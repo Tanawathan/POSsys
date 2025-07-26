@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>訂單管理中心 - Tanawat餐廳</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { font-family: 'Noto Sans TC', sans-serif; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #111827; }
+        ::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+        .order-card { transition: all 0.3s ease; }
+        .order-card:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        .status-badge { transition: all 0.3s ease; }
+        .pulse-animation { animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-300 min-h-screen">
+
+    <!-- Header -->
+    <header class="bg-gray-800 shadow-lg border-b border-gray-700">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-4">
+                    <!-- 返回按鈕 -->
+                    <div class="flex space-x-2">
+                        <a href="index.html" class="flex items-center px-3 py-2 text-gray-400 hover:text-blue-400 hover:bg-gray-700 rounded-lg transition-colors">
+                            <i class="fas fa-home mr-2"></i>
+                            主系統
+                        </a>
+                        <a href="main-dashboard.html" class="flex items-center px-3 py-2 text-gray-400 hover:text-blue-400 hover:bg-gray-700 rounded-lg transition-colors">
+                            <i class="fas fa-tachometer-alt mr-2"></i>
+                            儀表板
+                        </a>
+                    </div>
+                    <div class="border-l border-gray-600 h-6"></div>
+                    <div>
+                        <h1 class="text-3xl font-bold text-white flex items-center">
+                            <i class="fas fa-clipboard-list mr-3 text-blue-400"></i>
+                            訂單管理中心
+                        </h1>
+                        <p class="text-gray-400 mt-1">Tanawat泰式餐廳 - 即時訂單追蹤與管理</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div id="system-status" class="flex items-center">
+                        <div class="w-3 h-3 bg-green-400 rounded-full mr-2 animate-pulse"></div>
+                        <span class="text-green-400">系統連線正常</span>
+                    </div>
+                    <button onclick="window.open('/public/management/table-management-v2.html', '_blank')" 
+                            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-table mr-2"></i>桌況管理
+                    </button>
+                    <button onclick="window.open('/public/customer/checkout.html', '_blank')" 
+                            class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                        <i class="fas fa-cash-register mr-2"></i>結帳系統
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主要內容區域 -->
+    <div class="container mx-auto p-6">
+        
+        <!-- 統計概覽 -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-gray-800 rounded-2xl p-6 border border-gray-700">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-400 text-sm mb-1">總訂單數</p>
+                        <p id="total-orders" class="text-2xl font-bold text-white">0</p>
+                    </div>
+                    <div class="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
+                        <i class="fas fa-clipboard-list text-white text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-gray-800 rounded-2xl p-6 border border-gray-700">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-400 text-sm mb-1">進行中</p>
+                        <p id="pending-orders" class="text-2xl font-bold text-yellow-400">0</p>
+                    </div>
+                    <div class="w-12 h-12 bg-yellow-600 rounded-full flex items-center justify-center">
+                        <i class="fas fa-clock text-white text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-gray-800 rounded-2xl p-6 border border-gray-700">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-400 text-sm mb-1">已完成</p>
+                        <p id="completed-orders" class="text-2xl font-bold text-green-400">0</p>
+                    </div>
+                    <div class="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center">
+                        <i class="fas fa-check-circle text-white text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-gray-800 rounded-2xl p-6 border border-gray-700">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-400 text-sm mb-1">今日營收</p>
+                        <p id="daily-revenue" class="text-2xl font-bold text-purple-400">$0</p>
+                    </div>
+                    <div class="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center">
+                        <i class="fas fa-dollar-sign text-white text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 篩選和搜尋 -->
+        <div class="bg-gray-800 rounded-2xl p-6 mb-8 border border-gray-700">
+            <div class="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+                <div class="flex flex-wrap gap-2">
+                    <button class="status-filter-btn active" data-status="all">
+                        <i class="fas fa-list mr-2"></i>全部訂單
+                    </button>
+                    <button class="status-filter-btn" data-status="準備中">
+                        <i class="fas fa-utensils mr-2"></i>準備中
+                    </button>
+                    <button class="status-filter-btn" data-status="進行中">
+                        <i class="fas fa-clock mr-2"></i>進行中
+                    </button>
+                    <button class="status-filter-btn" data-status="已完成">
+                        <i class="fas fa-check-circle mr-2"></i>已完成
+                    </button>
+                    <button class="status-filter-btn" data-status="已取消">
+                        <i class="fas fa-times-circle mr-2"></i>已取消
+                    </button>
+                </div>
+                
+                <div class="flex gap-4 items-center">
+                    <div class="relative">
+                        <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                        <input type="text" id="search-input" 
+                               class="pl-10 pr-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                               placeholder="搜尋訂單編號、桌號...">
+                    </div>
+                    <button id="refresh-btn" 
+                            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-sync-alt mr-2"></i>刷新
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 訂單列表 -->
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <div id="orders-container" class="space-y-4">
+                <!-- 訂單卡片將在這裡顯示 -->
+                <div id="orders-loading" class="text-center py-16">
+                    <i class="fas fa-spinner fa-spin text-4xl text-blue-400 mb-4"></i>
+                    <p class="text-xl text-gray-400">正在載入訂單資料...</p>
+                </div>
+            </div>
+            
+            <!-- 訂單詳情面板 -->
+            <div class="bg-gray-800 rounded-2xl border border-gray-700 sticky top-6">
+                <div class="p-6">
+                    <div id="order-details-placeholder" class="text-center py-16">
+                        <i class="fas fa-clipboard text-6xl text-gray-600 mb-4"></i>
+                        <h3 class="text-xl font-semibold text-gray-400 mb-2">選擇訂單查看詳情</h3>
+                        <p class="text-gray-500">點擊左側訂單卡片查看詳細資訊</p>
+                    </div>
+                    
+                    <div id="order-details-content" class="hidden">
+                        <!-- 訂單詳情將在這裡顯示 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 新增訂單模態框 -->
+    <div id="add-order-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-gray-800 rounded-2xl p-8 max-w-2xl mx-4 w-full max-h-screen overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-white">新增訂單</h3>
+                <button onclick="closeAddOrderModal()" class="text-gray-400 hover:text-white">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <form id="add-order-form" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">桌號</label>
+                        <select id="table-select" required
+                                class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500">
+                            <option value="">選擇桌號</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-300 mb-2">用餐人數</label>
+                        <input type="number" id="customer-count" min="1" max="10" required
+                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500">
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-2">備註</label>
+                    <textarea id="order-notes" rows="3"
+                              class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-blue-500"
+                              placeholder="特殊需求或備註..."></textarea>
+                </div>
+                
+                <div class="flex gap-4 pt-4">
+                    <button type="button" onclick="closeAddOrderModal()" 
+                            class="flex-1 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+                        取消
+                    </button>
+                    <button type="submit" 
+                            class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        建立訂單
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // 全域變數
+        let allOrders = [];
+        let filteredOrders = [];
+        let selectedOrderId = null;
+        let currentFilter = 'all';
+
+        // DOM 元素
+        const dom = {
+            ordersLoading: document.getElementById('orders-loading'),
+            ordersContainer: document.getElementById('orders-container'),
+            orderDetailsPlaceholder: document.getElementById('order-details-placeholder'),
+            orderDetailsContent: document.getElementById('order-details-content'),
+            searchInput: document.getElementById('search-input'),
+            refreshBtn: document.getElementById('refresh-btn'),
+            addOrderModal: document.getElementById('add-order-modal'),
+            addOrderForm: document.getElementById('add-order-form'),
+            tableSelect: document.getElementById('table-select'),
+            totalOrders: document.getElementById('total-orders'),
+            pendingOrders: document.getElementById('pending-orders'),
+            completedOrders: document.getElementById('completed-orders'),
+            dailyRevenue: document.getElementById('daily-revenue')
+        };
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadOrders();
+            loadTables();
+            setupEventListeners();
+        });
+
+        // 設置事件監聽器
+        function setupEventListeners() {
+            // 刷新按鈕
+            dom.refreshBtn.addEventListener('click', loadOrders);
+            
+            // 搜尋輸入
+            dom.searchInput.addEventListener('input', debounce(filterOrders, 300));
+            
+            // 狀態篩選按鈕
+            document.querySelectorAll('.status-filter-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.status-filter-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    currentFilter = this.dataset.status;
+                    filterOrders();
+                });
+            });
+            
+            // 新增訂單表單
+            dom.addOrderForm.addEventListener('submit', handleAddOrder);
+        }
+
+        // 載入訂單資料
+        async function loadOrders() {
+            try {
+                dom.ordersLoading.style.display = 'block';
+                
+                console.log('📡 載入訂單資料...');
+                
+                // 嘗試從 Notion API 載入真實訂單資料
+                const response = await fetch('/api/notion/databases/23afd5adc30b80c39e71d1a640ccfb5d/query', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        page_size: 100,
+                        sorts: [
+                            {
+                                property: '建立時間',
+                                direction: 'descending'
+                            }
+                        ]
+                    })
+                });
+                
+                if (response.ok) {
+                    const notionData = await response.json();
+                    console.log('📋 Notion 訂單資料:', notionData);
+                    
+                    if (notionData.results && notionData.results.length > 0) {
+                        // 轉換 Notion 資料為本地格式
+                        allOrders = notionData.results.map(page => {
+                            const props = page.properties;
+                            
+                            // 解析訂單編號
+                            const orderId = props['訂單編號']?.title?.[0]?.text?.content || 
+                                           props['訂單編號']?.rich_text?.[0]?.text?.content || 
+                                           page.id.slice(-8);
+                            
+                            // 解析桌號
+                            const tableNumber = props['桌號']?.rich_text?.[0]?.text?.content || 
+                                              props['桌號']?.title?.[0]?.text?.content || 
+                                              props['桌號']?.number?.toString() || '未知';
+                            
+                            // 解析狀態
+                            const status = props['狀態']?.select?.name || '進行中';
+                            
+                            // 解析總金額
+                            const total = props['總金額']?.number || 0;
+                            
+                            // 解析訂單項目
+                            const orderItemsText = props['訂單項目']?.rich_text?.[0]?.text?.content || '';
+                            const notesText = props['備註']?.rich_text?.[0]?.text?.content || '';
+                            
+                            let items = [];
+                            
+                            // 嘗試從備註中解析 JSON 格式的訂單項目
+                            if (notesText) {
+                                try {
+                                    // 查找 [系統資料] 標記
+                                    const jsonStart = notesText.indexOf('[系統資料]');
+                                    if (jsonStart !== -1) {
+                                        const jsonPart = notesText.substring(jsonStart + '[系統資料]'.length).trim();
+                                        const parsedData = JSON.parse(jsonPart);
+                                        if (parsedData.items && Array.isArray(parsedData.items)) {
+                                            items = parsedData.items;
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.warn('⚠️ 無法解析備註中的 JSON 資料:', e);
+                                }
+                            }
+                            
+                            // 如果 JSON 解析失敗，嘗試解析文字格式的訂單項目
+                            if (items.length === 0 && orderItemsText) {
+                                const lines = orderItemsText.split('\n').filter(line => line.trim());
+                                items = lines.map(line => {
+                                    const match = line.match(/^(.+?)\s+x(\d+)\s+-\s+NT\$(\d+)/);
+                                    if (match) {
+                                        const [, name, qty, totalPrice] = match;
+                                        const quantity = parseInt(qty);
+                                        const itemPrice = parseInt(totalPrice) / quantity; // 計算單價
+                                        return {
+                                            name: name.trim(),
+                                            quantity: quantity,
+                                            price: itemPrice
+                                        };
+                                    }
+                                    return null;
+                                }).filter(item => item !== null);
+                            }
+                            
+                            // 如果仍然沒有項目，創建一個預設項目
+                            if (items.length === 0 && total > 0) {
+                                items = [{
+                                    name: '訂單項目',
+                                    quantity: 1,
+                                    price: total
+                                }];
+                            }
+                            
+                            // 解析建立時間
+                            const orderTime = props['建立時間']?.date?.start || 
+                                            props['建立時間']?.created_time || 
+                                            page.created_time || 
+                                            new Date().toISOString();
+                            
+                            // 解析用餐人數
+                            const customerCount = props['用餐人數']?.number || 1;
+                            
+                            // 解析備註（排除系統資料部分）
+                            let userNotes = '';
+                            if (notesText) {
+                                const systemDataStart = notesText.indexOf('[系統資料]');
+                                if (systemDataStart !== -1) {
+                                    userNotes = notesText.substring(0, systemDataStart).trim();
+                                } else {
+                                    userNotes = notesText;
+                                }
+                            }
+                            
+                            return {
+                                id: orderId,
+                                tableNumber: tableNumber,
+                                customerCount: customerCount,
+                                status: status,
+                                items: items,
+                                total: total,
+                                orderTime: orderTime,
+                                notes: userNotes,
+                                notionPageId: page.id // 保存 Notion 頁面 ID 以便更新
+                            };
+                        });
+                        
+                        console.log(`✅ 成功載入 ${allOrders.length} 筆真實訂單`);
+                    } else {
+                        console.log('📭 Notion 訂單資料庫為空，使用模擬資料');
+                        allOrders = generateMockOrders();
+                    }
+                } else {
+                    console.warn('⚠️ 無法載入 Notion 訂單，使用模擬資料');
+                    allOrders = generateMockOrders();
+                }
+                
+                updateStatistics();
+                filterOrders();
+                
+            } catch (error) {
+                console.error('❌ 載入訂單失敗:', error);
+                console.log('🔄 使用模擬資料作為備用方案');
+                allOrders = generateMockOrders();
+                updateStatistics();
+                filterOrders();
+            } finally {
+                dom.ordersLoading.style.display = 'none';
+            }
+        }
+
+        // 載入桌位資料
+        async function loadTables() {
+            try {
+                console.log('🪑 載入桌位資料...');
+                
+                const response = await fetch('/api/notion/databases/23afd5adc30b80fe86c9e086a54a0d61/query', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        page_size: 100,
+                        sorts: [
+                            {
+                                property: '桌號',
+                                direction: 'ascending'
+                            }
+                        ]
+                    })
+                });
+                
+                if (response.ok) {
+                    const notionData = await response.json();
+                    console.log('🏪 Notion 桌位資料:', notionData);
+                    
+                    if (notionData.results && notionData.results.length > 0) {
+                        const tables = notionData.results.map(page => {
+                            const props = page.properties;
+                            
+                            // 解析桌號
+                            const tableNumber = props['桌號']?.title?.[0]?.text?.content || 
+                                              props['桌號']?.rich_text?.[0]?.text?.content || 
+                                              props['桌號']?.number?.toString() || '未知';
+                            
+                            // 解析狀態
+                            const status = props['狀態']?.select?.name || '空閒中';
+                            
+                            // 解析容納人數
+                            const maxCapacity = props['容納人數']?.number || 4;
+                            
+                            return {
+                                id: page.id,
+                                tableNumber: tableNumber,
+                                status: status,
+                                maxCapacity: maxCapacity
+                            };
+                        });
+                        
+                        populateTableSelect(tables);
+                        console.log(`✅ 成功載入 ${tables.length} 個桌位`);
+                    } else {
+                        console.log('📭 桌位資料庫為空');
+                    }
+                } else {
+                    console.warn('⚠️ 無法載入桌位資料');
+                }
+            } catch (error) {
+                console.error('❌ 載入桌位失敗:', error);
+            }
+        }
+
+        // 填充桌位選擇器
+        function populateTableSelect(tables) {
+            dom.tableSelect.innerHTML = '<option value="">選擇桌號</option>';
+            
+            tables.filter(table => table.status === '空閒中').forEach(table => {
+                const option = document.createElement('option');
+                option.value = table.id;
+                option.textContent = `${table.tableNumber} (${table.maxCapacity}人桌)`;
+                dom.tableSelect.appendChild(option);
+            });
+        }
+
+        // 生成模擬訂單資料
+        function generateMockOrders() {
+            const statuses = ['準備中', '進行中', '已完成', '已取消'];
+            const items = [
+                { name: '打拋豬飯', price: 220 },
+                { name: '綠咖哩雞', price: 280 },
+                { name: '泰式奶茶', price: 80 },
+                { name: '椰汁雞湯', price: 320 },
+                { name: '芒果糯米飯', price: 180 }
+            ];
+            
+            const orders = [];
+            for (let i = 1; i <= 15; i++) {
+                const orderItems = [];
+                const itemCount = Math.floor(Math.random() * 3) + 1;
+                
+                for (let j = 0; j < itemCount; j++) {
+                    const item = items[Math.floor(Math.random() * items.length)];
+                    const existingItem = orderItems.find(oi => oi.name === item.name);
+                    if (existingItem) {
+                        existingItem.quantity++;
+                    } else {
+                        orderItems.push({ ...item, quantity: 1 });
+                    }
+                }
+                
+                const total = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                const orderTime = new Date(Date.now() - Math.random() * 24 * 60 * 60 * 1000);
+                
+                orders.push({
+                    id: `ORD${String(i).padStart(3, '0')}`,
+                    tableNumber: `A${i % 8 + 1}`,
+                    customerCount: Math.floor(Math.random() * 4) + 1,
+                    status: statuses[Math.floor(Math.random() * statuses.length)],
+                    items: orderItems,
+                    total: total,
+                    orderTime: orderTime.toISOString(),
+                    notes: i % 3 === 0 ? '不要辣' : ''
+                });
+            }
+            
+            return orders;
+        }
+
+        // 更新統計資料
+        function updateStatistics() {
+            const totalOrders = allOrders.length;
+            const pendingOrders = allOrders.filter(order => 
+                order.status === '準備中' || order.status === '進行中'
+            ).length;
+            const completedOrders = allOrders.filter(order => order.status === '已完成').length;
+            const dailyRevenue = allOrders
+                .filter(order => order.status === '已完成')
+                .reduce((sum, order) => sum + order.total, 0);
+            
+            dom.totalOrders.textContent = totalOrders;
+            dom.pendingOrders.textContent = pendingOrders;
+            dom.completedOrders.textContent = completedOrders;
+            dom.dailyRevenue.textContent = `$${dailyRevenue}`;
+        }
+
+        // 篩選和搜尋訂單
+        function filterOrders() {
+            let filtered = allOrders;
+            
+            // 狀態篩選
+            if (currentFilter !== 'all') {
+                filtered = filtered.filter(order => order.status === currentFilter);
+            }
+            
+            // 搜尋篩選
+            const searchTerm = dom.searchInput.value.toLowerCase().trim();
+            if (searchTerm) {
+                filtered = filtered.filter(order => 
+                    order.id.toLowerCase().includes(searchTerm) ||
+                    order.tableNumber.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            filteredOrders = filtered;
+            renderOrders();
+        }
+
+        // 渲染訂單列表
+        function renderOrders() {
+            if (filteredOrders.length === 0) {
+                dom.ordersContainer.innerHTML = `
+                    <div class="text-center py-16">
+                        <i class="fas fa-inbox text-6xl text-gray-600 mb-4"></i>
+                        <h3 class="text-xl font-semibold text-gray-400 mb-2">沒有找到訂單</h3>
+                        <p class="text-gray-500">調整篩選條件或新增訂單</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            dom.ordersContainer.innerHTML = '';
+            
+            filteredOrders.forEach(order => {
+                const orderCard = createOrderCard(order);
+                dom.ordersContainer.appendChild(orderCard);
+            });
+        }
+
+        // 創建訂單卡片
+        function createOrderCard(order) {
+            const card = document.createElement('div');
+            card.className = `order-card bg-gray-800 rounded-2xl p-6 border border-gray-700 cursor-pointer transition-all hover:border-blue-500 ${selectedOrderId === order.id ? 'ring-2 ring-blue-500 border-blue-500' : ''}`;
+            
+            const statusColors = {
+                '準備中': 'bg-yellow-600 text-yellow-100',
+                '進行中': 'bg-blue-600 text-blue-100',
+                '已完成': 'bg-green-600 text-green-100',
+                '已取消': 'bg-red-600 text-red-100'
+            };
+            
+            const statusIcons = {
+                '準備中': 'fa-utensils',
+                '進行中': 'fa-clock',
+                '已完成': 'fa-check-circle',
+                '已取消': 'fa-times-circle'
+            };
+            
+            const orderTime = new Date(order.orderTime).toLocaleString('zh-TW');
+            const duration = formatDuration(new Date() - new Date(order.orderTime));
+            
+            card.innerHTML = `
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h3 class="text-xl font-bold text-white mb-1">${order.id}</h3>
+                        <p class="text-gray-400">桌號: ${order.tableNumber} • ${order.customerCount}人</p>
+                    </div>
+                    <span class="status-badge px-3 py-1 rounded-full text-sm font-medium ${statusColors[order.status]}">
+                        <i class="fas ${statusIcons[order.status]} mr-1"></i>
+                        ${order.status}
+                    </span>
+                </div>
+                
+                <div class="mb-4">
+                    <p class="text-sm text-gray-400 mb-2">訂單項目 (${order.items.length}項)</p>
+                    <div class="space-y-1">
+                        ${order.items.slice(0, 2).map(item => `
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-300">${item.name} x${item.quantity}</span>
+                                <span class="text-white">$${item.price * item.quantity}</span>
+                            </div>
+                        `).join('')}
+                        ${order.items.length > 2 ? `<p class="text-sm text-gray-500">...還有${order.items.length - 2}項</p>` : ''}
+                    </div>
+                </div>
+                
+                <div class="flex justify-between items-center pt-4 border-t border-gray-700">
+                    <div class="text-sm text-gray-400">
+                        <i class="fas fa-clock mr-1"></i>
+                        ${duration}
+                    </div>
+                    <div class="text-lg font-bold text-white">
+                        總計: $${order.total}
+                    </div>
+                </div>
+            `;
+            
+            card.addEventListener('click', () => selectOrder(order));
+            return card;
+        }
+
+        // 選擇訂單
+        function selectOrder(order) {
+            selectedOrderId = order.id;
+            renderOrders(); // 重新渲染以更新選中狀態
+            showOrderDetails(order);
+        }
+
+        // 顯示訂單詳情
+        function showOrderDetails(order) {
+            dom.orderDetailsPlaceholder.classList.add('hidden');
+            dom.orderDetailsContent.classList.remove('hidden');
+            
+            const statusColors = {
+                '準備中': 'bg-yellow-600 text-yellow-100',
+                '進行中': 'bg-blue-600 text-blue-100',
+                '已完成': 'bg-green-600 text-green-100',
+                '已取消': 'bg-red-600 text-red-100'
+            };
+            
+            const orderTime = new Date(order.orderTime).toLocaleString('zh-TW');
+            const subtotal = order.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const serviceFee = Math.round(subtotal * 0.1);
+            
+            dom.orderDetailsContent.innerHTML = `
+                <div class="mb-6">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-2xl font-bold text-white mb-2">${order.id}</h3>
+                            <p class="text-gray-400">桌號: ${order.tableNumber} • ${order.customerCount}人</p>
+                        </div>
+                        <span class="px-3 py-1 rounded-full text-sm font-medium ${statusColors[order.status]}">
+                            ${order.status}
+                        </span>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <span class="text-gray-400">訂單時間:</span>
+                            <p class="text-white">${orderTime}</p>
+                        </div>
+                        <div>
+                            <span class="text-gray-400">用餐時長:</span>
+                            <p class="text-white">${formatDuration(new Date() - new Date(order.orderTime))}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mb-6">
+                    <h4 class="text-lg font-semibold text-white mb-4">訂單明細</h4>
+                    <div class="space-y-3">
+                        ${order.items.map(item => `
+                            <div class="flex justify-between items-center p-3 bg-gray-700 rounded-lg">
+                                <div>
+                                    <p class="text-white font-medium">${item.name}</p>
+                                    <p class="text-gray-400 text-sm">$${item.price} x ${item.quantity}</p>
+                                </div>
+                                <p class="text-white font-bold">$${item.price * item.quantity}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                
+                <div class="mb-6 p-4 bg-gray-700 rounded-lg">
+                    <h4 class="text-lg font-semibold text-white mb-3">費用明細</h4>
+                    <div class="space-y-2">
+                        <div class="flex justify-between">
+                            <span class="text-gray-300">小計</span>
+                            <span class="text-white">$${subtotal}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-300">服務費 (10%)</span>
+                            <span class="text-white">$${serviceFee}</span>
+                        </div>
+                        <div class="border-t border-gray-600 pt-2">
+                            <div class="flex justify-between text-lg font-bold">
+                                <span class="text-white">總計</span>
+                                <span class="text-white">$${order.total}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                ${order.notes ? `
+                    <div class="mb-6">
+                        <h4 class="text-lg font-semibold text-white mb-2">備註</h4>
+                        <p class="text-gray-300 p-3 bg-gray-700 rounded-lg">${order.notes}</p>
+                    </div>
+                ` : ''}
+                
+                <div class="flex gap-3">
+                    ${order.status === '準備中' ? `
+                        <button onclick="updateOrderStatus('${order.id}', '進行中')" 
+                                class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                            <i class="fas fa-play mr-2"></i>開始製作
+                        </button>
+                    ` : ''}
+                    
+                    ${order.status === '進行中' ? `
+                        <button onclick="updateOrderStatus('${order.id}', '已完成')" 
+                                class="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                            <i class="fas fa-check mr-2"></i>完成訂單
+                        </button>
+                    ` : ''}
+                    
+                    ${order.status !== '已完成' && order.status !== '已取消' ? `
+                        <button onclick="updateOrderStatus('${order.id}', '已取消')" 
+                                class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                            <i class="fas fa-times mr-2"></i>取消
+                        </button>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        // 更新訂單狀態
+        async function updateOrderStatus(orderId, newStatus) {
+            try {
+                console.log(`🔄 更新訂單 ${orderId} 狀態為: ${newStatus}`);
+                
+                const orderIndex = allOrders.findIndex(order => order.id === orderId);
+                if (orderIndex === -1) {
+                    throw new Error('找不到指定的訂單');
+                }
+                
+                const order = allOrders[orderIndex];
+                
+                // 如果有 Notion 頁面 ID，嘗試更新 Notion 記錄
+                if (order.notionPageId) {
+                    console.log(`📡 更新 Notion 訂單記錄: ${order.notionPageId}`);
+                    
+                    const updateResponse = await fetch(`/api/notion/pages/${order.notionPageId}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            properties: {
+                                狀態: {
+                                    select: {
+                                        name: newStatus
+                                    }
+                                }
+                            }
+                        })
+                    });
+                    
+                    if (updateResponse.ok) {
+                        console.log(`✅ Notion 訂單狀態已更新: ${orderId} -> ${newStatus}`);
+                    } else {
+                        console.warn(`⚠️ Notion 更新失敗，但繼續本地更新`);
+                    }
+                }
+                
+                // 更新本地資料
+                allOrders[orderIndex].status = newStatus;
+                updateStatistics();
+                filterOrders();
+                
+                if (selectedOrderId === orderId) {
+                    showOrderDetails(allOrders[orderIndex]);
+                }
+                
+                showNotification('success', `訂單 ${orderId} 狀態已更新為 ${newStatus}`);
+                
+            } catch (error) {
+                console.error('❌ 更新訂單狀態失敗:', error);
+                showNotification('error', '更新失敗，請稍後再試: ' + error.message);
+            }
+        }
+
+        // 處理新增訂單
+        async function handleAddOrder(e) {
+            e.preventDefault();
+            
+            try {
+                const formData = new FormData(dom.addOrderForm);
+                const tableId = formData.get('table-select');
+                const customerCount = parseInt(formData.get('customer-count'));
+                const notes = formData.get('order-notes');
+                
+                if (!tableId) {
+                    showNotification('error', '請選擇桌號');
+                    return;
+                }
+                
+                // 這裡應該調用實際的API創建訂單
+                const newOrder = {
+                    id: `ORD${String(allOrders.length + 1).padStart(3, '0')}`,
+                    tableNumber: dom.tableSelect.options[dom.tableSelect.selectedIndex].text.split(' ')[0],
+                    customerCount: customerCount,
+                    status: '準備中',
+                    items: [],
+                    total: 0,
+                    orderTime: new Date().toISOString(),
+                    notes: notes
+                };
+                
+                allOrders.unshift(newOrder);
+                updateStatistics();
+                filterOrders();
+                closeAddOrderModal();
+                
+                showNotification('success', `訂單 ${newOrder.id} 已成功建立`);
+                
+            } catch (error) {
+                console.error('建立訂單失敗:', error);
+                showNotification('error', '建立訂單失敗，請稍後再試');
+            }
+        }
+
+        // 開啟新增訂單模態框
+        function openAddOrderModal() {
+            loadTables(); // 重新載入可用桌位
+            dom.addOrderModal.classList.remove('hidden');
+            dom.addOrderModal.classList.add('flex');
+        }
+
+        // 關閉新增訂單模態框
+        function closeAddOrderModal() {
+            dom.addOrderModal.classList.add('hidden');
+            dom.addOrderModal.classList.remove('flex');
+            dom.addOrderForm.reset();
+        }
+
+        // 顯示通知
+        function showNotification(type, message) {
+            // 簡單的通知實現
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${
+                type === 'success' ? 'bg-green-600' : 'bg-red-600'
+            } text-white`;
+            notification.innerHTML = `
+                <div class="flex items-center">
+                    <i class="fas ${type === 'success' ? 'fa-check' : 'fa-exclamation-triangle'} mr-2"></i>
+                    ${message}
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // 格式化持續時間
+        function formatDuration(ms) {
+            const hours = Math.floor(ms / (1000 * 60 * 60));
+            const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+            
+            if (hours > 0) {
+                return `${hours}小時${minutes}分鐘`;
+            } else {
+                return `${minutes}分鐘`;
+            }
+        }
+
+        // 防抖函數
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // 添加CSS樣式
+        const style = document.createElement('style');
+        style.textContent = `
+            .status-filter-btn {
+                @apply px-4 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors;
+            }
+            .status-filter-btn.active {
+                @apply bg-blue-600 text-white;
+            }
+        `;
+        document.head.appendChild(style);
+
+        // 每30秒自動刷新資料
+        setInterval(() => {
+            if (!document.hidden) {
+                loadOrders();
+            }
+        }, 30000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,1427 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>菜單管理系統 - 泰式餐廳</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .page-header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .page-header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .page-header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        /* 菜單管理容器 */
+        #menu-management-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        /* 菜單標題 */
+        .menu-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 25px 30px;
+            background: linear-gradient(135deg, #FF6B6B, #FF8E53);
+            color: white;
+        }
+
+        .menu-header h2 {
+            font-size: 1.8rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .menu-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #4ECDC4;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #95A5A6;
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        /* 導航 */
+        .menu-nav {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .nav-btn {
+            flex: 1;
+            padding: 15px 20px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .nav-btn:hover {
+            background: #e9ecef;
+            color: #333;
+        }
+
+        .nav-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        /* 內容區域 */
+        .menu-content {
+            padding: 30px;
+            min-height: 600px;
+        }
+
+        /* 總覽網格 */
+        .overview-grid {
+            display: grid;
+            gap: 25px;
+        }
+
+        .stats-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            border-left: 4px solid #667eea;
+        }
+
+        .stat-card.success { border-left-color: #28a745; }
+        .stat-card.warning { border-left-color: #ffc107; }
+        .stat-card.danger { border-left-color: #dc3545; }
+
+        .stat-icon {
+            font-size: 2.5rem;
+            color: #667eea;
+        }
+
+        .stat-card.success .stat-icon { color: #28a745; }
+        .stat-card.warning .stat-icon { color: #ffc107; }
+        .stat-card.danger .stat-icon { color: #dc3545; }
+
+        .stat-info h3 {
+            font-size: 2rem;
+            margin-bottom: 5px;
+        }
+
+        .stat-info p {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        /* 總覽區塊 */
+        .overview-section {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+        }
+
+        .overview-section h3 {
+            margin-bottom: 20px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* 財務總覽 */
+        .financial-overview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .financial-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .financial-item .label {
+            font-weight: 500;
+            color: #666;
+        }
+
+        .financial-item .value {
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: #667eea;
+        }
+
+        /* 警報列表 */
+        .alerts-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .alert-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid;
+        }
+
+        .alert-item.high {
+            background: #fff5f5;
+            border-left-color: #dc3545;
+        }
+
+        .alert-item.medium {
+            background: #fffbf0;
+            border-left-color: #ffc107;
+        }
+
+        .alert-icon {
+            font-size: 1.2rem;
+        }
+
+        .alert-item.high .alert-icon { color: #dc3545; }
+        .alert-item.medium .alert-icon { color: #ffc107; }
+
+        .alert-content strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .alert-content p {
+            color: #666;
+            font-size: 0.9rem;
+            margin: 0;
+        }
+
+        /* 分類統計 */
+        .category-breakdown {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .category-item {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .category-name {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .category-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            font-size: 0.9rem;
+        }
+
+        .category-stats .total { color: #667eea; font-weight: 500; }
+        .category-stats .available { color: #28a745; }
+        .category-stats .price { color: #666; }
+
+        /* 菜單項目頁面 */
+        .menu-items-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .search-section {
+            position: relative;
+            min-width: 300px;
+        }
+
+        #menu-search {
+            width: 100%;
+            padding: 12px 45px 12px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 25px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        #menu-search:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .search-icon {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #666;
+        }
+
+        .category-filters {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .category-filter {
+            padding: 8px 16px;
+            border: 2px solid #e9ecef;
+            background: white;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .category-filter:hover {
+            border-color: #667eea;
+            color: #667eea;
+        }
+
+        .category-filter.active {
+            background: #667eea;
+            border-color: #667eea;
+            color: white;
+        }
+
+        /* 菜單項目網格 */
+        .menu-items-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+        }
+
+        .menu-item-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .menu-item-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .menu-item-card.unavailable {
+            opacity: 0.7;
+            background: #f8f9fa;
+        }
+
+        .item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+
+        .item-header h4 {
+            font-size: 1.3rem;
+            color: #333;
+            margin: 0;
+        }
+
+        .availability-toggle .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .availability-toggle .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .availability-toggle .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+        .availability-toggle .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        .availability-toggle input:checked + .slider {
+            background-color: #28a745;
+        }
+
+        .availability-toggle input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        .item-details .description {
+            color: #666;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+
+        .item-specs {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        .item-specs span {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            background: #f8f9fa;
+            color: #666;
+        }
+
+        .item-specs .category { background: #667eea; color: white; }
+        .item-specs .spice-level { background: #ff6b6b; color: white; }
+        .item-specs .location { background: #4ecdc4; color: white; }
+
+        .item-metrics {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+        }
+
+        .metric .label {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .metric .value {
+            font-weight: bold;
+        }
+
+        .metric .price { color: #28a745; }
+        .metric .cost { color: #dc3545; }
+        .metric .margin { color: #667eea; }
+        .metric .stock.zero { color: #dc3545; }
+        .metric .stock.low { color: #ffc107; }
+        .metric .stock.normal { color: #28a745; }
+
+        .unavailable-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.2rem;
+            color: #dc3545;
+        }
+
+        .unavailable-overlay i {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        /* 可用性頁面 */
+        .availability-overview {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .availability-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .summary-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+
+        .summary-card.danger { border-left: 4px solid #dc3545; }
+        .summary-card.warning { border-left: 4px solid #ffc107; }
+        .summary-card.info { border-left: 4px solid #17a2b8; }
+
+        .summary-card h3 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .summary-card.danger h3 { color: #dc3545; }
+        .summary-card.warning h3 { color: #ffc107; }
+        .summary-card.info h3 { color: #17a2b8; }
+
+        /* 表格樣式 */
+        .alerts-table, .suggestions-table, .profitability-table {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .table-header, .table-row {
+            display: grid;
+            padding: 15px;
+            align-items: center;
+        }
+
+        .alerts-table .table-header,
+        .alerts-table .table-row {
+            grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+        }
+
+        .suggestions-table .table-header,
+        .suggestions-table .table-row {
+            grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+        }
+
+        .profitability-table .table-header,
+        .profitability-table .table-row {
+            grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+        }
+
+        .table-header {
+            background: #f8f9fa;
+            font-weight: bold;
+            color: #333;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .table-row {
+            border-bottom: 1px solid #dee2e6;
+            transition: background-color 0.3s ease;
+        }
+
+        .table-row:hover {
+            background: #f8f9fa;
+        }
+
+        .table-row.high {
+            background: rgba(220, 53, 69, 0.05);
+        }
+
+        .table-row.medium {
+            background: rgba(255, 193, 7, 0.05);
+        }
+
+        .status-badge, .type-badge, .margin-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .status-badge.unavailable {
+            background: #dc3545;
+            color: white;
+        }
+
+        .status-badge.low_stock {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .type-badge.recipe {
+            background: #667eea;
+            color: white;
+        }
+
+        .type-badge.ingredient {
+            background: #28a745;
+            color: white;
+        }
+
+        .margin-badge.high {
+            background: #28a745;
+            color: white;
+        }
+
+        .margin-badge.medium {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .margin-badge.low {
+            background: #dc3545;
+            color: white;
+        }
+
+        /* 獲利分析 */
+        .profitability-analysis {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .profitability-summary {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+
+        .summary-metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .metric-card {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .metric-card h4 {
+            margin-bottom: 10px;
+            color: #666;
+        }
+
+        .metric-card .value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .metric-card .item {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .profitability-tables {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+        }
+
+        .table-section h3 {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .category-profitability {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+
+        .category-profit-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .category-profit-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .category-profit-card h4 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .profit-metrics {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .profit-metrics .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* 顧客菜單 */
+        .customer-menu-preview {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+
+        .menu-header-customer {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f8f9fa;
+        }
+
+        .menu-header-customer h2 {
+            font-size: 2.5rem;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .menu-subtitle {
+            font-size: 1.1rem;
+            color: #666;
+        }
+
+        .menu-category-section {
+            margin-bottom: 40px;
+        }
+
+        .category-title {
+            font-size: 1.8rem;
+            color: #667eea;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .menu-items-customer {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .customer-menu-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .customer-menu-item:hover {
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            border-color: #667eea;
+        }
+
+        .customer-menu-item.low-stock {
+            border-color: #ffc107;
+            background: rgba(255, 193, 7, 0.05);
+        }
+
+        .item-name-price {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .item-name {
+            font-size: 1.2rem;
+            color: #333;
+            margin: 0;
+        }
+
+        .item-price {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #28a745;
+        }
+
+        .item-description {
+            color: #666;
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+
+        .item-tags {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .spice-tag, .allergen-tag, .customizable-tag, .stock-warning {
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .spice-tag.不辣 { background: #e9ecef; color: #333; }
+        .spice-tag.微辣 { background: #fff3cd; color: #856404; }
+        .spice-tag.小辣 { background: #f8d7da; color: #721c24; }
+        .spice-tag.中辣 { background: #f5c6cb; color: #721c24; }
+        .spice-tag.大辣 { background: #f1b0b7; color: #721c24; }
+
+        .allergen-tag {
+            background: #dc3545;
+            color: white;
+        }
+
+        .customizable-tag {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .stock-warning {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .add-to-cart-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .add-to-cart-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .menu-footer-customer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e9ecef;
+            text-align: center;
+        }
+
+        .menu-note {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+        }
+
+        /* 無結果 */
+        .no-results {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .no-results i {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        /* 通知 */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 1000;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+
+        .notification.success {
+            background: #28a745;
+        }
+
+        .notification.warning {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .notification.error {
+            background: #dc3545;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        /* 彈窗 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            max-width: 800px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            color: #333;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 5px;
+            color: #666;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .item-details-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+        }
+
+        .detail-section h4 {
+            margin-bottom: 15px;
+            color: #333;
+            border-bottom: 2px solid #f8f9fa;
+            padding-bottom: 8px;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #f8f9fa;
+        }
+
+        .detail-row .label {
+            font-weight: 500;
+            color: #666;
+        }
+
+        .detail-row .value {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .components-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .component-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .component-name {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .component-details {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            font-size: 0.9rem;
+        }
+
+        .component-details span {
+            color: #666;
+        }
+
+        .recipe-info, .ingredient-info {
+            font-weight: 500;
+            color: #667eea !important;
+        }
+
+        /* 響應式設計 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            .menu-header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+
+            .menu-nav {
+                flex-direction: column;
+            }
+
+            .menu-items-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .stats-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .menu-items-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .profitability-tables {
+                grid-template-columns: 1fr;
+            }
+
+            .item-details-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .customer-menu-item {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 15px;
+            }
+
+            .item-name-price {
+                align-items: flex-start;
+            }
+        }
+
+        /* 工具提示 */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.8rem;
+        }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* 載入動畫 */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 文字工具 */
+        .text-success { color: #28a745; }
+        .text-warning { color: #ffc107; }
+        .text-danger { color: #dc3545; }
+        .text-info { color: #17a2b8; }
+        .text-muted { color: #666; }
+
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 0.8rem;
+        }
+
+        .more-alerts {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            margin-top: 10px;
+        }
+
+        .table-footer {
+            background: #f8f9fa;
+            padding: 15px;
+            border-top: 2px solid #dee2e6;
+            text-align: right;
+        }
+
+        .total-cost {
+            font-weight: bold;
+            font-size: 1.1rem;
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="page-header">
+            <h1><i class="fas fa-utensils"></i> 泰式餐廳菜單管理系統</h1>
+            <p>完整的菜單管理、庫存監控與獲利分析</p>
+        </div>
+        
+        <!-- 菜單管理容器將在這裡動態生成 -->
+    </div>
+
+    <!-- 載入配置檔案 -->
+    <script src="../../config/config.js"></script>
+    <!-- 載入 JavaScript -->
+    <script src="../../assets/js/notion-manager.js"></script>
+    <script src="../../assets/js/menu-manager.js"></script>
+    <script src="../../assets/js/menu-ui.js"></script>
+    
+    <script>
+        // 初始化菜單管理系統
+        let menuUI;
+        let menuManager;
+        
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                console.log('🚀 開始初始化菜單管理系統...');
+                
+                // 檢查必要的類別是否已載入
+                if (typeof MenuManager === 'undefined') {
+                    throw new Error('MenuManager 類別未載入');
+                }
+                if (typeof MenuUI === 'undefined') {
+                    throw new Error('MenuUI 類別未載入');
+                }
+                
+                // 先初始化菜單管理器
+                console.log('📋 初始化 MenuManager...');
+                menuManager = new MenuManager();
+                
+                // 載入 Notion 資料
+                console.log('📋 從 Notion 載入菜單資料...');
+                await menuManager.loadMenuFromNotion();
+                
+                // 建立菜單UI實例
+                console.log('🎨 初始化 MenuUI...');
+                menuUI = new MenuUI(menuManager);
+                
+                // 檢查 initialize 方法是否存在
+                if (typeof menuUI.initialize !== 'function') {
+                    console.warn('⚠️ MenuUI.initialize 方法不存在，使用 init 方法');
+                    if (typeof menuUI.init === 'function') {
+                        menuUI.init();
+                    } else {
+                        throw new Error('MenuUI 沒有可用的初始化方法');
+                    }
+                } else {
+                    // 初始化 UI
+                    await menuUI.initialize();
+                }
+                
+                console.log('✅ 菜單管理系統初始化完成');
+                
+                // 顯示成功訊息
+                showNotification('菜單系統已成功連接到 Notion 資料庫', 'success');
+                
+            } catch (error) {
+                console.error('❌ 菜單管理系統初始化失敗:', error);
+                
+                // 顯示錯誤訊息
+                const container = document.querySelector('.container');
+                const errorDiv = document.createElement('div');
+                errorDiv.innerHTML = `
+                    <div style="background: white; padding: 30px; border-radius: 12px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: #dc3545; margin-bottom: 20px;"></i>
+                        <h3 style="color: #dc3545; margin-bottom: 15px;">系統載入失敗</h3>
+                        <p style="color: #666; margin-bottom: 20px;">錯誤: ${error.message}</p>
+                        <div style="margin-bottom: 20px;">
+                            <button onclick="location.reload()" style="padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; margin-right: 10px;">
+                                <i class="fas fa-sync-alt"></i> 重新載入
+                            </button>
+                            <button onclick="useOfflineMode()" style="padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                                <i class="fas fa-wifi-slash"></i> 離線模式
+                            </button>
+                            <button onclick="testNotionConnection()" style="padding: 10px 20px; background: #17a2b8; color: white; border: none; border-radius: 8px; cursor: pointer; margin-left: 10px;">
+                                <i class="fas fa-database"></i> 測試連接
+                            </button>
+                        </div>
+                        <div style="text-align: left; background: #f8f9fa; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 0.8rem;">
+                            <strong>除錯資訊:</strong><br>
+                            MenuManager 存在: ${typeof MenuManager !== 'undefined'}<br>
+                            MenuUI 存在: ${typeof MenuUI !== 'undefined'}<br>
+                            時間: ${new Date().toLocaleString()}
+                        </div>
+                    </div>
+                `;
+                container.appendChild(errorDiv);
+            }
+        });
+        
+        // 離線模式
+        function useOfflineMode() {
+            try {
+                menuManager = new MenuManager();
+                menuUI = new MenuUI(menuManager);
+                menuUI.initialize();
+                showNotification('已切換至離線模式', 'warning');
+                location.reload();
+            } catch (error) {
+                console.error('離線模式初始化失敗:', error);
+            }
+        }
+        
+        // API 連接檢查
+        async function checkApiConnection() {
+            try {
+                const response = await fetch('/api/health');
+                const data = await response.json();
+                
+                if (data.status === 'healthy') {
+                    console.log('✅ API 連接正常:', data);
+                    return true;
+                } else {
+                    console.warn('⚠️ API 連接異常:', data);
+                    return false;
+                }
+            } catch (error) {
+                console.error('❌ API 連接檢查失敗:', error);
+                return false;
+            }
+        }
+        
+        // 測試 Notion 連接
+        async function testNotionConnection() {
+            try {
+                const response = await fetch('/api/test-notion');
+                const data = await response.json();
+                
+                if (data.success) {
+                    console.log('✅ Notion 連接正常:', data);
+                    showNotification('Notion API 連接正常', 'success');
+                    return true;
+                } else {
+                    console.warn('⚠️ Notion 連接異常:', data);
+                    showNotification('Notion API 連接異常', 'warning');
+                    return false;
+                }
+            } catch (error) {
+                console.error('❌ Notion 連接測試失敗:', error);
+                showNotification('Notion API 連接失敗', 'error');
+                return false;
+            }
+        }
+        
+        // 通知函數
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type} show`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        // 全域函數
+        window.viewItemDetails = function(itemName) {
+            if (menuUI) {
+                menuUI.viewItemDetails(itemName);
+            }
+        };
+
+        // 鍵盤快捷鍵
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key) {
+                    case 'r':
+                        e.preventDefault();
+                        if (menuUI) {
+                            menuUI.refreshMenu();
+                        }
+                        break;
+                    case 'e':
+                        e.preventDefault();
+                        if (menuUI) {
+                            menuUI.exportMenu();
+                        }
+                        break;
+                    case '1':
+                        e.preventDefault();
+                        if (menuUI) {
+                            menuUI.switchView('menu-overview');
+                        }
+                        break;
+                    case '2':
+                        e.preventDefault();
+                        if (menuUI) {
+                            menuUI.switchView('menu-items');
+                        }
+                        break;
+                    case '3':
+                        e.preventDefault();
+                        if (menuUI) {
+                            menuUI.switchView('availability');
+                        }
+                        break;
+                    case '4':
+                        e.preventDefault();
+                        if (menuUI) {
+                            menuUI.switchView('profitability');
+                        }
+                        break;
+                    case '5':
+                        e.preventDefault();
+                        if (menuUI) {
+                            menuUI.switchView('customer-menu');
+                        }
+                        break;
+                }
+            }
+        });
+
+        // 防止意外離開頁面
+        window.addEventListener('beforeunload', function(e) {
+            e.preventDefault();
+            e.returnValue = '';
+        });
+    </script>
+</body>
+</html>

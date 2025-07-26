@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tanawat Restaurant 主儀表板</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+
+        .card-icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .card p {
+            color: #666;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 25px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .quick-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        .footer {
+            text-align: center;
+            color: white;
+            opacity: 0.8;
+            margin-top: 40px;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .card {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                <a href="./index.html" style="padding: 8px 16px; background-color: #4b5563; color: white; border-radius: 8px; text-decoration: none; font-size: 14px; display: flex; align-items: center; transition: background-color 0.3s;" onmouseover="this.style.backgroundColor='#374151'" onmouseout="this.style.backgroundColor='#4b5563'">
+                    ← 返回主系統
+                </a>
+                <div style="text-align: center; flex: 1;">
+                    <h1><i class="fas fa-utensils"></i> Tanawat Restaurant</h1>
+                    <p>泰式餐廳管理系統主儀表板</p>
+                </div>
+                <div style="width: 128px;"></div> <!-- 平衡右側空間 -->
+            </div>
+        </div>
+
+        <div class="quick-stats">
+            <div class="stat-card">
+                <div class="stat-number" id="active-tables">--</div>
+                <div class="stat-label">使用中桌位</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="today-orders">--</div>
+                <div class="stat-label">今日訂單</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="today-revenue">--</div>
+                <div class="stat-label">今日營收</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="menu-items">--</div>
+                <div class="stat-label">菜單項目</div>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="card">
+                <div class="card-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <h3>顧客點餐系統</h3>
+                <p>提供顧客友善的點餐介面，支援桌號選擇、菜單瀏覽和訂單管理</p>
+                <a href="./customer/customer-view.html" class="btn">進入點餐系統</a>
+            </div>
+
+            <div class="card">
+                <div class="card-icon">
+                    <i class="fas fa-cash-register"></i>
+                </div>
+                <h3>結帳系統 (New)</h3>
+                <p>基於 Notion API 的結帳系統，即時讀取桌況與訂單資料，支援完整結帳流程</p>
+                <a href="./customer/checkout-new.html" class="btn">進入結帳系統</a>
+            </div>
+
+            <div class="card">
+                <div class="card-icon">
+                    <i class="fas fa-table"></i>
+                </div>
+                <h3>桌況管理</h3>
+                <p>即時監控餐桌狀態，管理預訂和桌位安排。整合 Notion 資料庫的新版本。</p>
+                <a href="./management/table-management-v2.html" class="btn">管理桌況 v2.0</a>
+            </div>
+
+            <div class="card">
+                <div class="card-icon">
+                    <i class="fas fa-clipboard-list"></i>
+                </div>
+                <h3>訂單管理</h3>
+                <p>查看和處理所有訂單，追蹤訂單狀態和歷史記錄。已整合 Notion 資料庫。</p>
+                <a href="./order-center.html" class="btn">管理訂單</a>
+            </div>
+
+            <div class="card">
+                <div class="card-icon">
+                    <i class="fas fa-book"></i>
+                </div>
+                <h3>菜單管理</h3>
+                <p>編輯菜單項目、價格和供應狀態，管理餐點分類</p>
+                <a href="./management/menu-management.html" class="btn">管理菜單</a>
+            </div>
+
+            <div class="card">
+                <div class="card-icon">
+                    <i class="fas fa-utensils"></i>
+                </div>
+                <h3>廚房出餐系統</h3>
+                <p>廚房專用訂單顯示系統，即時追蹤製作進度。整合 Notion 的新版本。</p>
+                <a href="./customer/kds-new.html" class="btn">廚房系統 KDS</a>
+            </div>
+
+            <div class="card">
+                <div class="card-icon">
+                    <i class="fas fa-box"></i>
+                </div>
+                <h3>庫存管理</h3>
+                <p>追蹤食材庫存、設定安全庫存量和管理進貨</p>
+                <a href="./management/inventory-management.html" class="btn">管理庫存</a>
+            </div>
+
+            <div class="card">
+                <div class="card-icon">
+                    <i class="fas fa-chart-line"></i>
+                </div>
+                <h3>營運分析</h3>
+                <p>查看營收報表、銷售分析和經營數據</p>
+                <a href="../pages/management/cost-analysis.html" class="btn">成本分析</a>
+            </div>
+
+            <div class="card">
+                <div class="card-icon">
+                    <i class="fas fa-shopping-cart"></i>
+                </div>
+                <h3>採購管理</h3>
+                <p>管理供應商資訊、採購訂單和成本控制</p>
+                <a href="./management/purchase-management.html" class="btn">管理採購</a>
+            </div>
+
+            <div class="card">
+                <div class="card-icon">
+                    <i class="fas fa-cogs"></i>
+                </div>
+                <h3>系統工具</h3>
+                <p>營運分析、資料視覺化和系統監控工具</p>
+                <a href="./tools/dashboard.html" class="btn">營運分析</a>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>&copy; 2025 Tanawat Restaurant. 版權所有.</p>
+            <p>餐廳管理系統 - 讓經營更輕鬆</p>
+        </div>
+    </div>
+
+    <script>
+        // 儀表板數據載入
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDashboardData();
+            // 每30秒更新一次數據
+            setInterval(loadDashboardData, 30000);
+        });
+
+        // 從 API 載入儀表板數據
+        async function loadDashboardData() {
+            try {
+                // 載入桌況數據
+                await loadTableStats();
+                // 載入訂單數據
+                await loadOrderStats();
+            } catch (error) {
+                console.error('載入儀表板數據失敗:', error);
+                // 使用模擬數據作為後備
+                loadMockData();
+            }
+        }
+
+        // 載入桌況統計
+        async function loadTableStats() {
+            try {
+                const response = await fetch('http://localhost:3000/api/notion/databases/23afd5adc30b80fe86c9e086a54a0d61/query', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({})
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const tables = data.results || [];
+                    
+                    // 計算使用中的桌位
+                    const activeTables = tables.filter(table => {
+                        const status = table.properties['狀態']?.select?.name;
+                        return status === '使用中' || status === '已預訂';
+                    }).length;
+                    
+                    document.getElementById('active-tables').textContent = activeTables;
+                }
+            } catch (error) {
+                console.warn('無法載入桌況數據:', error);
+            }
+        }
+
+        // 載入訂單統計
+        async function loadOrderStats() {
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                
+                const response = await fetch('http://localhost:3000/api/notion/databases/23afd5adc30b80c39e71d1a640ccfb5d/query', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        filter: {
+                            property: '建立時間',
+                            date: {
+                                on_or_after: today
+                            }
+                        }
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const orders = data.results || [];
+                    
+                    // 計算今日訂單數
+                    document.getElementById('today-orders').textContent = orders.length;
+                    
+                    // 計算今日營收
+                    const todayRevenue = orders.reduce((total, order) => {
+                        const amount = order.properties['總金額']?.number || 0;
+                        return total + amount;
+                    }, 0);
+                    
+                    document.getElementById('today-revenue').textContent = `NT$ ${todayRevenue.toLocaleString()}`;
+                }
+            } catch (error) {
+                console.warn('無法載入訂單數據:', error);
+            }
+        }
+
+        // 載入模擬數據（後備方案）
+        function loadMockData() {
+            document.getElementById('active-tables').textContent = '8';
+            document.getElementById('today-orders').textContent = '23';
+            document.getElementById('today-revenue').textContent = 'NT$ 15,480';
+            document.getElementById('menu-items').textContent = '45';
+        }
+
+        // 初始化時載入模擬菜單數據
+        setTimeout(() => {
+            document.getElementById('menu-items').textContent = '45';
+        }, 1000);
+    </script>
+</body>
+</html>

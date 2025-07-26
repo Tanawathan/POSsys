@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV 同步測試工具</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            margin: 0.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+            height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .info { color: #007bff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 CSV 同步測試工具</h1>
+        
+        <div>
+            <button onclick="testConnection()">🔗 測試連線</button>
+            <button onclick="loadCSV()">📄 載入 CSV</button>
+            <button onclick="syncOne()">🚀 同步一筆</button>
+            <button onclick="syncAll()" id="syncAllBtn">🎯 全部同步</button>
+            <button onclick="clearLog()">🧹 清除日誌</button>
+        </div>
+        
+        <div class="log" id="log"></div>
+        
+        <div id="stats">
+            <p>狀態：<span id="status">準備中</span></p>
+            <p>CSV 資料：<span id="csvCount">0</span> 筆</p>
+            <p>同步進度：<span id="progress">0/0</span></p>
+        </div>
+    </div>
+
+    <script>
+        let csvData = [];
+        let currentIndex = 0;
+        
+        function log(message, type = 'info') {
+            const logElement = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = type;
+            entry.textContent = `[${time}] ${message}`;
+            logElement.appendChild(entry);
+            logElement.scrollTop = logElement.scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+        
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+            log('日誌已清除');
+        }
+        
+        function updateStatus(status) {
+            document.getElementById('status').textContent = status;
+        }
+        
+        function updateStats() {
+            document.getElementById('csvCount').textContent = csvData.length;
+            document.getElementById('progress').textContent = `${currentIndex}/${csvData.length}`;
+        }
+        
+        async function testConnection() {
+            log('🔗 測試伺服器連線...');
+            try {
+                const response = await fetch('/api/health');
+                const data = await response.json();
+                
+                if (data.status === 'ok') {
+                    log('✅ 伺服器連線正常', 'success');
+                    log(`🔑 Notion API: ${data.notion_api_configured ? '已設定' : '未設定'}`, 'info');
+                    updateStatus('連線正常');
+                } else {
+                    log('❌ 伺服器狀態異常', 'error');
+                    updateStatus('連線異常');
+                }
+            } catch (error) {
+                log(`❌ 連線失敗: ${error.message}`, 'error');
+                updateStatus('連線失敗');
+            }
+        }
+        
+        async function loadCSV() {
+            log('📄 載入 CSV 資料...');
+            try {
+                const response = await fetch('/api/csv-preview');
+                const data = await response.json();
+                
+                if (data.success) {
+                    csvData = data.data;
+                    currentIndex = 0;
+                    updateStats();
+                    log(`✅ 成功載入 ${csvData.length} 筆菜單資料`, 'success');
+                    updateStatus('資料已載入');
+                    
+                    // 顯示前3筆資料
+                    for (let i = 0; i < Math.min(3, csvData.length); i++) {
+                        log(`📋 ${i + 1}. ${csvData[i]['餐點名稱']} - $${csvData[i]['價格']}`, 'info');
+                    }
+                } else {
+                    log(`❌ 載入失敗: ${data.error}`, 'error');
+                    updateStatus('載入失敗');
+                }
+            } catch (error) {
+                log(`❌ 載入錯誤: ${error.message}`, 'error');
+                updateStatus('載入錯誤');
+            }
+        }
+        
+        async function syncOne() {
+            if (csvData.length === 0) {
+                log('⚠️ 請先載入 CSV 資料', 'error');
+                return;
+            }
+            
+            if (currentIndex >= csvData.length) {
+                log('✅ 所有資料已同步完成', 'success');
+                return;
+            }
+            
+            const item = csvData[currentIndex];
+            log(`🚀 同步第 ${currentIndex + 1} 筆: ${item['餐點名稱']}`);
+            
+            try {
+                const response = await fetch('/api/sync-menu-item', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(item)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    log(`✅ ${item['餐點名稱']} 同步成功`, 'success');
+                } else {
+                    log(`❌ ${item['餐點名稱']} 同步失敗: ${result.error}`, 'error');
+                }
+                
+                currentIndex++;
+                updateStats();
+                
+            } catch (error) {
+                log(`❌ 同步錯誤: ${error.message}`, 'error');
+            }
+        }
+        
+        async function syncAll() {
+            if (csvData.length === 0) {
+                log('⚠️ 請先載入 CSV 資料', 'error');
+                return;
+            }
+            
+            if (!confirm(`確定要同步全部 ${csvData.length} 筆資料嗎？`)) {
+                return;
+            }
+            
+            document.getElementById('syncAllBtn').disabled = true;
+            updateStatus('批次同步中');
+            
+            let successCount = 0;
+            let errorCount = 0;
+            
+            for (let i = 0; i < csvData.length; i++) {
+                const item = csvData[i];
+                currentIndex = i;
+                updateStats();
+                
+                log(`🔄 處理 ${i + 1}/${csvData.length}: ${item['餐點名稱']}`);
+                
+                try {
+                    const response = await fetch('/api/sync-menu-item', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(item)
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        successCount++;
+                        log(`✅ ${item['餐點名稱']} 成功`, 'success');
+                    } else {
+                        errorCount++;
+                        log(`❌ ${item['餐點名稱']} 失敗: ${result.error}`, 'error');
+                    }
+                    
+                } catch (error) {
+                    errorCount++;
+                    log(`❌ ${item['餐點名稱']} 錯誤: ${error.message}`, 'error');
+                }
+                
+                // 避免 API 限制
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
+            
+            log(`🎉 批次同步完成！成功: ${successCount}, 失敗: ${errorCount}`, 'success');
+            updateStatus('同步完成');
+            document.getElementById('syncAllBtn').disabled = false;
+        }
+        
+        // 頁面載入時自動測試連線
+        window.addEventListener('load', () => {
+            log('🌟 CSV 同步測試工具已載入');
+            testConnection();
+        });
+    </script>
+</body>
+</html>

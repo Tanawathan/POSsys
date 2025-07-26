@@ -1,0 +1,1349 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>桌況管理系統 - 泰式餐廳</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        /* 統一導航欄樣式 */
+        .admin-navbar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 15px 0;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .navbar-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .navbar-brand {
+            display: flex;
+            align-items: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .navbar-brand i {
+            margin-right: 10px;
+            font-size: 1.8rem;
+        }
+
+        .navbar-nav {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .nav-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 25px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nav-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .nav-btn.secondary {
+            background: linear-gradient(135deg, #6c757d, #495057);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .page-header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .page-header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .page-header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        /* 桌況管理容器 */
+        #table-management-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        /* 標題區 */
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 25px 30px;
+            background: linear-gradient(135deg, #4ECDC4, #44A08D);
+            color: white;
+        }
+
+        .table-header h2 {
+            font-size: 1.8rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .table-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-warning {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-info {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 0.8rem;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        /* 導航 */
+        .table-nav {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .nav-btn {
+            flex: 1;
+            padding: 15px 20px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .nav-btn:hover {
+            background: #e9ecef;
+            color: #333;
+        }
+
+        .nav-btn.active {
+            background: #4ECDC4;
+            color: white;
+        }
+
+        /* 狀態欄 */
+        .table-status-bar {
+            display: flex;
+            align-items: center;
+            padding: 15px 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            gap: 25px;
+            flex-wrap: wrap;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .status-indicator.available .status-dot {
+            background: #28a745;
+        }
+
+        .status-indicator.occupied .status-dot {
+            background: #dc3545;
+        }
+
+        .status-indicator.reserved .status-dot {
+            background: #ffc107;
+        }
+
+        .status-indicator.cleaning .status-dot {
+            background: #6c757d;
+        }
+
+        .status-count {
+            font-weight: bold;
+            margin-left: 5px;
+        }
+
+        .occupancy-rate {
+            margin-left: auto;
+            font-weight: bold;
+            color: #4ECDC4;
+        }
+
+        /* 內容區域 */
+        .table-content {
+            padding: 30px;
+            min-height: 600px;
+        }
+
+        /* 座位圖 */
+        .floor-plan {
+            display: grid;
+            grid-template-columns: 1fr 250px;
+            gap: 30px;
+        }
+
+        .restaurant-layout {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .layout-section {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .section-title {
+            margin-bottom: 20px;
+            color: #333;
+            text-align: center;
+            font-size: 1.2rem;
+            border-bottom: 2px solid #4ECDC4;
+            padding-bottom: 10px;
+        }
+
+        .tables-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            justify-items: center;
+        }
+
+        .table-item {
+            width: 100px;
+            height: 100px;
+            border: 3px solid;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            background: white;
+        }
+
+        .table-item.圓形 {
+            border-radius: 50%;
+        }
+
+        .table-item.available {
+            border-color: #28a745;
+            background: #d4edda;
+        }
+
+        .table-item.occupied {
+            border-color: #dc3545;
+            background: #f8d7da;
+        }
+
+        .table-item.reserved {
+            border-color: #ffc107;
+            background: #fff3cd;
+        }
+
+        .table-item.cleaning {
+            border-color: #6c757d;
+            background: #e2e3e5;
+        }
+
+        .table-item:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .table-visual {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .table-number {
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        .table-capacity {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .table-revenue {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background: #4ECDC4;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: bold;
+        }
+
+        .table-timer {
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #dc3545;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+        }
+
+        /* 圖例 */
+        .floor-plan-legend {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            height: fit-content;
+        }
+
+        .floor-plan-legend h4 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .legend-items {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+
+        .legend-color.available { background: #28a745; }
+        .legend-color.occupied { background: #dc3545; }
+        .legend-color.reserved { background: #ffc107; }
+        .legend-color.cleaning { background: #6c757d; }
+
+        /* 桌位列表 */
+        .table-list {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+        }
+
+        .search-section {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .search-section input,
+        .search-section select {
+            padding: 10px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .search-section input:focus,
+        .search-section select:focus {
+            outline: none;
+            border-color: #4ECDC4;
+        }
+
+        .table-list-container {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .list-table-header {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            padding: 20px;
+            background: #4ECDC4;
+            color: white;
+            font-weight: bold;
+        }
+
+        .table-list-item {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr;
+            padding: 20px;
+            border-bottom: 1px solid #e9ecef;
+            transition: background-color 0.3s ease;
+            cursor: pointer;
+        }
+
+        .table-list-item:hover {
+            background: #f8f9fa;
+        }
+
+        .table-info {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .table-number {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .table-details {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .table-status {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            align-items: flex-start;
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .status-badge.available {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-badge.occupied {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-badge.reserved {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-badge.cleaning {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+
+        /* 預訂管理 */
+        .reservations-management {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .reservations-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+        }
+
+        .reservations-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 25px;
+        }
+
+        .today-reservations {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .reservations-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .reservation-card {
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .reservation-card:hover {
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .reservation-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .reservation-time {
+            font-weight: bold;
+            color: #4ECDC4;
+        }
+
+        .table-number {
+            background: #4ECDC4;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+        }
+
+        .reservation-details {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .customer-info {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .phone {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .party-size {
+            background: #f8f9fa;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+        }
+
+        .reservation-notes {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .reservation-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .no-reservations {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .no-reservations i {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            opacity: 0.3;
+        }
+
+        .upcoming-reservations {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .upcoming-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .upcoming-item {
+            padding: 10px;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+        }
+
+        .upcoming-date {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .upcoming-details {
+            display: flex;
+            gap: 10px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        /* 統計面板 */
+        .statistics-dashboard {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .stats-overview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .stat-icon {
+            font-size: 2.5rem;
+            color: #4ECDC4;
+        }
+
+        .stat-info h3 {
+            font-size: 2rem;
+            margin-bottom: 5px;
+        }
+
+        .stat-info p {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .stats-details {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .stat-section {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+
+        .stat-section h3 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .efficiency-table {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .efficiency-table .table-header {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr 2fr 1fr;
+            padding: 15px;
+            background: #4ECDC4;
+            color: white;
+            font-weight: bold;
+        }
+
+        .efficiency-table .table-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr 2fr 1fr;
+            padding: 15px;
+            border-bottom: 1px solid #e9ecef;
+            align-items: center;
+        }
+
+        .efficiency-bar {
+            background: #e9ecef;
+            border-radius: 10px;
+            height: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .efficiency-fill {
+            background: linear-gradient(90deg, #4ECDC4, #44A08D);
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.3s ease;
+        }
+
+        .efficiency-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .waiting-alerts {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .waiting-alert {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #ffc107;
+            background: #fff8e1;
+        }
+
+        .waiting-alert.urgent {
+            border-left-color: #dc3545;
+            background: #ffebee;
+        }
+
+        .alert-info {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .revenue-chart {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .revenue-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .table-name {
+            min-width: 80px;
+            font-weight: bold;
+        }
+
+        .revenue-bar {
+            flex: 1;
+            background: #e9ecef;
+            border-radius: 10px;
+            height: 25px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .revenue-fill {
+            background: linear-gradient(90deg, #4ECDC4, #44A08D);
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.3s ease;
+        }
+
+        .revenue-amount {
+            position: absolute;
+            top: 50%;
+            right: 10px;
+            transform: translateY(-50%);
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: #333;
+        }
+
+        /* 彈窗 */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal.hidden {
+            display: none;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            color: #333;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 5px;
+            color: #666;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .table-details {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #f8f9fa;
+        }
+
+        .detail-row .label {
+            font-weight: 500;
+            color: #666;
+        }
+
+        .detail-row .value {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        /* 表單 */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #4ECDC4;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        /* 訂單詳情 */
+        .order-details {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .order-header {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .order-info {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .order-id {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .order-time {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .order-items h4 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .items-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .order-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .item-name {
+            font-weight: 500;
+        }
+
+        .item-quantity {
+            color: #666;
+        }
+
+        .item-price {
+            font-weight: bold;
+            color: #4ECDC4;
+        }
+
+        .order-summary {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+        }
+
+        .summary-row.total {
+            border-top: 2px solid #e9ecef;
+            padding-top: 10px;
+            margin-top: 10px;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .order-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .order-notes {
+            padding: 15px;
+            background: #fff3cd;
+            border-radius: 8px;
+            border-left: 4px solid #ffc107;
+        }
+
+        .notes-label {
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        /* 通知 */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 1000;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+
+        .notification.success {
+            background: #28a745;
+        }
+
+        .notification.warning {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .notification.error {
+            background: #dc3545;
+        }
+
+        .notification.info {
+            background: #17a2b8;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        /* 響應式設計 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            .table-header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+
+            .table-nav {
+                flex-direction: column;
+            }
+
+            .table-status-bar {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+
+            .floor-plan {
+                grid-template-columns: 1fr;
+            }
+
+            .tables-grid {
+                grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            }
+
+            .table-item {
+                width: 80px;
+                height: 80px;
+            }
+
+            .reservations-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-overview {
+                grid-template-columns: 1fr;
+            }
+
+            .list-table-header,
+            .table-list-item {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+
+            .efficiency-table .table-header,
+            .efficiency-table .table-row {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+
+            .modal-content {
+                width: 95%;
+                margin: 10px;
+            }
+
+            .action-buttons {
+                flex-direction: column;
+            }
+        }
+
+        /* 載入動畫 */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4ECDC4;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- 統一導航欄 -->
+    <nav class="admin-navbar">
+        <div class="navbar-content">
+            <a href="../main-dashboard.html" class="navbar-brand">
+                <i class="fas fa-utensils"></i>
+                Tanawat Restaurant 管理系統
+            </a>
+            <div class="navbar-nav">
+                <a href="../main-dashboard.html" class="nav-btn">
+                    <i class="fas fa-home"></i>
+                    主頁面
+                </a>
+                <a href="./order-management-new.html" class="nav-btn secondary">
+                    <i class="fas fa-clipboard-list"></i>
+                    訂單管理
+                </a>
+                <a href="./menu-management.html" class="nav-btn secondary">
+                    <i class="fas fa-book"></i>
+                    菜單管理
+                </a>
+                <a href="../customer/customer-view.html" class="nav-btn secondary">
+                    <i class="fas fa-users"></i>
+                    點餐系統
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="page-header">
+            <h1><i class="fas fa-table"></i> 泰式餐廳桌況管理系統</h1>
+            <p>即時桌位監控、預訂管理與營運分析</p>
+        </div>
+        
+        <!-- 桌況管理容器將在這裡動態生成 -->
+    </div>
+
+    <!-- 載入 JavaScript -->
+    <script src="../../assets/js/table-manager.js"></script>
+    <script src="../../assets/js/table-ui.js"></script>
+    
+    <script>
+        // 初始化桌況管理系統
+        let tableUI;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            try {
+                // 建立桌況管理UI實例
+                tableUI = new TableUI();
+                
+                console.log('桌況管理系統初始化完成');
+            } catch (error) {
+                console.error('桌況管理系統初始化失敗:', error);
+                
+                // 顯示錯誤訊息
+                const container = document.querySelector('.container');
+                const errorDiv = document.createElement('div');
+                errorDiv.innerHTML = `
+                    <div style="background: white; padding: 30px; border-radius: 12px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                        <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: #dc3545; margin-bottom: 20px;"></i>
+                        <h3 style="color: #dc3545; margin-bottom: 15px;">系統載入失敗</h3>
+                        <p style="color: #666; margin-bottom: 20px;">請檢查 JavaScript 檔案是否正確載入</p>
+                        <button onclick="location.reload()" style="padding: 10px 20px; background: #4ECDC4; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                            <i class="fas fa-sync-alt"></i> 重新載入
+                        </button>
+                    </div>
+                `;
+                container.appendChild(errorDiv);
+            }
+        });
+
+        // 鍵盤快捷鍵
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key) {
+                    case 'r':
+                        e.preventDefault();
+                        if (tableUI) {
+                            tableUI.refreshTables();
+                        }
+                        break;
+                    case '1':
+                        e.preventDefault();
+                        if (tableUI) {
+                            tableUI.switchView('floor-plan');
+                        }
+                        break;
+                    case '2':
+                        e.preventDefault();
+                        if (tableUI) {
+                            tableUI.switchView('table-list');
+                        }
+                        break;
+                    case '3':
+                        e.preventDefault();
+                        if (tableUI) {
+                            tableUI.switchView('reservations');
+                        }
+                        break;
+                    case '4':
+                        e.preventDefault();
+                        if (tableUI) {
+                            tableUI.switchView('statistics');
+                        }
+                        break;
+                    case 'n':
+                        e.preventDefault();
+                        if (tableUI) {
+                            tableUI.showReservationModal();
+                        }
+                        break;
+                }
+            }
+            
+            // ESC 關閉彈窗
+            if (e.key === 'Escape') {
+                if (tableUI) {
+                    tableUI.closeModals();
+                }
+            }
+        });
+
+        // 防止意外離開頁面
+        window.addEventListener('beforeunload', function(e) {
+            e.preventDefault();
+            e.returnValue = '';
+        });
+    </script>
+</body>
+</html>

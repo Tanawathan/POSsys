@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>測試菜單 API</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .item { border: 1px solid #ccc; margin: 10px 0; padding: 10px; }
+        .available { background-color: #e8f5e8; }
+        .unavailable { background-color: #ffe8e8; }
+    </style>
+</head>
+<body>
+    <h1>菜單 API 測試</h1>
+    <button onclick="testAPI()">測試 API</button>
+    <div id="results"></div>
+
+    <script>
+        async function testAPI() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<p>正在載入...</p>';
+            
+            try {
+                console.log('🔍 開始測試 API...');
+                
+                const response = await fetch('/api/notion/databases/23afd5adc30b80c58355fd93d05c66d6/query', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        page_size: 10
+                    })
+                });
+                
+                console.log('📡 API 回應狀態:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`API 錯誤: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('📄 API 回應資料:', data);
+                
+                let html = '<h2>API 測試結果</h2>';
+                
+                if (data.results && data.results.length > 0) {
+                    html += `<p>找到 ${data.results.length} 個菜單項目</p>`;
+                    
+                    data.results.forEach(item => {
+                        const props = item.properties;
+                        const name = props['名稱']?.title?.[0]?.text?.content || '未命名';
+                        const price = props['價格']?.number || 0;
+                        const category = props['分類']?.select?.name || '未分類';
+                        const available = props['供應狀態']?.checkbox === true;
+                        
+                        html += `
+                            <div class="item ${available ? 'available' : 'unavailable'}">
+                                <h3>${name}</h3>
+                                <p>價格: NT$ ${price}</p>
+                                <p>分類: ${category}</p>
+                                <p>供應狀態: ${available ? '✅ 可供應' : '❌ 不可供應'}</p>
+                                <p>過濾結果: ${available ? '會顯示' : '被過濾'}</p>
+                            </div>
+                        `;
+                    });
+                } else {
+                    html += '<p style="color: red;">沒有找到任何菜單項目</p>';
+                }
+                
+                resultsDiv.innerHTML = html;
+                
+            } catch (error) {
+                console.error('❌ API 測試失敗:', error);
+                resultsDiv.innerHTML = `<p style="color: red;">錯誤: ${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

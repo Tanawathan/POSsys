@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>資料系統測試 - Tanawat Restaurant</title>
+    <link rel="stylesheet" href="../assets/css/unified-design.css">
+    <style>
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--space-6);
+        }
+        
+        .test-section {
+            margin-bottom: var(--space-8);
+        }
+        
+        .test-result {
+            background: var(--gray-50);
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius-lg);
+            padding: var(--space-4);
+            margin-top: var(--space-4);
+            font-family: monospace;
+            font-size: var(--text-sm);
+            white-space: pre-wrap;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: var(--space-2);
+        }
+        
+        .status-success { background: var(--success-500); }
+        .status-error { background: var(--error-500); }
+        .status-warning { background: var(--warning-500); }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="card">
+            <div class="card-header">
+                <h1 class="card-title">
+                    <i class="fas fa-database text-primary-500"></i>
+                    資料系統測試面板
+                </h1>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info mb-6">
+                    <i class="fas fa-info-circle"></i>
+                    此頁面用於測試資料儲存系統的各項功能。請在開發環境中使用。
+                </div>
+
+                <!-- 系統狀態 -->
+                <div class="test-section">
+                    <h2 class="text-xl font-semibold mb-4">🔍 系統狀態檢查</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="card">
+                            <div class="card-body">
+                                <h3 class="font-medium mb-2">資料庫連線</h3>
+                                <div id="db-status" class="flex items-center">
+                                    <span class="status-indicator status-warning"></span>
+                                    <span>檢查中...</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-body">
+                                <h3 class="font-medium mb-2">Notion API</h3>
+                                <div id="notion-status" class="flex items-center">
+                                    <span class="status-indicator status-warning"></span>
+                                    <span>檢查中...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 基本 CRUD 測試 -->
+                <div class="test-section">
+                    <h2 class="text-xl font-semibold mb-4">🧪 基本 CRUD 測試</h2>
+                    <div class="flex gap-3 mb-4">
+                        <button id="test-create" class="btn btn-primary">
+                            <i class="fas fa-plus"></i>
+                            <span>測試新增</span>
+                        </button>
+                        <button id="test-read" class="btn btn-secondary">
+                            <i class="fas fa-search"></i>
+                            <span>測試查詢</span>
+                        </button>
+                        <button id="test-update" class="btn btn-warning">
+                            <i class="fas fa-edit"></i>
+                            <span>測試更新</span>
+                        </button>
+                        <button id="test-delete" class="btn btn-error">
+                            <i class="fas fa-trash"></i>
+                            <span>測試刪除</span>
+                        </button>
+                    </div>
+                    <div id="crud-result" class="test-result" style="display: none;"></div>
+                </div>
+
+                <!-- 資料表狀態 -->
+                <div class="test-section">
+                    <h2 class="text-xl font-semibold mb-4">📊 資料表狀態</h2>
+                    <button id="check-tables" class="btn btn-info mb-4">
+                        <i class="fas fa-table"></i>
+                        <span>檢查所有資料表</span>
+                    </button>
+                    <div id="tables-result" class="test-result" style="display: none;"></div>
+                </div>
+
+                <!-- 資料操作 -->
+                <div class="test-section">
+                    <h2 class="text-xl font-semibold mb-4">⚡ 快速操作</h2>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <button id="clear-all-data" class="btn btn-error">
+                            <i class="fas fa-trash-alt"></i>
+                            <span>清空資料</span>
+                        </button>
+                        <button id="init-sample-data" class="btn btn-success">
+                            <i class="fas fa-seedling"></i>
+                            <span>載入範例資料</span>
+                        </button>
+                        <button id="performance-test" class="btn btn-warning">
+                            <i class="fas fa-stopwatch"></i>
+                            <span>效能測試</span>
+                        </button>
+                        <button id="test-notion-sync" class="btn btn-info">
+                            <i class="fas fa-cloud"></i>
+                            <span>測試 Notion 同步</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 日誌顯示 -->
+                <div class="test-section">
+                    <h2 class="text-xl font-semibold mb-4">📝 操作日誌</h2>
+                    <button id="clear-log" class="btn btn-secondary btn-sm mb-4">
+                        <i class="fas fa-eraser"></i>
+                        <span>清空日誌</span>
+                    </button>
+                    <div id="operation-log" class="test-result" style="height: 300px; overflow-y: auto;">
+                        系統日誌將在此顯示...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 載入資料管理系統 -->
+    <script src="../config/config.js"></script>
+    <script src="../assets/js/notion-manager.js"></script>
+    <script src="../assets/js/data-manager.js"></script>
+    <script src="../assets/js/data-initializer.js"></script>
+
+    <script>
+        class DataSystemTester {
+            constructor() {
+                this.logElement = document.getElementById('operation-log');
+                this.testData = {
+                    id: null,
+                    name: '測試菜品',
+                    category: '測試分類',
+                    price: 100,
+                    available: true
+                };
+            }
+
+            log(message, type = 'info') {
+                const timestamp = new Date().toLocaleTimeString();
+                const logEntry = `[${timestamp}] ${type.toUpperCase()}: ${message}\n`;
+                this.logElement.textContent += logEntry;
+                this.logElement.scrollTop = this.logElement.scrollHeight;
+                
+                if (type === 'error') {
+                    console.error(message);
+                } else {
+                    console.log(message);
+                }
+            }
+
+            async checkSystemStatus() {
+                // 檢查資料庫狀態
+                try {
+                    if (window.DataManager && window.DataManager.db) {
+                        document.getElementById('db-status').innerHTML = 
+                            '<span class="status-indicator status-success"></span><span>已連線</span>';
+                        this.log('資料庫連線正常');
+                    } else {
+                        throw new Error('資料庫未初始化');
+                    }
+                } catch (error) {
+                    document.getElementById('db-status').innerHTML = 
+                        '<span class="status-indicator status-error"></span><span>連線失敗</span>';
+                    this.log(`資料庫連線失敗: ${error.message}`, 'error');
+                }
+
+                // 檢查 Notion API 狀態
+                try {
+                    if (window.notionManager) {
+                        const connectionResult = await window.notionManager.checkConnection();
+                        if (connectionResult.connected) {
+                            document.getElementById('notion-status').innerHTML = 
+                                `<span class="status-indicator status-success"></span><span>已連線 (${connectionResult.user})</span>`;
+                            this.log(`Notion API 連線正常，使用者: ${connectionResult.user}`);
+                        } else {
+                            throw new Error(connectionResult.error);
+                        }
+                    } else {
+                        throw new Error('Notion Manager 未載入');
+                    }
+                } catch (error) {
+                    document.getElementById('notion-status').innerHTML = 
+                        '<span class="status-indicator status-error"></span><span>連線失敗</span>';
+                    this.log(`Notion API 連線失敗: ${error.message}`, 'error');
+                }
+            }
+
+            async testCreate() {
+                try {
+                    const result = await window.DataManager.add('menu', this.testData);
+                    this.testData.id = result;
+                    const message = `新增測試成功，ID: ${result}`;
+                    this.log(message);
+                    this.showResult('crud-result', message);
+                } catch (error) {
+                    const message = `新增測試失敗: ${error.message}`;
+                    this.log(message, 'error');
+                    this.showResult('crud-result', message);
+                }
+            }
+
+            async testRead() {
+                try {
+                    const allItems = await window.DataManager.getAll('menu');
+                    const message = `查詢測試成功，共 ${allItems.length} 筆資料:\n${JSON.stringify(allItems, null, 2)}`;
+                    this.log(`查詢測試成功，共 ${allItems.length} 筆資料`);
+                    this.showResult('crud-result', message);
+                } catch (error) {
+                    const message = `查詢測試失敗: ${error.message}`;
+                    this.log(message, 'error');
+                    this.showResult('crud-result', message);
+                }
+            }
+
+            async testUpdate() {
+                if (!this.testData.id) {
+                    await this.testCreate();
+                }
+
+                try {
+                    const updateData = { ...this.testData, name: '更新後的測試菜品', price: 150 };
+                    await window.DataManager.update('menu', updateData);
+                    const message = `更新測試成功:\n${JSON.stringify(updateData, null, 2)}`;
+                    this.log('更新測試成功');
+                    this.showResult('crud-result', message);
+                } catch (error) {
+                    const message = `更新測試失敗: ${error.message}`;
+                    this.log(message, 'error');
+                    this.showResult('crud-result', message);
+                }
+            }
+
+            async testDelete() {
+                if (!this.testData.id) {
+                    await this.testCreate();
+                }
+
+                try {
+                    await window.DataManager.delete('menu', this.testData.id);
+                    const message = `刪除測試成功，已刪除 ID: ${this.testData.id}`;
+                    this.log(message);
+                    this.showResult('crud-result', message);
+                    this.testData.id = null;
+                } catch (error) {
+                    const message = `刪除測試失敗: ${error.message}`;
+                    this.log(message, 'error');
+                    this.showResult('crud-result', message);
+                }
+            }
+
+            async checkTables() {
+                try {
+                    const tables = window.DataManager.tables;
+                    let result = '資料表狀態檢查:\n\n';
+                    
+                    for (const [key, tableName] of Object.entries(tables)) {
+                        const data = await window.DataManager.getAll(tableName);
+                        result += `${tableName}: ${data.length} 筆資料\n`;
+                    }
+                    
+                    this.log('資料表狀態檢查完成');
+                    this.showResult('tables-result', result);
+                } catch (error) {
+                    const message = `資料表檢查失敗: ${error.message}`;
+                    this.log(message, 'error');
+                    this.showResult('tables-result', message);
+                }
+            }
+
+            async clearAllData() {
+                if (!confirm('確定要清空所有資料嗎？此操作無法復原！')) return;
+
+                try {
+                    const tables = Object.values(window.DataManager.tables);
+                    for (const tableName of tables) {
+                        const transaction = window.DataManager.db.transaction([tableName], 'readwrite');
+                        const store = transaction.objectStore(tableName);
+                        await store.clear();
+                    }
+                    this.log('所有資料已清空');
+                    alert('資料清空完成！');
+                } catch (error) {
+                    this.log(`清空資料失敗: ${error.message}`, 'error');
+                }
+            }
+
+            async initSampleData() {
+                try {
+                    await window.dataInitializer.initializeAllData();
+                    this.log('範例資料載入完成');
+                    alert('範例資料載入完成！');
+                } catch (error) {
+                    this.log(`範例資料載入失敗: ${error.message}`, 'error');
+                }
+            }
+
+            async testNotionSync() {
+                this.log('開始測試 Notion 同步功能...');
+                
+                try {
+                    // 測試新增資料到 Notion
+                    const testData = {
+                        name: 'Notion 測試菜品',
+                        category: 'API 測試',
+                        price: 99,
+                        description: '這是透過 API 建立的測試菜品',
+                        available: true
+                    };
+                    
+                    const result = await window.notionManager.syncToNotion('menu', testData, 'create');
+                    
+                    if (result && result.id) {
+                        const message = `✅ Notion 同步測試成功！\n頁面 ID: ${result.id}`;
+                        this.log('Notion 同步測試成功');
+                        this.showResult('crud-result', message);
+                        
+                        // 測試從 Notion 讀取資料
+                        setTimeout(async () => {
+                            try {
+                                const notionData = await window.notionManager.getFromNotion('menu', 5);
+                                this.log(`從 Notion 讀取到 ${notionData.length} 筆菜單資料`);
+                            } catch (error) {
+                                this.log(`從 Notion 讀取資料失敗: ${error.message}`, 'error');
+                            }
+                        }, 2000);
+                        
+                    } else {
+                        throw new Error('未收到有效的回應');
+                    }
+                    
+                } catch (error) {
+                    const message = `❌ Notion 同步測試失敗: ${error.message}`;
+                    this.log(message, 'error');
+                    this.showResult('crud-result', message);
+                }
+            }
+
+            async exportBackup() {
+                try {
+                    await window.dataInitializer.exportAllData();
+                    this.log('資料備份匯出完成');
+                } catch (error) {
+                    this.log(`資料備份匯出失敗: ${error.message}`, 'error');
+                }
+            }
+
+            async performanceTest() {
+                this.log('開始效能測試...');
+                const startTime = performance.now();
+                
+                try {
+                    // 測試大量寫入
+                    for (let i = 0; i < 100; i++) {
+                        await window.DataManager.add('menu', {
+                            name: `效能測試菜品 ${i}`,
+                            category: '測試',
+                            price: Math.floor(Math.random() * 500) + 50,
+                            available: true
+                        });
+                    }
+                    
+                    // 測試大量查詢
+                    const allData = await window.DataManager.getAll('menu');
+                    
+                    const endTime = performance.now();
+                    const duration = endTime - startTime;
+                    
+                    const message = `效能測試完成:\n- 寫入 100 筆資料\n- 查詢 ${allData.length} 筆資料\n- 耗時: ${duration.toFixed(2)} ms`;
+                    this.log(`效能測試完成，耗時 ${duration.toFixed(2)} ms`);
+                    alert(message);
+                } catch (error) {
+                    this.log(`效能測試失敗: ${error.message}`, 'error');
+                }
+            }
+
+            showResult(elementId, content) {
+                const element = document.getElementById(elementId);
+                element.textContent = content;
+                element.style.display = 'block';
+            }
+
+            clearLog() {
+                this.logElement.textContent = '日誌已清空...\n';
+            }
+
+            init() {
+                // 等待資料系統載入
+                setTimeout(() => {
+                    this.checkSystemStatus();
+                }, 2000);
+
+                // 綁定事件
+                document.getElementById('test-create').addEventListener('click', () => this.testCreate());
+                document.getElementById('test-read').addEventListener('click', () => this.testRead());
+                document.getElementById('test-update').addEventListener('click', () => this.testUpdate());
+                document.getElementById('test-delete').addEventListener('click', () => this.testDelete());
+                document.getElementById('check-tables').addEventListener('click', () => this.checkTables());
+                document.getElementById('clear-all-data').addEventListener('click', () => this.clearAllData());
+                document.getElementById('init-sample-data').addEventListener('click', () => this.initSampleData());
+                document.getElementById('test-notion-sync').addEventListener('click', () => this.testNotionSync());
+                document.getElementById('performance-test').addEventListener('click', () => this.performanceTest());
+                document.getElementById('clear-log').addEventListener('click', () => this.clearLog());
+            }
+        }
+
+        // 初始化測試系統
+        const tester = new DataSystemTester();
+        document.addEventListener('DOMContentLoaded', () => {
+            tester.init();
+        });
+    </script>
+</body>
+</html>

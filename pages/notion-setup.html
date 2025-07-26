@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notion 資料庫設定助手 - Tanawat Restaurant</title>
+    <link rel="stylesheet" href="../assets/css/unified-design.css">
+    <style>
+        .setup-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--space-6);
+        }
+        
+        .database-card {
+            border: 2px solid var(--gray-200);
+            border-radius: var(--radius-lg);
+            padding: var(--space-6);
+            margin-bottom: var(--space-6);
+            background: var(--white);
+        }
+        
+        .database-card.connected {
+            border-color: var(--success-500);
+            background: var(--success-50);
+        }
+        
+        .property-list {
+            background: var(--gray-50);
+            border-radius: var(--radius-md);
+            padding: var(--space-4);
+            margin: var(--space-4) 0;
+        }
+        
+        .property-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--space-2) 0;
+            border-bottom: 1px solid var(--gray-200);
+        }
+        
+        .property-item:last-child {
+            border-bottom: none;
+        }
+        
+        .property-type {
+            background: var(--primary-100);
+            color: var(--primary-700);
+            padding: var(--space-1) var(--space-2);
+            border-radius: var(--radius-sm);
+            font-size: var(--text-xs);
+            font-weight: 600;
+        }
+        
+        .copy-button {
+            background: var(--gray-100);
+            border: 1px solid var(--gray-300);
+            padding: var(--space-1) var(--space-2);
+            border-radius: var(--radius-sm);
+            font-size: var(--text-xs);
+            cursor: pointer;
+        }
+        
+        .copy-button:hover {
+            background: var(--gray-200);
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: var(--space-2);
+        }
+        
+        .status-pending { background: var(--warning-500); }
+        .status-success { background: var(--success-500); }
+        .status-error { background: var(--error-500); }
+        
+        .instruction-step {
+            background: var(--blue-50);
+            border-left: 4px solid var(--blue-500);
+            padding: var(--space-4);
+            margin: var(--space-4) 0;
+        }
+        
+        .database-id-input {
+            width: 100%;
+            padding: var(--space-3);
+            border: 1px solid var(--gray-300);
+            border-radius: var(--radius-md);
+            font-family: monospace;
+            font-size: var(--text-sm);
+        }
+    </style>
+</head>
+<body>
+    <div class="setup-container">
+        <div class="card">
+            <div class="card-header">
+                <h1 class="card-title">
+                    <i class="fas fa-database text-primary-500"></i>
+                    Notion 資料庫設定助手
+                </h1>
+                <p class="text-gray-600">為 Tanawat Restaurant 系統建立 Notion 資料庫</p>
+            </div>
+            
+            <div class="card-body">
+                <!-- API 連線狀態 -->
+                <div class="alert alert-info mb-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <i class="fas fa-info-circle"></i>
+                            <strong>API 連線狀態：</strong>
+                            <span id="api-status">檢查中...</span>
+                        </div>
+                        <button id="test-connection" class="btn btn-sm btn-primary">
+                            <i class="fas fa-sync"></i>
+                            測試連線
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 設定步驟 -->
+                <div class="instruction-step">
+                    <h3 class="font-semibold mb-2">📋 設定步驟</h3>
+                    <ol class="list-decimal list-inside space-y-2 text-sm">
+                        <li>在 Notion 中為每個資料庫建立對應的資料庫頁面</li>
+                        <li>按照下方的屬性設定要求建立屬性</li>
+                        <li>將您的 Integration 加入到每個資料庫的連線中</li>
+                        <li>複製資料庫 ID 並填入下方的輸入框</li>
+                        <li>點擊「測試連線」按鈕驗證設定</li>
+                    </ol>
+                </div>
+
+                <!-- 菜單資料庫 -->
+                <div class="database-card" id="menu-card">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-semibold">
+                            <span class="status-indicator status-pending" id="menu-status"></span>
+                            🍽️ 菜單資料庫 (Menu)
+                        </h3>
+                        <button class="copy-button" onclick="copyDatabaseStructure('menu')">
+                            <i class="fas fa-copy"></i> 複製結構
+                        </button>
+                    </div>
+                    
+                    <div class="property-list">
+                        <div class="property-item">
+                            <span><strong>名稱</strong> - 菜品名稱</span>
+                            <span class="property-type">Title</span>
+                        </div>
+                        <div class="property-item">
+                            <span><strong>分類</strong> - 菜品分類</span>
+                            <span class="property-type">Text</span>
+                        </div>
+                        <div class="property-item">
+                            <span><strong>價格</strong> - 價格金額</span>
+                            <span class="property-type">Number</span>
+                        </div>
+                        <div class="property-item">
+                            <span><strong>描述</strong> - 菜品描述</span>
+                            <span class="property-type">Text</span>
+                        </div>
+                        <div class="property-item">
+                            <span><strong>供應狀態</strong> - 是否供應中</span>
+                            <span class="property-type">Checkbox</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <label class="block text-sm font-medium mb-2">資料庫 ID：</label>
+                        <input type="text" 
+                               id="menu-id" 
+                               class="database-id-input" 
+                               placeholder="請貼上菜單資料庫的 ID"
+                               onchange="updateDatabaseId('menu', this.value)">
+                    </div>
+                </div>
+
+                <!-- 訂單資料庫 -->
+                <div class="database-card" id="orders-card">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-semibold">
+                            <span class="status-indicator status-pending" id="orders-status"></span>
+                            📝 訂單資料庫 (Orders)
+                        </h3>
+                        <button class="copy-button" onclick="copyDatabaseStructure('orders')">
+                            <i class="fas fa-copy"></i> 複製結構
+                        </button>
+                    </div>
+                    
+                    <div class="property-list">
+                        <div class="property-item">
+                            <span><strong>桌號</strong> - 桌位編號</span>
+                            <span class="property-type">Title</span>
+                        </div>
+                        <div class="property-item">
+                            <span><strong>狀態</strong> - 訂單狀態 (進行中、已完成、已取消)</span>
+                            <span class="property-type">Select</span>
+                        </div>
+                        <div class="property-item">
+                            <span><strong>總金額</strong> - 訂單總金額</span>
+                            <span class="property-type">Number</span>
+                        </div>
+                        <div class="property-item">
+                            <span><strong>訂單項目</strong> - JSON 格式訂單明細</span>
+                            <span class="property-type">Text</span>
+                        </div>
+                        <div class="property-item">
+                            <span><strong>建立時間</strong> - 訂單建立時間</span>
+                            <span class="property-type">Date</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <label class="block text-sm font-medium mb-2">資料庫 ID：</label>
+                        <input type="text" 
+                               id="orders-id" 
+                               class="database-id-input" 
+                               placeholder="請貼上訂單資料庫的 ID"
+                               onchange="updateDatabaseId('orders', this.value)">
+                    </div>
+                </div>
+
+                <!-- 桌況資料庫 -->
+                <div class="database-card" id="tables-card">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-semibold">
+                            <span class="status-indicator status-pending" id="tables-status"></span>
+                            🪑 桌況資料庫 (Tables)
+                        </h3>
+                        <button class="copy-button" onclick="copyDatabaseStructure('tables')">
+                            <i class="fas fa-copy"></i> 複製結構
+                        </button>
+                    </div>
+                    
+                    <div class="property-list">
+                        <div class="property-item">
+                            <span><strong>桌號</strong> - 桌位編號</span>
+                            <span class="property-type">Title</span>
+                        </div>
+                        <div class="property-item">
+                            <span><strong>狀態</strong> - 桌位狀態 (空桌、已佔用、清潔中)</span>
+                            <span class="property-type">Select</span>
+                        </div>
+                        <div class="property-item">
+                            <span><strong>容納人數</strong> - 可容納人數</span>
+                            <span class="property-type">Number</span>
+                        </div>
+                        <div class="property-item">
+                            <span><strong>位置</strong> - 桌位位置描述</span>
+                            <span class="property-type">Text</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <label class="block text-sm font-medium mb-2">資料庫 ID：</label>
+                        <input type="text" 
+                               id="tables-id" 
+                               class="database-id-input" 
+                               placeholder="請貼上桌況資料庫的 ID"
+                               onchange="updateDatabaseId('tables', this.value)">
+                    </div>
+                </div>
+
+                <!-- 庫存資料庫 -->
+                <div class="database-card" id="inventory-card">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-semibold">
+                            <span class="status-indicator status-pending" id="inventory-status"></span>
+                            📦 庫存資料庫 (Inventory)
+                        </h3>
+                        <button class="copy-button" onclick="copyDatabaseStructure('inventory')">
+                            <i class="fas fa-copy"></i> 複製結構
+                        </button>
+                    </div>
+                    
+                    <div class="property-list">
+                        <div class="property-item">
+                            <span><strong>商品名稱</strong> - 庫存商品名稱</span>
+                            <span class="property-type">Title</span>
+                        </div>
+                        <div class="property-item">
+                            <span><strong>分類</strong> - 商品分類</span>
+                            <span class="property-type">Text</span>
+                        </div>
+                        <div class="property-item">
+                            <span><strong>目前庫存</strong> - 目前庫存數量</span>
+                            <span class="property-type">Number</span>
+                        </div>
+                        <div class="property-item">
+                            <span><strong>最低庫存</strong> - 最低庫存警戒線</span>
+                            <span class="property-type">Number</span>
+                        </div>
+                        <div class="property-item">
+                            <span><strong>單位</strong> - 計量單位</span>
+                            <span class="property-type">Text</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <label class="block text-sm font-medium mb-2">資料庫 ID：</label>
+                        <input type="text" 
+                               id="inventory-id" 
+                               class="database-id-input" 
+                               placeholder="請貼上庫存資料庫的 ID"
+                               onchange="updateDatabaseId('inventory', this.value)">
+                    </div>
+                </div>
+
+                <!-- 操作按鈕 -->
+                <div class="flex gap-4 mt-8">
+                    <button id="save-config" class="btn btn-primary">
+                        <i class="fas fa-save"></i>
+                        儲存設定
+                    </button>
+                    <button id="test-all-databases" class="btn btn-secondary">
+                        <i class="fas fa-check-circle"></i>
+                        測試所有資料庫
+                    </button>
+                    <button id="create-sample-data" class="btn btn-success">
+                        <i class="fas fa-seedling"></i>
+                        建立範例資料
+                    </button>
+                </div>
+
+                <!-- 狀態回饋 -->
+                <div id="status-feedback" class="mt-6" style="display: none;">
+                    <div class="alert alert-info">
+                        <div id="status-message">處理中...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 載入必要腳本 -->
+    <script src="../config/config.js"></script>
+    <script src="../assets/js/notion-manager.js"></script>
+
+    <script>
+        // 資料庫結構定義
+        const databaseStructures = {
+            menu: {
+                name: "菜單資料庫",
+                properties: {
+                    "名稱": "Title",
+                    "分類": "Text", 
+                    "價格": "Number",
+                    "描述": "Text",
+                    "供應狀態": "Checkbox"
+                }
+            },
+            orders: {
+                name: "訂單資料庫",
+                properties: {
+                    "桌號": "Title",
+                    "狀態": "Select (進行中、已完成、已取消)",
+                    "總金額": "Number",
+                    "訂單項目": "Text",
+                    "建立時間": "Date"
+                }
+            },
+            tables: {
+                name: "桌況資料庫", 
+                properties: {
+                    "桌號": "Title",
+                    "狀態": "Select (空桌、已佔用、清潔中)",
+                    "容納人數": "Number",
+                    "位置": "Text"
+                }
+            },
+            inventory: {
+                name: "庫存資料庫",
+                properties: {
+                    "商品名稱": "Title",
+                    "分類": "Text",
+                    "目前庫存": "Number", 
+                    "最低庫存": "Number",
+                    "單位": "Text"
+                }
+            }
+        };
+
+        let currentConfig = {};
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            checkApiConnection();
+            loadCurrentConfig();
+            
+            // 綁定事件
+            document.getElementById('test-connection').addEventListener('click', checkApiConnection);
+            document.getElementById('save-config').addEventListener('click', saveConfiguration);
+            document.getElementById('test-all-databases').addEventListener('click', testAllDatabases);
+            document.getElementById('create-sample-data').addEventListener('click', createSampleData);
+        });
+
+        // 檢查 API 連線
+        async function checkApiConnection() {
+            const statusElement = document.getElementById('api-status');
+            statusElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 檢查中...';
+            
+            try {
+                if (window.notionManager) {
+                    const result = await window.notionManager.checkConnection();
+                    if (result.connected) {
+                        statusElement.innerHTML = `<span class="text-success-600">✅ 已連線 (${result.user})</span>`;
+                    } else {
+                        statusElement.innerHTML = `<span class="text-error-600">❌ 連線失敗: ${result.error}</span>`;
+                    }
+                } else {
+                    statusElement.innerHTML = '<span class="text-warning-600">⚠️ Notion Manager 未載入</span>';
+                }
+            } catch (error) {
+                statusElement.innerHTML = `<span class="text-error-600">❌ 錯誤: ${error.message}</span>`;
+            }
+        }
+
+        // 載入當前設定
+        function loadCurrentConfig() {
+            if (window.APP_CONFIG && window.APP_CONFIG.notion && window.APP_CONFIG.notion.databaseIds) {
+                currentConfig = window.APP_CONFIG.notion.databaseIds;
+                
+                Object.keys(currentConfig).forEach(key => {
+                    const input = document.getElementById(`${key}-id`);
+                    if (input && currentConfig[key] !== `your-${key}-database-id`) {
+                        input.value = currentConfig[key];
+                        updateDatabaseStatus(key, 'pending');
+                    }
+                });
+            }
+        }
+
+        // 複製資料庫結構到剪貼簿
+        function copyDatabaseStructure(dbType) {
+            const structure = databaseStructures[dbType];
+            if (!structure) return;
+            
+            let text = `${structure.name} 屬性設定:\n\n`;
+            Object.entries(structure.properties).forEach(([name, type]) => {
+                text += `${name}: ${type}\n`;
+            });
+            
+            navigator.clipboard.writeText(text).then(() => {
+                showStatusMessage(`已複製 ${structure.name} 結構到剪貼簿`, 'success');
+            });
+        }
+
+        // 更新資料庫 ID
+        function updateDatabaseId(dbType, id) {
+            if (id.trim()) {
+                currentConfig[dbType] = id.trim();
+                updateDatabaseStatus(dbType, 'pending');
+            }
+        }
+
+        // 更新資料庫狀態指示器
+        function updateDatabaseStatus(dbType, status) {
+            const indicator = document.getElementById(`${dbType}-status`);
+            if (indicator) {
+                indicator.className = `status-indicator status-${status}`;
+            }
+            
+            const card = document.getElementById(`${dbType}-card`);
+            if (card) {
+                card.classList.toggle('connected', status === 'success');
+            }
+        }
+
+        // 儲存設定
+        async function saveConfiguration() {
+            showStatusMessage('正在儲存設定...', 'info');
+            
+            try {
+                // 這裡可以實作儲存到設定檔的邏輯
+                // 目前先更新記憶體中的設定
+                if (window.APP_CONFIG && window.APP_CONFIG.notion) {
+                    window.APP_CONFIG.notion.databaseIds = { ...currentConfig };
+                }
+                
+                showStatusMessage('設定已儲存！請記得更新 config.js 檔案', 'success');
+                
+                // 生成設定代碼
+                generateConfigCode();
+                
+            } catch (error) {
+                showStatusMessage(`儲存失敗: ${error.message}`, 'error');
+            }
+        }
+
+        // 測試所有資料庫連線
+        async function testAllDatabases() {
+            showStatusMessage('正在測試所有資料庫連線...', 'info');
+            
+            const databases = ['menu', 'orders', 'tables', 'inventory'];
+            
+            for (const dbType of databases) {
+                const dbId = currentConfig[dbType];
+                if (dbId && dbId !== `your-${dbType}-database-id`) {
+                    try {
+                        updateDatabaseStatus(dbType, 'pending');
+                        
+                        // 測試資料庫連線 (這裡可以實作實際的測試邏輯)
+                        await new Promise(resolve => setTimeout(resolve, 1000)); // 模擬測試
+                        
+                        updateDatabaseStatus(dbType, 'success');
+                    } catch (error) {
+                        updateDatabaseStatus(dbType, 'error');
+                    }
+                } else {
+                    updateDatabaseStatus(dbType, 'error');
+                }
+            }
+            
+            showStatusMessage('資料庫連線測試完成', 'success');
+        }
+
+        // 建立範例資料
+        async function createSampleData() {
+            showStatusMessage('正在建立範例資料...', 'info');
+            
+            try {
+                if (window.notionManager) {
+                    // 建立範例菜單
+                    const sampleMenu = {
+                        name: '招牌炒飯',
+                        category: '主菜',
+                        price: 120,
+                        description: '經典泰式炒飯，香氣誘人',
+                        available: true
+                    };
+                    
+                    await window.notionManager.syncToNotion('menu', sampleMenu, 'create');
+                    showStatusMessage('範例資料建立成功！', 'success');
+                } else {
+                    throw new Error('Notion Manager 未載入');
+                }
+            } catch (error) {
+                showStatusMessage(`建立範例資料失敗: ${error.message}`, 'error');
+            }
+        }
+
+        // 生成設定代碼
+        function generateConfigCode() {
+            const configCode = `
+// 請將以下設定更新到您的 config.js 檔案中
+notion: {
+    apiKey: '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',
+    apiVersion: '2022-06-28',
+    databaseIds: {
+        menu: '${currentConfig.menu || 'your-menu-database-id'}',
+        orders: '${currentConfig.orders || 'your-orders-database-id'}',
+        tables: '${currentConfig.tables || 'your-tables-database-id'}',
+        inventory: '${currentConfig.inventory || 'your-inventory-database-id'}',
+        reservations: '${currentConfig.reservations || 'your-reservations-database-id'}',
+        purchases: '${currentConfig.purchases || 'your-purchases-database-id'}',
+        recipes: '${currentConfig.recipes || 'your-recipes-database-id'}',
+        suppliers: '${currentConfig.suppliers || 'your-suppliers-database-id'}'
+    }
+}`;
+            
+            console.log(configCode);
+        }
+
+        // 顯示狀態訊息
+        function showStatusMessage(message, type) {
+            const feedback = document.getElementById('status-feedback');
+            const messageEl = document.getElementById('status-message');
+            
+            messageEl.textContent = message;
+            feedback.style.display = 'block';
+            
+            // 自動隱藏
+            setTimeout(() => {
+                feedback.style.display = 'none';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

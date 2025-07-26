@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>配方管理 - TANAWAT POS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        .recipe-card {
+            transition: all 0.3s ease;
+        }
+        .recipe-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+        .ingredient-tag {
+            background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto px-4 py-6">
+        <!-- 載入指示器 -->
+        <div id="loading-indicator" class="fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50 hidden">
+            <i class="fas fa-spinner fa-spin mr-2"></i>
+            <span id="loading-text">正在載入配方資料...</span>
+        </div>
+
+        <!-- 頁面標題 -->
+        <div class="mb-6">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">
+                <i class="fas fa-book-open text-green-600 mr-3"></i>
+                配方管理系統 (Notion API)
+            </h1>
+            <p class="text-gray-600">管理半成品配方、計算食材用量、預測生產能力</p>
+            <div id="data-status" class="mt-2 text-sm text-gray-500">
+                🔄 正在連接 Notion 資料庫...
+            </div>
+        </div>
+
+        <!-- 統計儀表板 -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+            <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-blue-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500 uppercase">總配方數</p>
+                        <p class="text-2xl font-bold text-gray-900" id="total-recipes">20</p>
+                    </div>
+                    <div class="bg-blue-100 p-3 rounded-full">
+                        <i class="fas fa-clipboard-list text-blue-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-green-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500 uppercase">可生產配方</p>
+                        <p class="text-2xl font-bold text-green-600" id="producible-recipes">0</p>
+                    </div>
+                    <div class="bg-green-100 p-3 rounded-full">
+                        <i class="fas fa-check-circle text-green-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-yellow-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500 uppercase">缺料配方</p>
+                        <p class="text-2xl font-bold text-yellow-600" id="shortage-recipes">0</p>
+                    </div>
+                    <div class="bg-yellow-100 p-3 rounded-full">
+                        <i class="fas fa-exclamation-triangle text-yellow-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-lg p-6 border-l-4 border-red-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500 uppercase">平均成本</p>
+                        <p class="text-2xl font-bold text-red-600" id="avg-cost">$12.50</p>
+                    </div>
+                    <div class="bg-red-100 p-3 rounded-full">
+                        <i class="fas fa-dollar-sign text-red-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 控制面板 -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <div class="flex flex-wrap gap-4 items-center justify-between">
+                <div class="flex flex-wrap gap-4 items-center">
+                    <div class="relative">
+                        <input type="text" id="recipe-search" placeholder="搜尋配方名稱..." 
+                               class="pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 w-64">
+                        <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+                    </div>
+                    
+                    <select id="category-filter" class="border rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500">
+                        <option value="">所有分類</option>
+                        <option value="主菜">主菜</option>
+                        <option value="醬料">醬料</option>
+                        <option value="配菜">配菜</option>
+                        <option value="調料">調料</option>
+                        <option value="湯品">湯品</option>
+                        <option value="飲料">飲料</option>
+                    </select>
+                    
+                    <select id="production-filter" class="border rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500">
+                        <option value="">生產狀態</option>
+                        <option value="可生產">可生產</option>
+                        <option value="缺料">缺料</option>
+                        <option value="低庫存">低庫存</option>
+                    </select>
+                </div>
+                
+                <div class="flex gap-3">
+                    <button id="refresh-data-btn" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors">
+                        <i class="fas fa-sync-alt mr-2"></i>重新載入
+                    </button>
+                    <button id="shortage-alert-btn" class="bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>缺料警報
+                    </button>
+                    <button id="purchase-suggest-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-shopping-cart mr-2"></i>採購建議
+                    </button>
+                    <button id="add-recipe-btn" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors" disabled>
+                        <i class="fas fa-plus mr-2"></i>新增配方
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 配方卡片列表 -->
+        <div id="recipes-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- 載入狀態 -->
+            <div id="loading-placeholder" class="col-span-full">
+                <div class="bg-white rounded-xl shadow-lg p-8 text-center">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
+                    <p class="text-gray-600">正在從 Notion 載入配方資料...</p>
+                    <div id="progress-info" class="mt-2 text-sm text-gray-500"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 分頁控制 -->
+        <div class="bg-white rounded-xl shadow-lg p-4 mt-6">
+            <div class="flex justify-between items-center">
+                <div class="text-sm text-gray-500">
+                    顯示 <span id="showing-start">1</span> 到 <span id="showing-end">12</span> 項，共 <span id="total-count">20</span> 項
+                </div>
+                <div class="flex space-x-2">
+                    <button id="prev-page" class="px-4 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <span id="page-info" class="px-4 py-2">第 1 頁，共 2 頁</span>
+                    <button id="next-page" class="px-4 py-2 border rounded-lg hover:bg-gray-50 disabled:opacity-50">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 配方詳情 Modal -->
+    <div id="recipe-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-screen overflow-y-auto">
+                <div class="p-6 border-b border-gray-200">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-lg font-semibold text-gray-800" id="modal-recipe-title">配方詳情</h3>
+                        <button id="close-modal" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- 配方基本資訊 -->
+                        <div class="space-y-4">
+                            <h4 class="text-lg font-semibold text-gray-800 mb-4">基本資訊</h4>
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <div class="grid grid-cols-2 gap-4 text-sm">
+                                    <div><span class="font-medium">配方分類:</span> <span id="modal-category">-</span></div>
+                                    <div><span class="font-medium">重量:</span> <span id="modal-weight">-</span> 克</div>
+                                    <div><span class="font-medium">單位成本:</span> $<span id="modal-unit-cost">-</span>/100g</div>
+                                    <div><span class="font-medium">總成本:</span> $<span id="modal-total-cost">-</span></div>
+                                    <div><span class="font-medium">當前庫存:</span> <span id="modal-current-stock">-</span></div>
+                                    <div><span class="font-medium">可製作份數:</span> <span id="modal-max-production">-</span></div>
+                                </div>
+                            </div>
+                            
+                            <!-- 生產計算器 -->
+                            <div class="bg-blue-50 p-4 rounded-lg">
+                                <h5 class="font-semibold text-blue-800 mb-3">生產計算器</h5>
+                                <div class="flex items-center space-x-3">
+                                    <label class="text-sm font-medium">製作份數:</label>
+                                    <input type="number" id="production-quantity" min="1" value="1" 
+                                           class="border rounded px-3 py-1 w-20">
+                                    <button id="calculate-btn" class="bg-blue-600 text-white px-4 py-1 rounded hover:bg-blue-700">
+                                        計算
+                                    </button>
+                                </div>
+                                <div id="production-result" class="mt-3 text-sm"></div>
+                            </div>
+                        </div>
+
+                        <!-- 食材清單 -->
+                        <div>
+                            <h4 class="text-lg font-semibold text-gray-800 mb-4">食材清單</h4>
+                            <div class="space-y-3 max-h-96 overflow-y-auto custom-scrollbar">
+                                <div id="ingredients-list">
+                                    <!-- 動態載入食材 -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 生產按鈕 -->
+                    <div class="flex justify-end space-x-3 mt-6 pt-6 border-t border-gray-200">
+                        <button id="check-availability-btn" class="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                            檢查庫存
+                        </button>
+                        <button id="start-production-btn" class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                            開始生產
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 缺料警報 Modal -->
+    <div id="shortage-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-screen overflow-y-auto">
+                <div class="p-6 border-b border-gray-200">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-lg font-semibold text-gray-800">
+                            <i class="fas fa-exclamation-triangle text-yellow-500 mr-2"></i>
+                            缺料警報
+                        </h3>
+                        <button id="close-shortage-modal" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="p-6">
+                    <div id="shortage-alerts-content">
+                        <!-- 動態載入缺料警報 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 採購建議 Modal -->
+    <div id="purchase-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-screen overflow-y-auto">
+                <div class="p-6 border-b border-gray-200">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-lg font-semibold text-gray-800">
+                            <i class="fas fa-shopping-cart text-blue-500 mr-2"></i>
+                            智能採購建議
+                        </h3>
+                        <button id="close-purchase-modal" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="p-6">
+                    <div id="purchase-suggestions-content">
+                        <!-- 動態載入採購建議 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../../assets/js/recipe-notion-manager.js"></script>
+    
+    <script>
+        // 配方管理系統初始化
+        let globalRecipeManager;
+        let currentRecipes = [];
+        let filteredRecipes = [];
+        let currentPage = 1;
+        const recipesPerPage = 12;
+
+        // 等待 DOM 載入完成
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('🚀 初始化配方管理系統...');
+            
+            try {
+                // 初始化 Notion 配方管理器
+                globalRecipeManager = new RecipeNotionManager();
+                
+                // 設定載入進度回調
+                globalRecipeManager.setProgressCallback(updateLoadingProgress);
+                
+                // 載入資料
+                await loadRecipeData();
+                
+                // 設定事件監聽器
+                setupEventListeners();
+                
+            } catch (error) {
+                console.error('❌ 初始化失敗:', error);
+                showError(`初始化失敗: ${error.message}`);
+            }
+        });
+
+        // 載入配方資料
+        async function loadRecipeData() {
+            try {
+                showLoading(true, '正在載入配方資料...');
+                updateDataStatus('🔄 正在連接 Notion API...');
+                
+                const data = await globalRecipeManager.loadAllData();
+                
+                currentRecipes = data.recipes;
+                filteredRecipes = [...currentRecipes];
+                
+                // 更新統計
+                updateStatistics(data.summary);
+                updateDataStatus(`✅ 已載入 ${data.summary.totalRecipes} 項配方，${data.summary.totalIngredients} 項組成項目`);
+                
+                // 渲染配方卡片
+                renderRecipeCards();
+                
+                showLoading(false);
+                
+                console.log('✅ 配方資料載入完成:', data.summary);
+                
+            } catch (error) {
+                console.error('❌ 載入配方資料失敗:', error);
+                showError(`載入失敗: ${error.message}`);
+                updateDataStatus('❌ 載入失敗，請檢查網路連接');
+                showLoading(false);
+            }
+        }
+
+        // 更新載入進度
+        function updateLoadingProgress(progress) {
+            const progressInfo = document.getElementById('progress-info');
+            if (progressInfo) {
+                progressInfo.textContent = `配方: ${progress.recipes} 項，組成項目: ${progress.ingredients} 項`;
+            }
+        }
+
+        // 更新統計資訊
+        function updateStatistics(summary) {
+            document.getElementById('total-recipes').textContent = summary.totalRecipes || 0;
+            document.getElementById('producible-recipes').textContent = summary.producibleRecipes || 0;
+            document.getElementById('shortage-recipes').textContent = summary.shortageRecipes || 0;
+            document.getElementById('avg-cost').textContent = `$${summary.averageCost || '0.00'}`;
+            
+            // 更新分頁資訊
+            updatePaginationInfo();
+        }
+
+        // 渲染配方卡片
+        function renderRecipeCards() {
+            const container = document.getElementById('recipes-container');
+            const startIndex = (currentPage - 1) * recipesPerPage;
+            const endIndex = startIndex + recipesPerPage;
+            const pageRecipes = filteredRecipes.slice(startIndex, endIndex);
+            
+            if (pageRecipes.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full bg-white rounded-xl shadow-lg p-8 text-center">
+                        <i class="fas fa-search text-gray-400 text-4xl mb-4"></i>
+                        <p class="text-gray-600">沒有找到符合條件的配方</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = pageRecipes.map(recipe => createRecipeCard(recipe)).join('');
+            updatePaginationInfo();
+        }
+
+        // 創建配方卡片
+        function createRecipeCard(recipe) {
+            const statusConfig = {
+                'available': { 
+                    class: 'text-green-600 bg-green-100', 
+                    text: '可生產', 
+                    icon: 'fas fa-check-circle' 
+                },
+                'low-stock': { 
+                    class: 'text-yellow-600 bg-yellow-100', 
+                    text: '庫存偏低', 
+                    icon: 'fas fa-exclamation-triangle' 
+                },
+                'unavailable': { 
+                    class: 'text-red-600 bg-red-100', 
+                    text: '無法生產', 
+                    icon: 'fas fa-times-circle' 
+                },
+                'out-of-stock': { 
+                    class: 'text-red-600 bg-red-100', 
+                    text: '缺貨', 
+                    icon: 'fas fa-ban' 
+                }
+            };
+            
+            const config = statusConfig[recipe.status] || statusConfig.unavailable;
+            const ingredientCount = recipe.ingredients?.length || 0;
+            
+            return `
+                <div class="recipe-card bg-white rounded-xl shadow-lg overflow-hidden border hover:border-green-300 cursor-pointer" 
+                     onclick="showRecipeDetails('${recipe.id}')">
+                    <div class="p-6">
+                        <!-- 狀態標籤 -->
+                        <div class="flex justify-between items-start mb-4">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${config.class}">
+                                <i class="${config.icon} mr-1"></i>
+                                ${config.text}
+                            </span>
+                            <span class="text-xs text-gray-500">${recipe.category}</span>
+                        </div>
+                        
+                        <!-- 配方名稱 -->
+                        <h3 class="text-lg font-semibold text-gray-800 mb-2 line-clamp-2">
+                            ${recipe.name}
+                        </h3>
+                        
+                        <!-- 基本資訊 -->
+                        <div class="space-y-2 mb-4">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600">重量:</span>
+                                <span class="font-medium">${recipe.weight}g</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600">成本:</span>
+                                <span class="font-medium">$${recipe.unitCost.toFixed(2)}/100g</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600">庫存:</span>
+                                <span class="font-medium">${recipe.currentStock}份</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-600">可製作:</span>
+                                <span class="font-medium text-green-600">${recipe.maxProduction}份</span>
+                            </div>
+                        </div>
+                        
+                        <!-- 組成項目 -->
+                        <div class="mb-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs text-gray-600">組成項目</span>
+                                <span class="text-xs text-gray-500">${ingredientCount} 項</span>
+                            </div>
+                            <div class="flex flex-wrap gap-1">
+                                ${recipe.ingredients?.slice(0, 3).map(ing => `
+                                    <span class="ingredient-tag text-white text-xs px-2 py-1 rounded">
+                                        ${ing.name.length > 8 ? ing.name.substring(0, 8) + '...' : ing.name}
+                                    </span>
+                                `).join('') || ''}
+                                ${ingredientCount > 3 ? `<span class="text-xs text-gray-500">+${ingredientCount - 3}項</span>` : ''}
+                            </div>
+                        </div>
+                        
+                        <!-- 操作按鈕 -->
+                        <div class="flex space-x-2">
+                            <button onclick="event.stopPropagation(); showRecipeDetails('${recipe.id}')" 
+                                    class="flex-1 bg-green-600 text-white text-sm py-2 px-3 rounded hover:bg-green-700 transition-colors">
+                                <i class="fas fa-eye mr-1"></i>查看
+                            </button>
+                            <button onclick="event.stopPropagation(); calculateProduction('${recipe.id}')" 
+                                    class="flex-1 bg-blue-600 text-white text-sm py-2 px-3 rounded hover:bg-blue-700 transition-colors">
+                                <i class="fas fa-calculator mr-1"></i>計算
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 設定事件監聽器
+        function setupEventListeners() {
+            // 重新載入按鈕
+            document.getElementById('refresh-data-btn')?.addEventListener('click', async () => {
+                await loadRecipeData();
+            });
+            
+            // 搜尋
+            document.getElementById('recipe-search')?.addEventListener('input', (e) => {
+                applyFilters();
+            });
+            
+            // 分類篩選
+            document.getElementById('category-filter')?.addEventListener('change', () => {
+                applyFilters();
+            });
+            
+            // 生產狀態篩選
+            document.getElementById('production-filter')?.addEventListener('change', () => {
+                applyFilters();
+            });
+            
+            // 分頁按鈕
+            document.getElementById('prev-page')?.addEventListener('click', () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    renderRecipeCards();
+                }
+            });
+            
+            document.getElementById('next-page')?.addEventListener('click', () => {
+                const maxPage = Math.ceil(filteredRecipes.length / recipesPerPage);
+                if (currentPage < maxPage) {
+                    currentPage++;
+                    renderRecipeCards();
+                }
+            });
+            
+            // 缺料警報
+            document.getElementById('shortage-alert-btn')?.addEventListener('click', showShortageAlerts);
+            
+            // 採購建議
+            document.getElementById('purchase-suggest-btn')?.addEventListener('click', showPurchaseSuggestions);
+        }
+
+        // 應用篩選器
+        function applyFilters() {
+            const searchQuery = document.getElementById('recipe-search')?.value || '';
+            const categoryFilter = document.getElementById('category-filter')?.value || '';
+            const statusFilter = document.getElementById('production-filter')?.value || '';
+            
+            filteredRecipes = globalRecipeManager.searchRecipes(searchQuery, categoryFilter, statusFilter);
+            currentPage = 1;
+            renderRecipeCards();
+        }
+
+        // 顯示配方詳情
+        function showRecipeDetails(recipeId) {
+            const recipe = currentRecipes.find(r => r.id === recipeId);
+            if (!recipe) return;
+            
+            // 填充 Modal 內容
+            document.getElementById('modal-recipe-title').textContent = recipe.name;
+            document.getElementById('modal-category').textContent = recipe.category;
+            document.getElementById('modal-weight').textContent = recipe.weight;
+            document.getElementById('modal-unit-cost').textContent = recipe.unitCost.toFixed(2);
+            document.getElementById('modal-total-cost').textContent = recipe.totalCost.toFixed(2);
+            document.getElementById('modal-current-stock').textContent = `${recipe.currentStock} 份`;
+            document.getElementById('modal-max-production').textContent = `${recipe.maxProduction} 份`;
+            
+            // 顯示組成項目
+            const ingredientsList = document.getElementById('ingredients-list');
+            ingredientsList.innerHTML = recipe.ingredients?.map(ingredient => `
+                <div class="bg-gray-50 p-3 rounded-lg">
+                    <div class="flex justify-between items-center">
+                        <span class="font-medium">${ingredient.name}</span>
+                        <span class="text-sm text-gray-600">${ingredient.usageAmount}g</span>
+                    </div>
+                    <div class="text-xs text-gray-500 mt-1">
+                        成本: $${ingredient.itemCost.toFixed(2)} | 庫存: ${ingredient.ingredientStock}g
+                    </div>
+                </div>
+            `).join('') || '<p class="text-gray-500">無組成項目資料</p>';
+            
+            // 顯示 Modal
+            document.getElementById('recipe-modal').classList.remove('hidden');
+        }
+
+        // 計算生產能力
+        function calculateProduction(recipeId) {
+            const quantity = parseInt(document.getElementById('production-quantity')?.value || 1);
+            const result = globalRecipeManager.calculateProductionCapacity(recipeId, quantity);
+            
+            if (!result) return;
+            
+            const resultDiv = document.getElementById('production-result');
+            if (result.isPossible) {
+                resultDiv.innerHTML = `
+                    <div class="text-green-600">
+                        ✅ 可以製作 ${quantity} 份<br>
+                        總成本: $${result.totalCost}
+                    </div>
+                `;
+            } else {
+                resultDiv.innerHTML = `
+                    <div class="text-red-600">
+                        ❌ 無法製作 ${quantity} 份<br>
+                        最多可製作: ${result.maxPossible} 份<br>
+                        ${result.shortageItems.map(item => 
+                            `缺少 ${item.name}: ${item.shortage}g`
+                        ).join('<br>')}
+                    </div>
+                `;
+            }
+        }
+
+        // 顯示缺料警報
+        function showShortageAlerts() {
+            const shortageRecipes = globalRecipeManager.getShortageRecipes();
+            const content = document.getElementById('shortage-alerts-content');
+            
+            if (shortageRecipes.length === 0) {
+                content.innerHTML = `
+                    <div class="text-center py-8">
+                        <i class="fas fa-check-circle text-green-500 text-4xl mb-4"></i>
+                        <p class="text-gray-600">目前沒有缺料的配方！</p>
+                    </div>
+                `;
+            } else {
+                content.innerHTML = shortageRecipes.map(recipe => `
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-3">
+                        <div class="flex items-center justify-between">
+                            <h4 class="font-semibold text-red-800">${recipe.name}</h4>
+                            <span class="text-sm text-red-600">缺料</span>
+                        </div>
+                        <p class="text-sm text-red-600 mt-1">
+                            可製作份數: ${recipe.maxProduction} | 當前庫存: ${recipe.currentStock}
+                        </p>
+                    </div>
+                `).join('');
+            }
+            
+            document.getElementById('shortage-modal').classList.remove('hidden');
+        }
+
+        // 顯示採購建議
+        function showPurchaseSuggestions() {
+            const suggestions = globalRecipeManager.generatePurchaseSuggestions();
+            const content = document.getElementById('purchase-suggestions-content');
+            
+            if (suggestions.length === 0) {
+                content.innerHTML = `
+                    <div class="text-center py-8">
+                        <i class="fas fa-check-circle text-green-500 text-4xl mb-4"></i>
+                        <p class="text-gray-600">目前不需要採購任何食材！</p>
+                    </div>
+                `;
+            } else {
+                content.innerHTML = `
+                    <div class="space-y-3">
+                        ${suggestions.map(suggestion => `
+                            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                <div class="flex items-center justify-between">
+                                    <h4 class="font-semibold text-blue-800">${suggestion.ingredient}</h4>
+                                    <span class="text-xs px-2 py-1 rounded-full ${
+                                        suggestion.urgency === 'high' ? 'bg-red-100 text-red-600' :
+                                        suggestion.urgency === 'medium' ? 'bg-yellow-100 text-yellow-600' :
+                                        'bg-green-100 text-green-600'
+                                    }">
+                                        ${suggestion.urgency === 'high' ? '高' : suggestion.urgency === 'medium' ? '中' : '低'}優先級
+                                    </span>
+                                </div>
+                                <p class="text-sm text-blue-600 mt-1">
+                                    建議採購: ${suggestion.recommendedAmount}g | 影響配方: ${suggestion.affectedRecipes} 項
+                                </p>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+            
+            document.getElementById('purchase-modal').classList.remove('hidden');
+        }
+
+        // 更新分頁資訊
+        function updatePaginationInfo() {
+            const total = filteredRecipes.length;
+            const maxPage = Math.ceil(total / recipesPerPage);
+            const startIndex = (currentPage - 1) * recipesPerPage + 1;
+            const endIndex = Math.min(currentPage * recipesPerPage, total);
+            
+            document.getElementById('showing-start').textContent = total > 0 ? startIndex : 0;
+            document.getElementById('showing-end').textContent = total > 0 ? endIndex : 0;
+            document.getElementById('total-count').textContent = total;
+            document.getElementById('page-info').textContent = `第 ${currentPage} 頁，共 ${maxPage} 頁`;
+            
+            // 更新按鈕狀態
+            const prevBtn = document.getElementById('prev-page');
+            const nextBtn = document.getElementById('next-page');
+            
+            if (prevBtn) prevBtn.disabled = currentPage <= 1;
+            if (nextBtn) nextBtn.disabled = currentPage >= maxPage;
+        }
+
+        // 更新資料狀態
+        function updateDataStatus(message) {
+            const statusDiv = document.getElementById('data-status');
+            if (statusDiv) {
+                statusDiv.textContent = message;
+            }
+        }
+
+        // 顯示載入狀態
+        function showLoading(show, message = '載入中...') {
+            const indicator = document.getElementById('loading-indicator');
+            const placeholder = document.getElementById('loading-placeholder');
+            const loadingText = document.getElementById('loading-text');
+            
+            if (indicator) {
+                indicator.classList.toggle('hidden', !show);
+                if (loadingText) loadingText.textContent = message;
+            }
+            
+            if (placeholder) {
+                placeholder.style.display = show ? 'block' : 'none';
+            }
+        }
+
+        // 顯示錯誤訊息
+        function showError(message) {
+            const container = document.getElementById('recipes-container');
+            container.innerHTML = `
+                <div class="col-span-full bg-red-50 border border-red-200 rounded-xl p-8 text-center">
+                    <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
+                    <h3 class="text-lg font-semibold text-red-800 mb-2">載入失敗</h3>
+                    <p class="text-red-600 mb-4">${message}</p>
+                    <button onclick="loadRecipeData()" class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700">
+                        重試
+                    </button>
+                </div>
+            `;
+        }
+
+        // Modal 關閉事件
+        document.getElementById('close-modal')?.addEventListener('click', () => {
+            document.getElementById('recipe-modal').classList.add('hidden');
+        });
+        
+        document.getElementById('close-shortage-modal')?.addEventListener('click', () => {
+            document.getElementById('shortage-modal').classList.add('hidden');
+        });
+        
+        document.getElementById('close-purchase-modal')?.addEventListener('click', () => {
+            document.getElementById('purchase-modal').classList.add('hidden');
+        });
+    </script>
+</body>
+</html>

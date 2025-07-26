@@ -1,0 +1,50 @@
+📝 Node.js 快速安裝指南
+=======================
+
+🚀 方法 1：直接下載安裝（推薦）
+-------------------------------
+1. 訪問 Node.js 官網：https://nodejs.org/
+2. 點擊綠色的 "Download Node.js (LTS)" 按鈕
+3. 下載完成後，雙擊執行 .msi 安裝檔
+4. 安裝過程中：
+   ✅ 保持所有預設選項
+   ✅ 確保勾選 "Add to PATH" 選項
+   ✅ 點擊 "Next" 直到完成
+
+🔍 驗證安裝
+-----------
+安裝完成後：
+1. 關閉目前的 PowerShell 視窗
+2. 重新開啟 PowerShell
+3. 執行以下命令驗證：
+
+   node --version
+   npm --version
+
+如果顯示版本號，表示安裝成功！
+
+⚡ 快速啟動 CSV 同步
+-----------------
+Node.js 安裝完成後，執行：
+
+   .\start-csv-sync.bat
+
+或者：
+
+   npm start
+
+然後在瀏覽器中訪問：
+http://localhost:3000/pages/tools/csv-notion-sync.html
+
+🎯 推薦版本
+----------
+- 下載 LTS 版本（長期支援版本）
+- 目前推薦：Node.js 20.x LTS
+
+📞 如有問題
+----------
+1. 確保網路連線正常
+2. 以系統管理員身分執行安裝程式
+3. 安裝完成後重新啟動 PowerShell
+
+現在請前往 https://nodejs.org/ 下載並安裝 Node.js！

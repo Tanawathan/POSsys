@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>按鈕響應測試</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            margin: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            min-width: 200px;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .clear-btn {
+            background: #dc3545;
+        }
+        .clear-btn:hover {
+            background: #c82333;
+        }
+        .sync-btn {
+            background: #28a745;
+        }
+        .sync-btn:hover {
+            background: #218838;
+        }
+        #log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            min-height: 300px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .error {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .success {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .info {
+            color: #17a2b8;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 按鈕響應診斷工具</h1>
+    
+    <div>
+        <button class="btn" onclick="checkServerStatus()">🔍 檢查伺服器狀態</button>
+        <button class="btn sync-btn" onclick="testSyncButton()">🚀 測試同步按鈕</button>
+        <button class="btn clear-btn" onclick="testClearButton()">🗑️ 測試清空按鈕</button>
+        <button class="btn" onclick="testJavaScript()">🧪 測試 JavaScript</button>
+        <button class="btn" onclick="clearLog()">🧹 清除日誌</button>
+    </div>
+    
+    <div id="log"></div>
+
+    <script>
+        // 錯誤捕獲
+        window.addEventListener('error', function(e) {
+            log(`JavaScript 錯誤: ${e.message} (${e.filename}:${e.lineno})`, 'error');
+        });
+
+        function log(message, type = 'info') {
+            const logElement = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : 'info';
+            logElement.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+            log('日誌已清除');
+        }
+
+        async function checkServerStatus() {
+            log('🔍 檢查伺服器狀態...');
+            try {
+                // 測試基本連線
+                const healthResponse = await fetch('/api/health');
+                if (healthResponse.ok) {
+                    log('✅ 伺服器健康檢查通過', 'success');
+                } else {
+                    log(`❌ 伺服器健康檢查失敗: ${healthResponse.status}`, 'error');
+                }
+
+                // 測試 CSV 預覽
+                const csvResponse = await fetch('/api/preview-csv-menu');
+                if (csvResponse.ok) {
+                    const csvData = await csvResponse.json();
+                    log(`✅ CSV 預覽正常: ${csvData.length} 筆資料`, 'success');
+                } else {
+                    log(`❌ CSV 預覽失敗: ${csvResponse.status}`, 'error');
+                }
+
+                // 測試 Notion 連線
+                const notionResponse = await fetch('/api/test-notion');
+                if (notionResponse.ok) {
+                    log('✅ Notion 連線正常', 'success');
+                } else {
+                    log(`❌ Notion 連線失敗: ${notionResponse.status}`, 'error');
+                }
+
+            } catch (error) {
+                log(`❌ 伺服器連線錯誤: ${error.message}`, 'error');
+            }
+        }
+
+        async function testSyncButton() {
+            log('🚀 測試同步按鈕功能...');
+            
+            try {
+                // 檢查是否有 CSV 資料
+                const csvResponse = await fetch('/api/preview-csv-menu');
+                if (!csvResponse.ok) {
+                    log(`❌ 無法取得 CSV 資料: ${csvResponse.status}`, 'error');
+                    return;
+                }
+                
+                const csvData = await csvResponse.json();
+                log(`📊 找到 ${csvData.length} 筆 CSV 資料`);
+                
+                if (csvData.length === 0) {
+                    log('⚠️ 沒有資料可同步', 'error');
+                    return;
+                }
+
+                // 測試同步第一筆資料
+                log('🔄 測試同步第一筆資料...');
+                const syncResponse = await fetch('/api/sync-menu-item', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(csvData[0])
+                });
+
+                if (syncResponse.ok) {
+                    const result = await syncResponse.json();
+                    log(`✅ 同步測試成功`, 'success');
+                    log(`   項目: ${csvData[0]['餐點名稱']}`);
+                    log(`   結果: ${JSON.stringify(result)}`);
+                } else {
+                    const errorText = await syncResponse.text();
+                    log(`❌ 同步測試失敗: ${syncResponse.status}`, 'error');
+                    log(`   錯誤: ${errorText}`);
+                }
+
+            } catch (error) {
+                log(`❌ 同步測試錯誤: ${error.message}`, 'error');
+            }
+        }
+
+        async function testClearButton() {
+            log('🗑️ 測試清空按鈕功能...');
+            
+            if (!confirm('⚠️ 確定要測試清空功能嗎？這會實際清空 Notion 資料庫！')) {
+                log('🚫 使用者取消清空測試');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/clear-notion-menu', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.success) {
+                        log(`✅ 清空測試成功`, 'success');
+                        log(`   刪除: ${result.deletedCount} 筆`);
+                        log(`   失敗: ${result.failedCount || 0} 筆`);
+                    } else {
+                        log(`❌ 清空測試失敗: ${result.error}`, 'error');
+                    }
+                } else {
+                    const errorText = await response.text();
+                    log(`❌ 清空測試失敗: ${response.status}`, 'error');
+                    log(`   錯誤: ${errorText}`);
+                }
+            } catch (error) {
+                log(`❌ 清空測試錯誤: ${error.message}`, 'error');
+            }
+        }
+
+        function testJavaScript() {
+            log('🧪 測試 JavaScript 功能...');
+            
+            // 測試基本 JavaScript 功能
+            try {
+                log('✅ console.log 正常工作');
+                log('✅ fetch API 可用: ' + (typeof fetch !== 'undefined'));
+                log('✅ async/await 支援: ' + (typeof async !== 'undefined'));
+                log('✅ JSON 支援: ' + (typeof JSON !== 'undefined'));
+                log('✅ Promise 支援: ' + (typeof Promise !== 'undefined'));
+                
+                // 測試 DOM 操作
+                const testElement = document.getElementById('log');
+                if (testElement) {
+                    log('✅ DOM 操作正常', 'success');
+                } else {
+                    log('❌ DOM 操作失敗', 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ JavaScript 測試失敗: ${error.message}`, 'error');
+            }
+        }
+
+        // 頁面載入時自動執行檢查
+        window.addEventListener('DOMContentLoaded', function() {
+            log('📄 頁面載入完成');
+            log('🔧 診斷工具已準備就緒');
+            
+            // 自動檢查伺服器狀態
+            setTimeout(checkServerStatus, 1000);
+        });
+    </script>
+</body>
+</html>

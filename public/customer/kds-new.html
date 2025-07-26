@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>廚房出餐系統 (KDS) - Notion版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        body::-webkit-scrollbar {
+            display: none;
+        }
+        #order-container {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        #order-container::-webkit-scrollbar {
+            display: none;
+        }
+        .order-card {
+            animation: slideIn 0.5s ease-out;
+        }
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        .completed-order {
+            animation: slideOut 0.3s ease-in;
+        }
+        @keyframes slideOut {
+            to {
+                opacity: 0;
+                transform: translateX(20px) scale(0.8);
+            }
+        }
+        .status-preparing { border-left: 6px solid #f59e0b; }
+        .status-cooking { border-left: 6px solid #ef4444; }
+        .status-ready { border-left: 6px solid #10b981; }
+        .priority-high { background: linear-gradient(135deg, #fee2e2, #fef2f2); }
+        .priority-normal { background: linear-gradient(135deg, #f3f4f6, #ffffff); }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200">
+
+    <div class="flex flex-col h-screen">
+        <!-- Header -->
+        <header class="bg-gray-800 border-b-4 border-indigo-600 shadow-lg">
+            <div class="container mx-auto px-4 py-3">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center space-x-4">
+                        <div class="flex items-center space-x-4">
+                            <a href="../index.html" class="px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors text-sm">← 主系統</a>
+                            <a href="../main-dashboard.html" class="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm">📊 儀表板</a>
+                        </div>
+                        <h1 class="text-3xl font-bold text-white">廚房出餐系統 (KDS)</h1>
+                        <div class="flex space-x-2">
+                            <button id="filter-all" class="px-3 py-1 bg-indigo-600 text-white rounded text-sm filter-btn active">
+                                全部 (<span id="count-all">0</span>)
+                            </button>
+                            <button id="filter-preparing" class="px-3 py-1 bg-yellow-600 text-white rounded text-sm filter-btn">
+                                準備中 (<span id="count-preparing">0</span>)
+                            </button>
+                            <button id="filter-cooking" class="px-3 py-1 bg-red-600 text-white rounded text-sm filter-btn">
+                                烹飪中 (<span id="count-cooking">0</span>)
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center space-x-4">
+                        <button id="refresh-kds-btn" class="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:bg-indigo-400 disabled:cursor-wait">
+                            <svg class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0011.664 0M6.817 9.348L3.636 6.165a8.25 8.25 0 0111.664 0l3.181 3.183" />
+                            </svg>
+                            更新訂單
+                        </button>
+                        
+                        <div class="text-right">
+                            <p id="system-time" class="text-2xl text-gray-200"></p>
+                            <p id="system-status" class="text-sm text-green-400 mt-1">● 連線正常</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Stats Bar -->
+                <div class="mt-3 flex space-x-4 text-sm">
+                    <div class="bg-yellow-600 px-3 py-1 rounded text-white">
+                        <span>平均等待: </span><span id="avg-wait-time">-- 分鐘</span>
+                    </div>
+                    <div class="bg-red-600 px-3 py-1 rounded text-white">
+                        <span>最長等待: </span><span id="max-wait-time">-- 分鐘</span>
+                    </div>
+                    <div class="bg-green-600 px-3 py-1 rounded text-white">
+                        <span>今日完成: </span><span id="today-completed">--</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Order Container -->
+        <main id="order-container" class="flex-1 flex items-start p-4 bg-gray-900 overflow-x-auto">
+            <div id="order-wrapper" class="flex flex-nowrap space-x-4 h-full min-w-full">
+                <div id="loading-placeholder" class="text-center py-16 text-gray-400 w-screen">
+                    <div class="animate-spin rounded-full border-8 border-t-8 border-gray-200 h-24 w-24 mb-4 mx-auto"></div>
+                    <p class="text-xl">正在連接 Notion 資料庫...</p>
+                    <p class="text-sm mt-2">載入訂單資料中</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Order Detail Modal -->
+    <div id="order-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-gray-900">訂單詳情</h2>
+                <button id="close-modal" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+            <div id="modal-content" class="text-gray-900">
+                <!-- Modal content will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- CONFIGURATION ---
+        const CONFIG = {
+            notionApiEndpoint: 'http://localhost:3000/api/notion/databases',
+            ordersDatabase: '23afd5adc30b80c39e71d1a640ccfb5d',
+            autoRefreshInterval: 30000, // 30秒
+            soundEnabled: true
+        };
+
+        // --- STATE ---
+        let allOrders = [];
+        let displayedOrderIds = new Set();
+        let currentFilter = 'all';
+        let autoRefreshTimer = null;
+
+        // --- DOM ELEMENTS ---
+        const dom = {
+            orderWrapper: document.getElementById('order-wrapper'),
+            systemTime: document.getElementById('system-time'),
+            systemStatus: document.getElementById('system-status'),
+            loadingPlaceholder: document.getElementById('loading-placeholder'),
+            refreshKdsBtn: document.getElementById('refresh-kds-btn'),
+            orderModal: document.getElementById('order-modal'),
+            modalContent: document.getElementById('modal-content'),
+            closeModal: document.getElementById('close-modal'),
+            // Filter buttons
+            filterAll: document.getElementById('filter-all'),
+            filterPreparing: document.getElementById('filter-preparing'),
+            filterCooking: document.getElementById('filter-cooking'),
+            // Counters
+            countAll: document.getElementById('count-all'),
+            countPreparing: document.getElementById('count-preparing'),
+            countCooking: document.getElementById('count-cooking'),
+            // Stats
+            avgWaitTime: document.getElementById('avg-wait-time'),
+            maxWaitTime: document.getElementById('max-wait-time'),
+            todayCompleted: document.getElementById('today-completed')
+        };
+
+        // --- INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 KDS 系統初始化');
+            initEventListeners();
+            fetchOrders();
+            updateTime();
+            setInterval(updateTime, 1000);
+            startAutoRefresh();
+        });
+
+        function initEventListeners() {
+            // Refresh button
+            dom.refreshKdsBtn.addEventListener('click', fetchOrders);
+            
+            // Filter buttons
+            dom.filterAll.addEventListener('click', () => setFilter('all'));
+            dom.filterPreparing.addEventListener('click', () => setFilter('preparing'));
+            dom.filterCooking.addEventListener('click', () => setFilter('cooking'));
+            
+            // Modal
+            dom.closeModal.addEventListener('click', closeModal);
+            dom.orderModal.addEventListener('click', (e) => {
+                if (e.target === dom.orderModal) closeModal();
+            });
+            
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'r' || e.key === 'R') {
+                    fetchOrders();
+                } else if (e.key === 'Escape') {
+                    closeModal();
+                }
+            });
+        }
+
+        // --- DATA FETCHING ---
+        async function fetchOrders() {
+            console.log('📥 開始從 Notion 獲取訂單資料...');
+            updateRefreshButton(true);
+
+            try {
+                const response = await fetch(`${CONFIG.notionApiEndpoint}/${CONFIG.ordersDatabase}/query`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        sorts: [
+                            {
+                                property: '建立時間',
+                                direction: 'descending'
+                            }
+                        ],
+                        filter: {
+                            or: [
+                                {
+                                    property: '狀態',
+                                    select: {
+                                        equals: '準備中'
+                                    }
+                                },
+                                {
+                                    property: '狀態',
+                                    select: {
+                                        equals: '進行中'
+                                    }
+                                }
+                            ]
+                        }
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                console.log('📦 收到 Notion 訂單資料:', data);
+
+                if (data.results && Array.isArray(data.results)) {
+                    // 將 Notion 資料映射為 KDS 可用格式
+                    allOrders = data.results.map(mapNotionOrderToKDS);
+                    processAndRenderOrders();
+                    updateStats();
+                    updateStatus(true);
+                    console.log(`✅ 成功載入 ${allOrders.length} 筆訂單`);
+                } else {
+                    console.warn('⚠️ 資料格式異常:', data);
+                    showError('資料格式異常');
+                }
+            } catch (error) {
+                console.error('❌ 獲取訂單失敗:', error);
+                updateStatus(false);
+                showError(`連線失敗: ${error.message}`);
+            } finally {
+                updateRefreshButton(false);
+            }
+        }
+
+        // --- NOTION DATA MAPPING ---
+        function mapNotionOrderToKDS(notionOrder) {
+            const props = notionOrder.properties;
+            
+            // 解析訂單編號
+            const orderId = props['訂單編號']?.title?.[0]?.text?.content || 
+                           props['訂單編號']?.rich_text?.[0]?.text?.content || 
+                           `ORDER-${Date.now()}`;
+            
+            // 解析桌號
+            const tableNumber = props['桌號']?.rich_text?.[0]?.text?.content || 
+                               props['桌號']?.title?.[0]?.text?.content || '未知';
+            
+            // 解析狀態
+            const status = props['狀態']?.select?.name || '準備中';
+            
+            // 解析總金額
+            const total = props['總金額']?.number || 0;
+            
+            // 解析用餐人數
+            const customerCount = props['用餐人數']?.number || 1;
+            
+            // 解析建立時間
+            const createdTime = props['建立時間']?.date?.start || 
+                               props['建立時間']?.created_time || 
+                               notionOrder.created_time;
+            
+            // 解析備註和訂單項目
+            const notesText = props['備註']?.rich_text?.[0]?.text?.content || '';
+            let items = [];
+            let customerNote = '';
+            
+            // 從備註中提取系統資料和用戶備註
+            if (notesText) {
+                const systemDataMatch = notesText.match(/\[系統資料\]\s*({.*?})\s*(?:\[\/系統資料\]|$)/s);
+                
+                if (systemDataMatch) {
+                    try {
+                        const systemData = JSON.parse(systemDataMatch[1]);
+                        items = systemData.items || [];
+                    } catch (e) {
+                        console.warn('解析系統資料失敗:', e);
+                    }
+                    
+                    // 提取用戶備註（系統資料之前的部分）
+                    const systemDataStart = notesText.indexOf('[系統資料]');
+                    if (systemDataStart > 0) {
+                        customerNote = notesText.substring(0, systemDataStart).trim();
+                    }
+                } else {
+                    // 如果沒有系統資料，嘗試從訂單項目欄位解析
+                    const orderItemsText = props['訂單項目']?.rich_text?.[0]?.text?.content || '';
+                    if (orderItemsText) {
+                        // 嘗試解析格式如 "項目名稱 x 數量 - $總價"
+                        const itemMatches = orderItemsText.match(/([^x]+)\s*x\s*(\d+)\s*-\s*\$(\d+)/g);
+                        if (itemMatches) {
+                            items = itemMatches.map(match => {
+                                const [, name, qty, totalPrice] = match.match(/([^x]+)\s*x\s*(\d+)\s*-\s*\$(\d+)/);
+                                const quantity = parseInt(qty);
+                                const itemPrice = parseInt(totalPrice) / quantity;
+                                return {
+                                    name: name.trim(),
+                                    quantity: quantity,
+                                    price: itemPrice
+                                };
+                            });
+                        }
+                    }
+                    
+                    // 用戶備註就是整個備註內容
+                    customerNote = notesText;
+                }
+            }
+            
+            // 如果沒有解析到項目，創建預設項目
+            if (items.length === 0 && total > 0) {
+                items = [{
+                    name: '訂單項目',
+                    quantity: 1,
+                    price: total
+                }];
+            }
+            
+            return {
+                id: orderId,
+                properties: {
+                    '訂單編號': { title: [{ text: { content: orderId } }] },
+                    '桌號': { rich_text: [{ text: { content: tableNumber } }] },
+                    '狀態': { select: { name: status } },
+                    '總金額': { number: total },
+                    '用餐人數': { number: customerCount },
+                    '建立時間': { date: { start: createdTime } },
+                    '備註': { rich_text: [{ text: { content: notesText } }] }
+                },
+                created_time: createdTime,
+                // KDS 特定屬性
+                items: items,
+                customerNote: customerNote,
+                notionPageId: notionOrder.id
+            };
+        }
+
+        // --- DATA PROCESSING ---
+        function processAndRenderOrders() {
+            removeLoadingPlaceholder();
+            
+            // 過濾並顯示訂單
+            const filteredOrders = filterOrders(allOrders);
+            renderOrders(filteredOrders);
+            updateCounters();
+        }
+
+        function filterOrders(orders) {
+            switch (currentFilter) {
+                case 'preparing':
+                    return orders.filter(order => order.properties['狀態']?.select?.name === '準備中');
+                case 'cooking':
+                    return orders.filter(order => order.properties['狀態']?.select?.name === '進行中');
+                default:
+                    return orders;
+            }
+        }
+
+        function renderOrders(orders) {
+            // 清除不再存在的訂單
+            const currentOrderIds = new Set(orders.map(order => order.id));
+            displayedOrderIds.forEach(id => {
+                if (!currentOrderIds.has(id)) {
+                    const ticket = document.getElementById(`order-${id}`);
+                    if (ticket) {
+                        ticket.classList.add('completed-order');
+                        setTimeout(() => ticket.remove(), 300);
+                    }
+                    displayedOrderIds.delete(id);
+                }
+            });
+
+            if (orders.length === 0) {
+                showNoOrdersMessage();
+                return;
+            } else {
+                removeNoOrdersMessage();
+            }
+
+            // 渲染新訂單或更新現有訂單
+            orders.forEach(order => {
+                const orderId = order.id;
+                const existingTicket = document.getElementById(`order-${orderId}`);
+                
+                if (existingTicket) {
+                    // 更新現有訂單
+                    updateOrderTicket(existingTicket, order);
+                } else {
+                    // 創建新訂單票據
+                    createOrderTicket(order);
+                    displayedOrderIds.add(orderId);
+                }
+            });
+
+            updateTimers();
+        }
+
+        function createOrderTicket(order) {
+            const orderId = order.id;
+            const props = order.properties;
+            
+            // 提取訂單資訊
+            const orderNumber = props['訂單編號']?.title?.[0]?.text?.content || orderId.substring(0, 8);
+            const tableNumber = props['桌號']?.rich_text?.[0]?.text?.content || 'N/A';
+            const status = props['狀態']?.select?.name || '準備中';
+            const createdTime = props['建立時間']?.date?.start || order.created_time;
+            const orderItems = order.items || [];
+            const customerNote = order.customerNote || '';
+            const totalAmount = props['總金額']?.number || 0;
+
+            // 計算等待時間
+            const waitTime = calculateWaitTime(createdTime);
+            const priority = waitTime > 30 ? 'high' : 'normal';
+
+            const ticket = document.createElement('div');
+            ticket.id = `order-${orderId}`;
+            ticket.className = `order-card bg-white text-gray-900 rounded-lg shadow-2xl w-80 h-full flex flex-col flex-shrink-0 status-${status.toLowerCase()} priority-${priority}`;
+            
+            // 構建項目列表
+            let itemsHtml = '';
+            if (orderItems && Array.isArray(orderItems)) {
+                itemsHtml = orderItems.map(item => {
+                    const note = item.note ? `<p class="text-red-600 font-semibold text-sm ml-4">備註: ${item.note}</p>` : '';
+                    return `
+                        <li class="py-2 border-b border-gray-200 last:border-b-0">
+                            <div class="flex justify-between items-center">
+                                <span class="text-lg font-semibold">${item.name || '未知項目'}</span>
+                                <span class="text-xl font-bold text-indigo-600">x${item.quantity || 1}</span>
+                            </div>
+                            ${note}
+                        </li>
+                    `;
+                }).join('');
+            } else {
+                itemsHtml = '<li class="text-gray-500 italic">訂單內容載入中...</li>';
+            }
+
+            // 狀態顏色配置
+            const statusConfig = {
+                '準備中': { bg: 'bg-yellow-500', text: '準備中' },
+                '進行中': { bg: 'bg-red-500', text: '進行中' },
+                '已完成': { bg: 'bg-green-500', text: '已完成' }
+            };
+            const statusInfo = statusConfig[status] || statusConfig['準備中'];
+
+            ticket.innerHTML = `
+                <div class="p-4 bg-gray-800 text-white rounded-t-lg">
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <p class="text-2xl font-bold">桌號: ${tableNumber}</p>
+                            <p class="text-sm text-gray-400">#${orderNumber}</p>
+                        </div>
+                        <span class="${statusInfo.bg} px-2 py-1 rounded text-xs font-semibold">
+                            ${statusInfo.text}
+                        </span>
+                    </div>
+                    <p class="text-sm text-yellow-400 font-semibold" data-timestamp="${createdTime}">
+                        已等待 ${waitTime} 分鐘
+                    </p>
+                    ${totalAmount > 0 ? `<p class="text-sm text-green-400">總額: $${totalAmount}</p>` : ''}
+                </div>
+                
+                <div class="flex-1 p-3 overflow-y-auto">
+                    <ul class="space-y-1">
+                        ${itemsHtml}
+                    </ul>
+                    ${customerNote ? `<div class="mt-3 p-2 bg-yellow-50 border-l-4 border-yellow-400">
+                        <p class="text-sm font-semibold text-yellow-800">客戶備註:</p>
+                        <p class="text-sm text-yellow-700">${customerNote}</p>
+                    </div>` : ''}
+                </div>
+                
+                <div class="p-3 space-y-2">
+                    <div class="flex space-x-2">
+                        ${status === '準備中' ? `
+                            <button class="action-btn cooking-btn flex-1 bg-orange-600 text-white py-3 rounded-md text-lg font-bold hover:bg-orange-700 transition-colors">
+                                開始烹飪
+                            </button>
+                        ` : ''}
+                        ${status === '進行中' ? `
+                            <button class="action-btn complete-btn flex-1 bg-green-600 text-white py-3 rounded-md text-lg font-bold hover:bg-green-700 transition-colors">
+                                完成出餐
+                            </button>
+                        ` : ''}
+                        <button class="detail-btn bg-gray-600 text-white py-3 px-4 rounded-md text-lg hover:bg-gray-700 transition-colors">
+                            詳情
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            // 添加事件監聽器
+            const cookingBtn = ticket.querySelector('.cooking-btn');
+            const completeBtn = ticket.querySelector('.complete-btn');
+            const detailBtn = ticket.querySelector('.detail-btn');
+
+            if (cookingBtn) {
+                cookingBtn.addEventListener('click', () => updateOrderStatus(orderId, '進行中', cookingBtn));
+            }
+            if (completeBtn) {
+                completeBtn.addEventListener('click', () => updateOrderStatus(orderId, '已完成', completeBtn));
+            }
+            if (detailBtn) {
+                detailBtn.addEventListener('click', () => showOrderDetail(order));
+            }
+
+            dom.orderWrapper.appendChild(ticket);
+        }
+
+        function updateOrderTicket(ticket, order) {
+            const waitTimeElement = ticket.querySelector('[data-timestamp]');
+            if (waitTimeElement) {
+                const createdTime = order.properties['建立時間']?.date?.start || order.created_time;
+                const waitTime = calculateWaitTime(createdTime);
+                waitTimeElement.textContent = `已等待 ${waitTime} 分鐘`;
+            }
+        }
+
+        // --- ORDER ACTIONS ---
+        async function updateOrderStatus(orderId, newStatus, buttonElement) {
+            console.log(`🔄 更新訂單 ${orderId} 狀態為 ${newStatus}`);
+            
+            if (buttonElement) {
+                buttonElement.disabled = true;
+                buttonElement.textContent = '處理中...';
+            }
+
+            try {
+                // 找到對應的訂單
+                const order = allOrders.find(o => o.id === orderId);
+                if (!order || !order.notionPageId) {
+                    throw new Error('找不到訂單或 Notion 頁面 ID');
+                }
+
+                // 使用 Notion API 更新狀態
+                const response = await fetch(`http://localhost:3000/api/notion/pages/${order.notionPageId}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        properties: {
+                            '狀態': {
+                                select: {
+                                    name: newStatus
+                                }
+                            }
+                        }
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                console.log(`✅ 訂單 ${orderId} 狀態更新成功`);
+                
+                // 如果是完成狀態，移除訂單卡片
+                if (newStatus === '已完成') {
+                    const ticket = document.getElementById(`order-${orderId}`);
+                    if (ticket) {
+                        ticket.classList.add('completed-order');
+                        setTimeout(() => {
+                            ticket.remove();
+                            displayedOrderIds.delete(orderId);
+                            // 從 allOrders 中移除
+                            allOrders = allOrders.filter(order => order.id !== orderId);
+                            updateCounters();
+                            updateStats();
+                        }, 300);
+                    }
+                } else {
+                    // 重新獲取訂單資料以更新顯示
+                    setTimeout(fetchOrders, 1000);
+                }
+
+            } catch (error) {
+                console.error('❌ 更新訂單狀態失敗:', error);
+                alert(`更新訂單狀態失敗: ${error.message}`);
+                
+                if (buttonElement) {
+                    buttonElement.disabled = false;
+                    buttonElement.textContent = newStatus === '烹飪中' ? '開始烹飪' : '完成出餐';
+                }
+            }
+        }
+
+        // --- MODAL FUNCTIONS ---
+        function showOrderDetail(order) {
+            const props = order.properties;
+            
+            const orderNumber = extractTitle(order, '訂單編號') || extractRichText(order, '訂單ID') || order.id.substring(0, 8);
+            const tableNumber = extractNumber(order, '桌號') || extractRichText(order, '桌號') || 'N/A';
+            const status = extractSelect(order, '狀態') || '準備中';
+            const createdTime = extractDate(order, '建立時間') || order.created_time;
+            const orderItems = parseOrderItems(extractRichText(order, '訂單內容(JSON)'));
+            const customerNote = extractRichText(order, '客戶備註') || '';
+            const totalAmount = extractNumber(order, '總金額') || 0;
+            const paymentMethod = extractSelect(order, '付款方式') || '未指定';
+
+            let itemsDetailHtml = '';
+            if (orderItems && Array.isArray(orderItems)) {
+                itemsDetailHtml = orderItems.map(item => `
+                    <tr class="border-b">
+                        <td class="py-2 px-4">${item.name || '未知項目'}</td>
+                        <td class="py-2 px-4 text-center">${item.quantity || 1}</td>
+                        <td class="py-2 px-4 text-right">$${(item.price || 0) * (item.quantity || 1)}</td>
+                        <td class="py-2 px-4 text-sm text-gray-600">${item.note || '-'}</td>
+                    </tr>
+                `).join('');
+            }
+
+            dom.modalContent.innerHTML = `
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">訂單編號</label>
+                            <p class="text-lg font-semibold">#${orderNumber}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">桌號</label>
+                            <p class="text-lg font-semibold">${tableNumber}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">狀態</label>
+                            <p class="text-lg font-semibold text-${status === '準備中' ? 'yellow' : status === '烹飪中' ? 'red' : 'green'}-600">${status}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">下單時間</label>
+                            <p class="text-lg">${new Date(createdTime).toLocaleString('zh-TW')}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">總金額</label>
+                            <p class="text-lg font-semibold text-green-600">$${totalAmount}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">付款方式</label>
+                            <p class="text-lg">${paymentMethod}</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">訂單內容</label>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full bg-gray-50 rounded-lg">
+                                <thead class="bg-gray-100">
+                                    <tr>
+                                        <th class="py-2 px-4 text-left">品項</th>
+                                        <th class="py-2 px-4 text-center">數量</th>
+                                        <th class="py-2 px-4 text-right">小計</th>
+                                        <th class="py-2 px-4 text-left">備註</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${itemsDetailHtml}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    ${customerNote ? `
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">客戶備註</label>
+                            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-3">
+                                <p class="text-yellow-800">${customerNote}</p>
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+
+            dom.orderModal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            dom.orderModal.classList.add('hidden');
+        }
+
+        // --- UTILITY FUNCTIONS ---
+        function extractTitle(order, propertyName) {
+            const prop = order.properties[propertyName];
+            return prop?.title?.[0]?.plain_text || '';
+        }
+
+        function extractRichText(order, propertyName) {
+            const prop = order.properties[propertyName];
+            return prop?.rich_text?.[0]?.plain_text || '';
+        }
+
+        function extractSelect(order, propertyName) {
+            const prop = order.properties[propertyName];
+            return prop?.select?.name || '';
+        }
+
+        function extractNumber(order, propertyName) {
+            const prop = order.properties[propertyName];
+            return prop?.number || null;
+        }
+
+        function extractDate(order, propertyName) {
+            const prop = order.properties[propertyName];
+            return prop?.date?.start || prop?.created_time || null;
+        }
+
+        function parseOrderItems(jsonString) {
+            if (!jsonString) return [];
+            
+            try {
+                const parsed = JSON.parse(jsonString);
+                return Array.isArray(parsed) ? parsed : [parsed];
+            } catch (e) {
+                console.warn('無法解析訂單內容:', jsonString);
+                return [];
+            }
+        }
+
+        function calculateWaitTime(createdTime) {
+            const orderTime = new Date(createdTime);
+            const now = new Date();
+            return Math.floor((now - orderTime) / 60000); // 分鐘
+        }
+
+        function setFilter(filter) {
+            currentFilter = filter;
+            
+            // 更新按鈕樣式
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active', 'bg-indigo-600');
+                btn.classList.add('bg-gray-600');
+            });
+            
+            const activeBtn = document.getElementById(`filter-${filter}`);
+            activeBtn.classList.add('active', 'bg-indigo-600');
+            activeBtn.classList.remove('bg-gray-600');
+            
+            // 重新渲染訂單
+            processAndRenderOrders();
+        }
+
+        function updateCounters() {
+            const preparing = allOrders.filter(order => extractSelect(order, '狀態') === '準備中').length;
+            const cooking = allOrders.filter(order => extractSelect(order, '狀態') === '烹飪中').length;
+            const total = allOrders.length;
+
+            dom.countAll.textContent = total;
+            dom.countPreparing.textContent = preparing;
+            dom.countCooking.textContent = cooking;
+        }
+
+        function updateStats() {
+            if (allOrders.length === 0) {
+                dom.avgWaitTime.textContent = '-- 分鐘';
+                dom.maxWaitTime.textContent = '-- 分鐘';
+                return;
+            }
+
+            const waitTimes = allOrders.map(order => {
+                const createdTime = extractDate(order, '建立時間') || order.created_time;
+                return calculateWaitTime(createdTime);
+            });
+
+            const avgWait = Math.round(waitTimes.reduce((a, b) => a + b, 0) / waitTimes.length);
+            const maxWait = Math.max(...waitTimes);
+
+            dom.avgWaitTime.textContent = `${avgWait} 分鐘`;
+            dom.maxWaitTime.textContent = `${maxWait} 分鐘`;
+        }
+
+        function updateTimers() {
+            document.querySelectorAll('[data-timestamp]').forEach(el => {
+                const createdTime = el.dataset.timestamp;
+                const waitTime = calculateWaitTime(createdTime);
+                el.textContent = `已等待 ${waitTime} 分鐘`;
+                
+                // 根據等待時間調整顏色
+                if (waitTime > 45) {
+                    el.className = 'text-sm text-red-400 font-bold animate-pulse';
+                } else if (waitTime > 30) {
+                    el.className = 'text-sm text-orange-400 font-semibold';
+                } else {
+                    el.className = 'text-sm text-yellow-400 font-semibold';
+                }
+            });
+        }
+
+        function updateTime() {
+            const now = new Date();
+            dom.systemTime.textContent = now.toLocaleTimeString('zh-TW', { hour12: false });
+        }
+
+        function updateStatus(isOnline) {
+            if (isOnline) {
+                dom.systemStatus.textContent = '● Notion 連線正常';
+                dom.systemStatus.classList.remove('text-red-400');
+                dom.systemStatus.classList.add('text-green-400');
+            } else {
+                dom.systemStatus.textContent = '❗ Notion 連線異常';
+                dom.systemStatus.classList.add('text-red-400');
+                dom.systemStatus.classList.remove('text-green-400');
+            }
+        }
+
+        function updateRefreshButton(isLoading) {
+            const btn = dom.refreshKdsBtn;
+            if (isLoading) {
+                btn.disabled = true;
+                btn.innerHTML = `
+                    <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    更新中...
+                `;
+            } else {
+                btn.disabled = false;
+                btn.innerHTML = `
+                    <svg class="w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0011.664 0M6.817 9.348L3.636 6.165a8.25 8.25 0 0111.664 0l3.181 3.183" />
+                    </svg>
+                    更新訂單
+                `;
+            }
+        }
+
+        function removeLoadingPlaceholder() {
+            if (dom.loadingPlaceholder) {
+                dom.loadingPlaceholder.remove();
+                dom.loadingPlaceholder = null;
+            }
+        }
+
+        function showNoOrdersMessage() {
+            removeNoOrdersMessage();
+            const noOrdersMsg = document.createElement('div');
+            noOrdersMsg.id = 'no-orders-msg';
+            noOrdersMsg.className = 'text-center py-16 text-gray-500 w-screen';
+            noOrdersMsg.innerHTML = `
+                <div class="text-6xl mb-4">🍽️</div>
+                <p class="text-2xl font-semibold mb-2">目前沒有待處理訂單</p>
+                <p class="text-lg text-gray-400">所有訂單都已完成！</p>
+            `;
+            dom.orderWrapper.appendChild(noOrdersMsg);
+        }
+
+        function removeNoOrdersMessage() {
+            const noOrdersMsg = document.getElementById('no-orders-msg');
+            if (noOrdersMsg) noOrdersMsg.remove();
+        }
+
+        function showError(message) {
+            // 可以在這裡添加錯誤提示的 UI
+            console.error('❌ KDS 錯誤:', message);
+        }
+
+        function startAutoRefresh() {
+            autoRefreshTimer = setInterval(() => {
+                console.log('🔄 自動刷新訂單...');
+                fetchOrders();
+            }, CONFIG.autoRefreshInterval);
+        }
+
+        // 定時更新等待時間
+        setInterval(updateTimers, 60000);
+    </script>
+</body>
+</html>
