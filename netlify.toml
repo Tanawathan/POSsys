@@ -56,11 +56,30 @@
   [redirects.conditions]
     max-age = "31536000"
 
+# 將頁面路徑重定向到對應的 HTML 文件
 [[redirects]]
-  # SPA 路由支援 - 將所有路徑重定向到 index.html
+  from = "/pages/*"
+  to = "/public/:splat"
+  status = 200
+
+# API 重定向配置（移到前面以避免被 SPA 規則覆蓋）
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+# 靜態 HTML 文件直接訪問
+[[redirects]]
+  from = "/public/customer/checkout-new.html"
+  to = "/public/customer/checkout-new.html"
+  status = 200
+
+# SPA 路由支援 - 只對不是靜態文件的路徑重定向到 index.html
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
+  force = false
 
 # 表單處理設定（如果需要）
 [build.processing]
@@ -80,11 +99,5 @@
 # 函數設定（如果使用 Netlify Functions）
 [functions]
   directory = "netlify/functions"
-
-# API 重定向配置
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/:splat"
-  status = 200
 
 # 注意：邊緣函數設定已移除，因為目前不使用 edge functions
