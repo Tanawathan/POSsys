@@ -280,6 +280,7 @@
 
         // --- NOTION DATA MAPPING ---
         function mapNotionOrderToKDS(notionOrder) {
+            console.log('🔄 映射 Notion 訂單到 KDS 格式:', notionOrder);
             const props = notionOrder.properties;
             
             // 解析訂單編號
@@ -307,53 +308,70 @@
             
             // 解析備註和訂單項目
             const notesText = props['備註']?.rich_text?.[0]?.text?.content || '';
+            const orderItemsText = props['訂單項目']?.rich_text?.[0]?.text?.content || '';
             let items = [];
             let customerNote = '';
             
-            // 從備註中提取系統資料和用戶備註
-            if (notesText) {
-                const systemDataMatch = notesText.match(/\[系統資料\]\s*({.*?})\s*(?:\[\/系統資料\]|$)/s);
+            console.log('🔍 解析訂單項目:', { notesText, orderItemsText });
+            
+            // 首先嘗試從訂單項目欄位解析（新格式）
+            if (orderItemsText) {
+                console.log('📋 從訂單項目欄位解析...');
+                // 解析格式如 "打拋豬肉飯 x1 - NT$340\n其他項目..."
+                const itemLines = orderItemsText.split('\n').filter(line => line.trim());
+                items = itemLines.map(line => {
+                    console.log('📄 處理行:', line);
+                    // 匹配 "名稱 x數量 - NT$價格" 或 "名稱 x數量 - $價格"
+                    const match = line.match(/^(.+?)\s*x(\d+)\s*-\s*(?:NT\$|\$)(\d+)(?:\s*\((.*?)\))?/);
+                    if (match) {
+                        const [, name, qty, totalPrice, notes] = match;
+                        const quantity = parseInt(qty);
+                        const itemPrice = parseInt(totalPrice) / quantity;
+                        console.log('✅ 解析成功:', { name: name.trim(), quantity, price: itemPrice, notes });
+                        return {
+                            name: name.trim(),
+                            quantity: quantity,
+                            price: itemPrice,
+                            note: notes ? notes.trim() : ''
+                        };
+                    } else {
+                        console.warn('⚠️ 無法解析行:', line);
+                        return null;
+                    }
+                }).filter(item => item !== null);
                 
-                if (systemDataMatch) {
-                    try {
-                        const systemData = JSON.parse(systemDataMatch[1]);
-                        items = systemData.items || [];
-                    } catch (e) {
-                        console.warn('解析系統資料失敗:', e);
-                    }
+                console.log('📦 解析結果:', items);
+                
+                // 用戶備註就是備註欄位內容
+                customerNote = notesText;
+            } else {
+                // 備用：從備註中提取系統資料和用戶備註（舊格式）
+                if (notesText) {
+                    const systemDataMatch = notesText.match(/\[系統資料\]\s*({.*?})\s*(?:\[\/系統資料\]|$)/s);
                     
-                    // 提取用戶備註（系統資料之前的部分）
-                    const systemDataStart = notesText.indexOf('[系統資料]');
-                    if (systemDataStart > 0) {
-                        customerNote = notesText.substring(0, systemDataStart).trim();
-                    }
-                } else {
-                    // 如果沒有系統資料，嘗試從訂單項目欄位解析
-                    const orderItemsText = props['訂單項目']?.rich_text?.[0]?.text?.content || '';
-                    if (orderItemsText) {
-                        // 嘗試解析格式如 "項目名稱 x 數量 - $總價"
-                        const itemMatches = orderItemsText.match(/([^x]+)\s*x\s*(\d+)\s*-\s*\$(\d+)/g);
-                        if (itemMatches) {
-                            items = itemMatches.map(match => {
-                                const [, name, qty, totalPrice] = match.match(/([^x]+)\s*x\s*(\d+)\s*-\s*\$(\d+)/);
-                                const quantity = parseInt(qty);
-                                const itemPrice = parseInt(totalPrice) / quantity;
-                                return {
-                                    name: name.trim(),
-                                    quantity: quantity,
-                                    price: itemPrice
-                                };
-                            });
+                    if (systemDataMatch) {
+                        try {
+                            const systemData = JSON.parse(systemDataMatch[1]);
+                            items = systemData.items || [];
+                        } catch (e) {
+                            console.warn('解析系統資料失敗:', e);
                         }
+                        
+                        // 提取用戶備註（系統資料之前的部分）
+                        const systemDataStart = notesText.indexOf('[系統資料]');
+                        if (systemDataStart > 0) {
+                            customerNote = notesText.substring(0, systemDataStart).trim();
+                        }
+                    } else {
+                        // 用戶備註就是整個備註內容
+                        customerNote = notesText;
                     }
-                    
-                    // 用戶備註就是整個備註內容
-                    customerNote = notesText;
                 }
             }
             
             // 如果沒有解析到項目，創建預設項目
             if (items.length === 0 && total > 0) {
+                console.log('⚠️ 未解析到項目，創建預設項目');
                 items = [{
                     name: '訂單項目',
                     quantity: 1,
@@ -361,7 +379,7 @@
                 }];
             }
             
-            return {
+            const result = {
                 id: orderId,
                 properties: {
                     '訂單編號': { title: [{ text: { content: orderId } }] },
@@ -378,6 +396,9 @@
                 customerNote: customerNote,
                 notionPageId: notionOrder.id
             };
+            
+            console.log('✅ KDS 訂單映射完成:', result);
+            return result;
         }
 
         // --- DATA PROCESSING ---
