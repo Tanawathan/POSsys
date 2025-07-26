@@ -499,9 +499,46 @@
                     console.warn('⚠️ 菜單陣列為空！');
                 }
                 
+                // 新增: 測試訂單資料庫結構
+                testOrderDatabaseSchema();
+                
                 alert('除錯資訊已輸出到控制台，請按 F12 查看');
             });
         });
+
+        // 測試訂單資料庫結構
+        async function testOrderDatabaseSchema() {
+            console.log('');
+            console.log('=== 🧪 測試訂單資料庫結構 ===');
+            try {
+                const response = await fetch(`${config.netlifyFunctionBase}/notion-api`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        path: `/databases/${config.notion.databaseIds.orders}`,
+                        method: 'GET'
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`無法獲取資料庫結構: ${response.status}`);
+                }
+
+                const dbSchema = await response.json();
+                console.log('📊 訂單資料庫結構:', dbSchema);
+                console.log('📋 可用欄位:');
+                
+                if (dbSchema.properties) {
+                    Object.entries(dbSchema.properties).forEach(([fieldName, fieldInfo]) => {
+                        console.log(`   - ${fieldName}: ${fieldInfo.type}`);
+                    });
+                }
+            } catch (error) {
+                console.error('❌ 測試資料庫結構失敗:', error);
+            }
+        }
 
         // 設置桌號選擇器彈出式模態框
         function setupTableSelector() {
@@ -798,8 +835,8 @@
                                 and: [
                                     {
                                         property: '桌號',
-                                        title: {
-                                            equals: tableNumber.toString()
+                                        rich_text: {
+                                            contains: tableNumber.toString()
                                         }
                                     },
                                     {
@@ -1307,7 +1344,7 @@
                 },
                 properties: {
                     '桌號': {
-                        title: [
+                        rich_text: [
                             {
                                 text: {
                                     content: tableNumber.toString()
@@ -1364,6 +1401,8 @@
 
             try {
                 console.log('📤 發送訂單資料到 Notion:', pageData);
+                console.log('🔍 訂單資料庫 ID:', config.notion.databaseIds.orders);
+                console.log('📋 完整頁面資料結構:', JSON.stringify(pageData, null, 2));
                 
                 // 使用 Netlify Functions 創建 Notion 頁面
                 const response = await fetch(`${config.netlifyFunctionBase}/notion-api`, {
@@ -1378,8 +1417,12 @@
                     })
                 });
 
+                console.log('📡 Notion API 回應狀態:', response.status);
+                
                 if (!response.ok) {
-                    throw new Error(`Netlify Function 錯誤: ${response.status} ${response.statusText}`);
+                    const errorText = await response.text();
+                    console.error('📄 錯誤詳情:', errorText);
+                    throw new Error(`Netlify Function 錯誤: ${response.status} - ${errorText}`);
                 }
 
                 const result = await response.json();
