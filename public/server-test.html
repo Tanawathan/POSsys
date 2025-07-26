@@ -55,7 +55,7 @@
             
             // 測試多個端點
             Promise.all([
-                fetch('/api/health').then(r => r.json()).catch(e => ({ error: e.message })),
+                fetch('/.netlify/functions/notion-api/health').then(r => r.json()).catch(e => ({ error: e.message })),
                 fetch('/api/tables').then(r => r.json()).catch(e => ({ error: e.message })),
                 fetch('/').then(r => r.text()).catch(e => ({ error: e.message }))
             ]).then(results => {

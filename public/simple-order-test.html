@@ -89,7 +89,7 @@
             console.log('發送的資料:', JSON.stringify(orderData, null, 2));
             
             try {
-                const response = await fetch('/api/notion/pages', {
+                const response = await fetch("/.netlify/functions/notion-api/pages', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'

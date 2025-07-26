@@ -62,7 +62,7 @@
                     '<span class="text-yellow-600">⏳ 正在載入 Notion 資料...</span>';
                 
                 // 獲取原始 Notion 資料
-                const response = await fetch('/api/notion/databases/237fd5adc30b808cbba3c03f8f2065fd/query', {
+                const response = await fetch("/.netlify/functions/notion-api/databases/237fd5adc30b808cbba3c03f8f2065fd/query', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({})

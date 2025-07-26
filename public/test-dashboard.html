@@ -31,7 +31,7 @@
     <div class="test-grid">
         <div class="test-card">
             <h4><span class="status-dot online"></span>健康檢查</h4>
-            <button onclick="testHealth()">測試 /api/health</button>
+            <button onclick="testHealth()">測試 /.netlify/functions/notion-api/health</button>
             <div id="health-result"></div>
         </div>
         
@@ -82,7 +82,7 @@
             const resultDiv = document.getElementById('health-result');
             try {
                 resultDiv.innerHTML = '<div style="color: #856404;">🔄 測試中...</div>';
-                const response = await fetch('/api/health');
+                const response = await fetch('/.netlify/functions/notion-api/health');
                 const data = await response.json();
                 resultDiv.innerHTML = '<div style="color: #155724;">✅ 正常<br>' + JSON.stringify(data, null, 2) + '</div>';
             } catch (error) {

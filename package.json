@@ -16,7 +16,11 @@
     "open": "echo 系統已啟動 http://localhost:3000",
     "open-management": "echo 管理功能 http://localhost:3000/management/",
     "open-tools": "echo 測試工具 http://localhost:3000/tools/",
-    "open-csv-sync": "echo CSV 同步工具 http://localhost:3000/pages/tools/csv-notion-sync.html"
+    "open-csv-sync": "echo CSV 同步工具 http://localhost:3000/pages/tools/csv-notion-sync.html",
+    "netlify-build": "node build-for-netlify.js",
+    "update-api": "node update-api-endpoints.js",
+    "deploy-prep": "npm run update-api && npm run netlify-build",
+    "test-netlify": "echo 請開啟 https://你的netlify網址.netlify.app 進行測試"
   },
   "dependencies": {
     "@notionhq/client": "^4.0.1",
@@ -32,7 +36,9 @@
     "restaurant",
     "management",
     "notion",
-    "api"
+    "api",
+    "netlify",
+    "serverless"
   ],
   "author": "Tanawat Restaurant",
   "license": "MIT"

@@ -4,7 +4,7 @@ async function debugF4Loading() {
     
     try {
         console.log('\n1️⃣ 檢查菜單 API');
-        const menuResponse = await fetch('http://localhost:3000/api/notion/databases/23afd5adc30b80c58355fd93d05c66d6/query', {
+        const menuResponse = await fetch('/.netlify/functions/notion-api/databases/23afd5adc30b80c58355fd93d05c66d6/query', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -31,7 +31,7 @@ async function debugF4Loading() {
         }
         
         console.log('\n2️⃣ 檢查訂單 API');
-        const orderResponse = await fetch('http://localhost:3000/api/notion/databases/23afd5adc30b80c39e71d1a640ccfb5d/query', {
+        const orderResponse = await fetch('/.netlify/functions/notion-api/databases/23afd5adc30b80c39e71d1a640ccfb5d/query', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

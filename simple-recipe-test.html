@@ -28,7 +28,7 @@
                 // 測試第一個資料庫
                 results.innerHTML += '<br>📊 測試半成品資料庫...';
                 
-                const response1 = await fetch('/api/notion/databases/237fd5adc30b80c09b59c03cd67c6432/query', {
+                const response1 = await fetch("/.netlify/functions/notion-api/databases/237fd5adc30b80c09b59c03cd67c6432/query', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -47,7 +47,7 @@
                 // 測試第二個資料庫
                 results.innerHTML += '<br>🧩 測試組成項目資料庫...';
                 
-                const response2 = await fetch('/api/notion/databases/237fd5adc30b80f7aedfe94804d80218/query', {
+                const response2 = await fetch("/.netlify/functions/notion-api/databases/237fd5adc30b80f7aedfe94804d80218/query', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'

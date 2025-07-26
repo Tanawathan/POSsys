@@ -5,7 +5,7 @@ async function deleteTestOrder() {
     try {
         // 步驟 1: 查詢訂單資料庫，找到 TEST-001 訂單
         console.log('🔍 查詢 TEST-001 訂單...');
-        const queryResponse = await fetch('http://localhost:3000/api/notion/databases/23afd5adc30b80c39e71d1a640ccfb5d/query', {
+        const queryResponse = await fetch('/.netlify/functions/notion-api/databases/23afd5adc30b80c39e71d1a640ccfb5d/query', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -40,7 +40,7 @@ async function deleteTestOrder() {
                 
                 // 刪除訂單（將頁面歸檔）
                 console.log(`🗑️ 正在刪除訂單 ${order.id}...`);
-                const deleteResponse = await fetch(`http://localhost:3000/api/notion/pages/${order.id}`, {
+                const deleteResponse = await fetch(`/.netlify/functions/notion-api/pages/${order.id}`, {
                     method: 'PATCH',
                     headers: {
                         'Content-Type': 'application/json'
@@ -65,7 +65,7 @@ async function deleteTestOrder() {
         
         // 步驟 3: 查找並刪除其他測試訂單（以 TEST- 開頭的）
         console.log('\n🔍 查詢其他測試訂單...');
-        const allTestOrdersResponse = await fetch('http://localhost:3000/api/notion/databases/23afd5adc30b80c39e71d1a640ccfb5d/query', {
+        const allTestOrdersResponse = await fetch('/.netlify/functions/notion-api/databases/23afd5adc30b80c39e71d1a640ccfb5d/query', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -89,7 +89,7 @@ async function deleteTestOrder() {
                     const orderNumber = testOrder.properties['訂單編號']?.title?.[0]?.text?.content;
                     console.log(`🗑️ 刪除測試訂單: ${orderNumber} (ID: ${testOrder.id})`);
                     
-                    const deleteResponse = await fetch(`http://localhost:3000/api/notion/pages/${testOrder.id}`, {
+                    const deleteResponse = await fetch(`/.netlify/functions/notion-api/pages/${testOrder.id}`, {
                         method: 'PATCH',
                         headers: {
                             'Content-Type': 'application/json'

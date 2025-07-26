@@ -104,7 +104,7 @@
         async function testConnection() {
             log('🔗 測試伺服器連線...');
             try {
-                const response = await fetch('/api/health');
+                const response = await fetch('/.netlify/functions/notion-api/health');
                 const data = await response.json();
                 
                 if (data.status === 'ok') {

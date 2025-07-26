@@ -706,7 +706,7 @@
             console.log('🧪 完整測試所有 Notion 項目');
             
             try {
-                const response = await fetch('/api/notion/databases/23afd5adc30b80c58355fd93d05c66d6/query', {
+                const response = await fetch("/.netlify/functions/notion-api/databases/23afd5adc30b80c58355fd93d05c66d6/query', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ page_size: 20 })
@@ -768,7 +768,7 @@
             
             try {
                 // 直接從 API 取得資料
-                const response = await fetch('/api/notion/databases/23afd5adc30b80c58355fd93d05c66d6/query', {
+                const response = await fetch("/.netlify/functions/notion-api/databases/23afd5adc30b80c58355fd93d05c66d6/query', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ page_size: 10 })

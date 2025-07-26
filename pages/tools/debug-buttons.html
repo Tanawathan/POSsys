@@ -103,7 +103,7 @@
             log('🔍 檢查伺服器狀態...');
             try {
                 // 測試基本連線
-                const healthResponse = await fetch('/api/health');
+                const healthResponse = await fetch('/.netlify/functions/notion-api/health');
                 if (healthResponse.ok) {
                     log('✅ 伺服器健康檢查通過', 'success');
                 } else {
@@ -120,7 +120,7 @@
                 }
 
                 // 測試 Notion 連線
-                const notionResponse = await fetch('/api/test-notion');
+                const notionResponse = await fetch('/.netlify/functions/notion-api/test-notion');
                 if (notionResponse.ok) {
                     log('✅ Notion 連線正常', 'success');
                 } else {

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Netlify 部署測試</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="env-config.js"></script>
+    <script src="api-config.js"></script>
+</head>
+<body class="bg-gray-50 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold text-gray-800 mb-8">🚀 Netlify 部署測試</h1>
+        
+        <!-- 環境信息 -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold text-gray-700 mb-4">📋 環境信息</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-600">部署類型</label>
+                    <div class="mt-1 p-2 bg-gray-100 rounded" id="deployment-type">檢查中...</div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600">API 基礎 URL</label>
+                    <div class="mt-1 p-2 bg-gray-100 rounded" id="api-base-url">檢查中...</div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600">Notion API 狀態</label>
+                    <div class="mt-1 p-2 bg-gray-100 rounded" id="notion-status">檢查中...</div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600">餐廳名稱</label>
+                    <div class="mt-1 p-2 bg-gray-100 rounded" id="restaurant-name">檢查中...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- API 測試 -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold text-gray-700 mb-4">🔧 API 測試</h2>
+            <div class="space-y-4">
+                <button onclick="testHealth()" class="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                    測試健康檢查端點
+                </button>
+                <button onclick="testNotionConnection()" class="w-full bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+                    測試 Notion 連接
+                </button>
+                <button onclick="testMenuDatabase()" class="w-full bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600">
+                    測試菜單資料庫
+                </button>
+            </div>
+        </div>
+
+        <!-- 測試結果 -->
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold text-gray-700 mb-4">📊 測試結果</h2>
+            <div id="test-results" class="space-y-2 text-sm">
+                <div class="text-gray-600">等待測試...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 頁面載入時初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeEnvironmentInfo();
+        });
+
+        function initializeEnvironmentInfo() {
+            // 顯示環境信息
+            document.getElementById('deployment-type').textContent = 
+                window.ENV_CONFIG?.DEPLOYMENT_TYPE || 'unknown';
+            document.getElementById('api-base-url').textContent = 
+                window.API_CONFIG?.baseUrl || '/.netlify/functions/notion-api';
+            document.getElementById('notion-status').textContent = 
+                window.ENV_CONFIG?.NOTION_API_KEY ? '✅ 已配置' : '❌ 未配置';
+            document.getElementById('restaurant-name').textContent = 
+                window.ENV_CONFIG?.RESTAURANT_NAME || '未設定';
+        }
+
+        function addTestResult(message, isSuccess = true) {
+            const resultsDiv = document.getElementById('test-results');
+            const timestamp = new Date().toLocaleTimeString();
+            const icon = isSuccess ? '✅' : '❌';
+            const colorClass = isSuccess ? 'text-green-600' : 'text-red-600';
+            
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `p-2 rounded ${colorClass} bg-gray-50`;
+            resultDiv.innerHTML = `<span class="font-mono text-xs text-gray-500">[${timestamp}]</span> ${icon} ${message}`;
+            
+            resultsDiv.appendChild(resultDiv);
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+
+        async function testHealth() {
+            addTestResult('開始健康檢查測試...', true);
+            
+            try {
+                const response = await fetch('/.netlify/functions/notion-api/health');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addTestResult(`健康檢查成功: ${data.status} (${data.environment})`, true);
+                    addTestResult(`Notion API 配置: ${data.notion_api_configured ? '✅' : '❌'}`, data.notion_api_configured);
+                } else {
+                    addTestResult(`健康檢查失敗: ${response.status}`, false);
+                }
+            } catch (error) {
+                addTestResult(`健康檢查錯誤: ${error.message}`, false);
+            }
+        }
+
+        async function testNotionConnection() {
+            addTestResult('開始 Notion 連接測試...', true);
+            
+            try {
+                const response = await fetch('/.netlify/functions/notion-api/test-notion');
+                const data = await response.json();
+                
+                if (response.ok && data.connected) {
+                    addTestResult(`Notion 連接成功: ${data.user}`, true);
+                } else {
+                    addTestResult(`Notion 連接失敗: ${data.error}`, false);
+                }
+            } catch (error) {
+                addTestResult(`Notion 連接錯誤: ${error.message}`, false);
+            }
+        }
+
+        async function testMenuDatabase() {
+            addTestResult('開始菜單資料庫測試...', true);
+            
+            try {
+                const menuDbId = window.ENV_CONFIG?.MENU_DATABASE_ID;
+                if (!menuDbId) {
+                    addTestResult('菜單資料庫 ID 未配置', false);
+                    return;
+                }
+
+                const response = await fetch(`/.netlify/functions/notion-api/databases/${menuDbId}/query`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        page_size: 5
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    addTestResult(`菜單資料庫查詢成功: 找到 ${data.results?.length || 0} 筆資料`, true);
+                } else {
+                    addTestResult(`菜單資料庫查詢失敗: ${data.message || '未知錯誤'}`, false);
+                }
+            } catch (error) {
+                addTestResult(`菜單資料庫測試錯誤: ${error.message}`, false);
+            }
+        }
+    </script>
+</body>
+</html>

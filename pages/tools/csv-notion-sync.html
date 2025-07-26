@@ -496,7 +496,7 @@
             
             try {
                 // 測試健康檢查
-                const healthResponse = await fetch('/api/health');
+                const healthResponse = await fetch('/.netlify/functions/notion-api/health');
                 const healthData = await healthResponse.json();
                 console.log('🏥 健康檢查結果:', healthData);
                 

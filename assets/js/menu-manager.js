@@ -21,7 +21,7 @@ class MenuManager {
             console.log('📋 從 Notion 載入菜單資料...');
             
             // 使用代理伺服器端點載入菜單資料
-            const response = await fetch('/api/notion/databases/23afd5adc30b80c58355fd93d05c66d6/query', {
+            const response = await fetch("/.netlify/functions/notion-api/databases/23afd5adc30b80c58355fd93d05c66d6/query', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -140,7 +140,7 @@ class MenuManager {
             console.log('🧩 載入菜單組成項目...');
             
             // 載入半成品資料
-            const semiFinishedResponse = await fetch('/api/notion/databases/237fd5adc30b80c09b59c03cd67c6432/query', {
+            const semiFinishedResponse = await fetch("/.netlify/functions/notion-api/databases/237fd5adc30b80c09b59c03cd67c6432/query', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -148,7 +148,7 @@ class MenuManager {
                 body: JSON.stringify({})
             });
             
-            const ingredientsResponse = await fetch('/api/notion/databases/237fd5adc30b808cbba3c03f8f2065fd/query', {
+            const ingredientsResponse = await fetch("/.netlify/functions/notion-api/databases/237fd5adc30b808cbba3c03f8f2065fd/query', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

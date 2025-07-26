@@ -1142,7 +1142,7 @@
                 }
                 
                 // 查詢 Notion 訂單資料庫
-                const response = await fetch('/api/notion/databases/' + NOTION_CONFIG.databaseIds.orders + '/query', {
+                const response = await fetch("/.netlify/functions/notion-api/databases/' + NOTION_CONFIG.databaseIds.orders + '/query', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -1706,7 +1706,7 @@
             try {
                 console.log(`更新訂單 ${orderId} 狀態為: ${newStatus}`);
                 
-                const response = await fetch(`/api/notion/pages/${orderId}`, {
+                const response = await fetch("/.netlify/functions/notion-api/pages/${orderId}`, {
                     method: 'PATCH',
                     headers: {
                         'Content-Type': 'application/json'

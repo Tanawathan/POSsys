@@ -55,7 +55,7 @@
                 apiStatus.innerHTML = '<span class="loading">連接 Notion API...</span>';
                 
                 // 查詢 Notion 訂單資料庫
-                const response = await fetch('/api/notion/databases/' + NOTION_CONFIG.databaseIds.orders + '/query', {
+                const response = await fetch("/.netlify/functions/notion-api/databases/' + NOTION_CONFIG.databaseIds.orders + '/query', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'

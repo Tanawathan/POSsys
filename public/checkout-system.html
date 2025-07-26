@@ -246,7 +246,7 @@
                 console.log('🏗️ 正在從 Notion 桌況資料庫載入桌況...');
                 
                 // 查詢 Notion 桌況資料庫
-                const response = await fetch('/api/notion/databases/' + NOTION_CONFIG.databaseIds.tables + '/query', {
+                const response = await fetch("/.netlify/functions/notion-api/databases/' + NOTION_CONFIG.databaseIds.tables + '/query', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -436,7 +436,7 @@
                 `;
                 
                 // 查詢該桌號的所有訂單
-                const response = await fetch('/api/notion/databases/' + NOTION_CONFIG.databaseIds.orders + '/query', {
+                const response = await fetch("/.netlify/functions/notion-api/databases/' + NOTION_CONFIG.databaseIds.orders + '/query', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'

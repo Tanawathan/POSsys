@@ -18,7 +18,7 @@
     
     <div class="test-section">
         <h3>1. 健康檢查</h3>
-        <button onclick="testHealth()">測試 /api/health</button>
+        <button onclick="testHealth()">測試 /.netlify/functions/notion-api/health</button>
         <div id="health-result" class="result"></div>
     </div>
     
@@ -44,7 +44,7 @@
             const resultDiv = document.getElementById('health-result');
             try {
                 resultDiv.textContent = '正在測試健康檢查端點...';
-                const response = await fetch('/api/health');
+                const response = await fetch('/.netlify/functions/notion-api/health');
                 
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);

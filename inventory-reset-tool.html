@@ -54,7 +54,7 @@
             
             // 檢查 API 連接
             try {
-                const response = await fetch('/api/notion/databases/237fd5adc30b808cbba3c03f8f2065fd/query', {
+                const response = await fetch("/.netlify/functions/notion-api/databases/237fd5adc30b808cbba3c03f8f2065fd/query', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({})
@@ -72,7 +72,7 @@
             
             // 檢查伺服器
             try {
-                const response = await fetch('/api/health');
+                const response = await fetch('/.netlify/functions/notion-api/health');
                 if (response.ok) {
                     checks.push('✅ 伺服器正常運行');
                 } else {
@@ -107,7 +107,7 @@
             log('🔄 強制重新載入 Notion 資料...');
             
             try {
-                const response = await fetch('/api/notion/databases/237fd5adc30b808cbba3c03f8f2065fd/query', {
+                const response = await fetch("/.netlify/functions/notion-api/databases/237fd5adc30b808cbba3c03f8f2065fd/query', {
                     method: 'POST',
                     headers: { 
                         'Content-Type': 'application/json',

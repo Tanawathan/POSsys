@@ -18,7 +18,7 @@ async function checkDatabaseStructure(databaseId, name) {
         console.log(`\n🔍 正在檢查 ${name} 資料庫結構...`);
         console.log(`📊 資料庫 ID: ${databaseId}`);
         
-        const response = await fetch(`http://localhost:3000/api/notion/databases/${databaseId}`, {
+        const response = await fetch(`/.netlify/functions/notion-api/databases/${databaseId}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json'

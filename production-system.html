@@ -306,7 +306,7 @@
                             requestBody.start_cursor = cursor;
                         }
                         
-                        const response = await fetch(`/api/notion/databases/${databaseId}/query`, {
+                        const response = await fetch("/.netlify/functions/notion-api/databases/${databaseId}/query`, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json'
@@ -843,7 +843,7 @@
                     }
                 };
                 
-                const response = await fetch(`/api/notion/pages/${recipe.id}`, {
+                const response = await fetch("/.netlify/functions/notion-api/pages/${recipe.id}`, {
                     method: 'PATCH',
                     headers: {
                         'Content-Type': 'application/json'
@@ -911,7 +911,7 @@
                             }
                         };
                         
-                        const response = await fetch(`/api/notion/pages/${inventoryItem.id}`, {
+                        const response = await fetch("/.netlify/functions/notion-api/pages/${inventoryItem.id}`, {
                             method: 'PATCH',
                             headers: {
                                 'Content-Type': 'application/json'
@@ -1020,7 +1020,7 @@
                     }
                 };
 
-                const response = await fetch('/api/notion/pages', {
+                const response = await fetch("/.netlify/functions/notion-api/pages', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -1238,7 +1238,7 @@
                         page_size: limit
                     };
 
-                    const response = await fetch('/api/notion/pages', {
+                    const response = await fetch("/.netlify/functions/notion-api/pages', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'
@@ -1510,7 +1510,7 @@
                     }
                     
                     // 發送 API 請求更新狀態
-                    const response = await fetch(`/api/notion/pages/${recordId}`, {
+                    const response = await fetch("/.netlify/functions/notion-api/pages/${recordId}`, {
                         method: 'PATCH',
                         headers: {
                             'Content-Type': 'application/json'

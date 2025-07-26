@@ -1309,7 +1309,7 @@
         // API 連接檢查
         async function checkApiConnection() {
             try {
-                const response = await fetch('/api/health');
+                const response = await fetch('/.netlify/functions/notion-api/health');
                 const data = await response.json();
                 
                 if (data.status === 'healthy') {
@@ -1328,7 +1328,7 @@
         // 測試 Notion 連接
         async function testNotionConnection() {
             try {
-                const response = await fetch('/api/test-notion');
+                const response = await fetch('/.netlify/functions/notion-api/test-notion');
                 const data = await response.json();
                 
                 if (data.success) {
