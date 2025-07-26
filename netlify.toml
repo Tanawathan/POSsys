@@ -41,6 +41,4 @@
 [functions]
   directory = "netlify/functions"
 
-# 邊緣函數設定
-[edge_functions]
-  directory = "netlify/edge-functions"
+# 注意：邊緣函數設定已移除，因為目前不使用 edge functions
