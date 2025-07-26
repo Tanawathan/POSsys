@@ -3,13 +3,44 @@
 netlify-env-vars.txt
 production-records-db-config.json
 NETLIFY-DEPLOYMENT-GUIDE.md
-*.md
 
-# Node modules 和 logs
+# 開發和測試檔案 - 包含敏感值
+*.md
+data/
+docs/
+scripts/
+test-*.js
+test-*.html
+debug-*.js
+debug-*.html
+monitor-*.js
+check-*.js
+create-*.js
+delete-*.js
+direct-*.js
+proxy-server.js
+server.js
+start-*.bat
+start-*.ps1
+start-server.*
+
+# 包含硬編碼值的頁面
+pages/
+assets/js/
+menu-management-system.html
+pos-system.html
+diagnostic-tool.html
+inventory-*.html
+pagination-test.html
+recipe-*.html
+simple-*.html
+
+# Node modules 和 logs  
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+package-lock.json
 
 # 開發檔案
 .git/
@@ -18,5 +49,20 @@ yarn-error.log*
 # 備份和臨時檔案
 *.bak
 *.tmp
+*.log
+
+# CSV 數據檔案
+*.csv
+
+# 系統檔案
+Node.js安裝步驟.txt
+*.bat
+*.ps1
+
+# 包含敏感值的文檔
+儀表板修正報告.md
+桌號訂單資訊功能說明.md
+系統導航說明.md
+資料夾導覽.md
 .DS_Store
 Thumbs.db
