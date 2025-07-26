@@ -332,6 +332,31 @@
             link.click();
         }
 
+        // 統一的設備檢測函數
+        function isMobileDevice() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                   window.innerWidth <= 768;
+        }
+
+        // 統一的頁面導航函數
+        function navigateToPage(url, openInNewWindow = false) {
+            const isMobile = isMobileDevice();
+            
+            if (isMobile && !openInNewWindow) {
+                // 手機設備：直接跳轉（除非特別要求新視窗）
+                window.location.href = url;
+            } else {
+                // 桌面設備或特別要求：在新視窗開啟
+                const newWindow = window.open(url, '_blank');
+                if (!newWindow) {
+                    // 如果彈出視窗被阻擋，提示用戶並提供備選方案
+                    if (confirm('彈出視窗被阻擋。是否在當前頁面開啟？')) {
+                        window.location.href = url;
+                    }
+                }
+            }
+        }
+
         // 新增頁面導航功能
         function openPage(pagePath) {
             // 檢查是否需要密碼驗證（管理系統頁面）
@@ -345,14 +370,13 @@
                 }
             }
             
-            // 開啟頁面
-            window.open(pagePath, '_blank');
+            navigateToPage(pagePath);
         }
 
         function openManagementDashboard() {
             const password = prompt('請輸入管理密碼：');
             if (password === 'admin123') {
-                window.open('pages/management/dashboard.html', '_blank');
+                navigateToPage('pages/management/dashboard.html');
             } else if (password) {
                 alert('密碼錯誤');
             }
@@ -379,7 +403,7 @@
             const tableNumber = prompt('請輸入桌號 (1-20):');
             if (tableNumber && tableNumber >= 1 && tableNumber <= 20) {
                 const orderUrl = `${window.location.origin}/customer/?table=${tableNumber}`;
-                window.open(orderUrl, '_blank');
+                navigateToPage(orderUrl);
             } else if (tableNumber) {
                 alert('請輸入有效的桌號 (1-20)');
             }
@@ -392,26 +416,30 @@
 
         // === 手機專區功能 ===
         function openMobilePage(pagePath) {
-            // 使用當前視窗開啟手機頁面，因為手機頁面通常應該全螢幕顯示
-            const width = window.screen.width;
-            const isMobile = width <= 768;
+            const isMobile = isMobileDevice();
             
             if (isMobile) {
                 // 在手機設備上，直接在當前視窗開啟
                 window.location.href = pagePath;
             } else {
-                // 在桌面設備上，開啟手機尺寸的新視窗
-                const mobileWindow = window.open(
-                    pagePath, 
-                    '_blank',
-                    'width=375,height=812,scrollbars=yes,resizable=yes,toolbar=no,menubar=no,location=no,status=no'
-                );
-                
-                if (mobileWindow) {
-                    mobileWindow.focus();
-                } else {
-                    // 如果彈出視窗被阻擋，則在新標籤頁開啟
-                    window.open(pagePath, '_blank');
+                // 在桌面設備上，嘗試開啟手機尺寸的新視窗
+                try {
+                    const mobileWindow = window.open(
+                        pagePath, 
+                        '_blank',
+                        'width=375,height=812,scrollbars=yes,resizable=yes,toolbar=no,menubar=no,location=no,status=no'
+                    );
+                    
+                    if (mobileWindow) {
+                        mobileWindow.focus();
+                    } else {
+                        throw new Error('彈出視窗被阻擋');
+                    }
+                } catch (error) {
+                    // 如果彈出視窗被阻擋，提供備選方案
+                    if (confirm('無法開啟手機模擬視窗。是否在新標籤頁開啟？')) {
+                        navigateToPage(pagePath, true);
+                    }
                 }
             }
         }
@@ -643,8 +671,60 @@
             // 加載手機樣式
             addMobileStyles();
 
+            // 為手機用戶添加返回按鈕支持
+            addMobileNavigationSupport();
+
             // 檢測設備並顯示相應提示
             setTimeout(detectDevice, 1000);
+        }
+
+        // 為手機用戶添加導航支持
+        function addMobileNavigationSupport() {
+            if (isMobileDevice()) {
+                // 添加手機專用的返回按鈕樣式
+                const mobileNavStyle = document.createElement('style');
+                mobileNavStyle.textContent = `
+                    .mobile-back-btn {
+                        position: fixed;
+                        top: 20px;
+                        left: 20px;
+                        z-index: 1000;
+                        background: rgba(0, 0, 0, 0.7);
+                        color: white;
+                        border: none;
+                        border-radius: 50%;
+                        width: 50px;
+                        height: 50px;
+                        font-size: 18px;
+                        cursor: pointer;
+                        display: none;
+                    }
+                    .mobile-back-btn.show {
+                        display: block;
+                    }
+                `;
+                document.head.appendChild(mobileNavStyle);
+
+                // 監聽頁面變化，在非首頁時顯示返回按鈕
+                if (window.location.pathname !== '/' && window.location.pathname !== '/index.html') {
+                    addMobileBackButton();
+                }
+            }
+        }
+
+        // 添加手機返回按鈕
+        function addMobileBackButton() {
+            const backBtn = document.createElement('button');
+            backBtn.className = 'mobile-back-btn show';
+            backBtn.innerHTML = '←';
+            backBtn.onclick = () => {
+                if (window.history.length > 1) {
+                    window.history.back();
+                } else {
+                    window.location.href = '/';
+                }
+            };
+            document.body.appendChild(backBtn);
         }
 
         // 頁面載入完成後初始化
