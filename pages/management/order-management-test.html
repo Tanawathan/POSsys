@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>訂單管理測試 - Tanawat Restaurant</title>
+    
+    <!-- 統一設計系統樣式 -->
+    <link rel="stylesheet" href="../../assets/css/unified-design.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        .test-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        
+        .test-section {
+            margin-bottom: 2rem;
+            padding: 1rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+        }
+        
+        .test-result {
+            padding: 0.5rem;
+            margin: 0.5rem 0;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        
+        .test-result.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #10b981;
+        }
+        
+        .test-result.error {
+            background: #fee2e2;
+            color: #dc2626;
+            border: 1px solid #ef4444;
+        }
+        
+        .test-result.warning {
+            background: #fef3c7;
+            color: #92400e;
+            border: 1px solid #f59e0b;
+        }
+        
+        .test-result.info {
+            background: #dbeafe;
+            color: #1d4ed8;
+            border: 1px solid #3b82f6;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1><i class="fas fa-bug"></i> 訂單管理系統測試</h1>
+        
+        <div class="test-section">
+            <h3>1. 腳本載入測試</h3>
+            <div id="script-test-results"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>2. 類別初始化測試</h3>
+            <div id="class-test-results"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>3. 基本功能測試</h3>
+            <div id="function-test-results"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>4. 瀏覽器資訊</h3>
+            <div id="browser-info"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>5. 錯誤日誌</h3>
+            <div id="error-log"></div>
+        </div>
+    </div>
+
+    <!-- 載入腳本 -->
+    <script src="../../assets/js/pos-utils.js"></script>
+    <script src="../../assets/js/notion-manager.js"></script>
+    <script src="../../assets/js/order-manager.js"></script>
+    <script src="../../assets/js/order-ui.js"></script>
+
+    <script>
+        // 測試結果記錄器
+        function logTestResult(containerId, type, message) {
+            const container = document.getElementById(containerId);
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${type}`;
+            resultDiv.innerHTML = `<strong>${type.toUpperCase()}:</strong> ${message}`;
+            container.appendChild(resultDiv);
+        }
+
+        // 1. 腳本載入測試
+        function testScriptLoading() {
+            const scripts = [
+                { name: 'pos-utils.js', path: '../../assets/js/pos-utils.js' },
+                { name: 'notion-manager.js', path: '../../assets/js/notion-manager.js' },
+                { name: 'order-manager.js', path: '../../assets/js/order-manager.js' },
+                { name: 'order-ui.js', path: '../../assets/js/order-ui.js' }
+            ];
+
+            scripts.forEach(script => {
+                const scriptElement = document.querySelector(`script[src="${script.path}"]`);
+                if (scriptElement) {
+                    logTestResult('script-test-results', 'success', `${script.name} 已載入`);
+                } else {
+                    logTestResult('script-test-results', 'error', `${script.name} 載入失敗`);
+                }
+            });
+        }
+
+        // 2. 類別初始化測試
+        function testClassInitialization() {
+            const classes = [
+                { name: 'OrderManager', class: OrderManager },
+                { name: 'OrderUI', class: OrderUI },
+                { name: 'NotionDataManager', class: NotionDataManager }
+            ];
+
+            classes.forEach(cls => {
+                if (typeof cls.class !== 'undefined') {
+                    logTestResult('class-test-results', 'success', `${cls.name} 類別已定義`);
+                    
+                    try {
+                        const instance = new cls.class();
+                        logTestResult('class-test-results', 'success', `${cls.name} 實例化成功`);
+                    } catch (error) {
+                        logTestResult('class-test-results', 'error', `${cls.name} 實例化失敗: ${error.message}`);
+                    }
+                } else {
+                    logTestResult('class-test-results', 'error', `${cls.name} 類別未定義`);
+                }
+            });
+        }
+
+        // 3. 基本功能測試
+        function testBasicFunctions() {
+            try {
+                if (typeof OrderManager !== 'undefined') {
+                    const orderManager = new OrderManager();
+                    
+                    // 測試建立訂單
+                    const orderResult = orderManager.createOrder('測試桌', 2);
+                    if (orderResult.success) {
+                        logTestResult('function-test-results', 'success', '建立訂單功能正常');
+                        
+                        // 測試新增品項
+                        try {
+                            orderManager.addItemToOrder(orderResult.orderId, {
+                                name: '測試菜品',
+                                price: 100,
+                                quantity: 1,
+                                category: '測試'
+                            });
+                            logTestResult('function-test-results', 'success', '新增品項功能正常');
+                        } catch (error) {
+                            logTestResult('function-test-results', 'error', `新增品項失敗: ${error.message}`);
+                        }
+                    } else {
+                        logTestResult('function-test-results', 'error', '建立訂單失敗');
+                    }
+                }
+            } catch (error) {
+                logTestResult('function-test-results', 'error', `功能測試失敗: ${error.message}`);
+            }
+        }
+
+        // 4. 瀏覽器資訊
+        function showBrowserInfo() {
+            const info = {
+                'User Agent': navigator.userAgent,
+                'Platform': navigator.platform,
+                'Language': navigator.language,
+                'Cookie Enabled': navigator.cookieEnabled,
+                'Online': navigator.onLine,
+                'Local Storage': typeof(Storage) !== "undefined" ? '支援' : '不支援',
+                'Session Storage': typeof(sessionStorage) !== "undefined" ? '支援' : '不支援'
+            };
+
+            Object.entries(info).forEach(([key, value]) => {
+                logTestResult('browser-info', 'info', `${key}: ${value}`);
+            });
+        }
+
+        // 5. 錯誤日誌
+        function setupErrorLogging() {
+            window.addEventListener('error', function(event) {
+                logTestResult('error-log', 'error', `${event.filename}:${event.lineno} - ${event.message}`);
+            });
+
+            window.addEventListener('unhandledrejection', function(event) {
+                logTestResult('error-log', 'error', `Promise 錯誤: ${event.reason}`);
+            });
+        }
+
+        // 執行所有測試
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('開始執行訂單管理系統測試...');
+            
+            // 延遲執行以確保腳本載入完成
+            setTimeout(() => {
+                testScriptLoading();
+                testClassInitialization();
+                testBasicFunctions();
+                showBrowserInfo();
+                setupErrorLogging();
+                
+                console.log('測試完成');
+            }, 2000);
+        });
+    </script>
+</body>
+</html> 

@@ -1044,41 +1044,63 @@
     </div>
 
     <!-- 載入所有必要的腳本 -->
-    <script src="assets/js/pos-utils.js"></script>
-    <script src="assets/js/recipe-manager.js"></script>
-    <script src="assets/js/menu-manager.js"></script>
-    <script src="assets/js/table-manager.js"></script>
-    <script src="assets/js/purchase-manager.js"></script>
-    <script src="assets/js/reservation-manager.js"></script>
-    <script src="assets/js/order-manager.js"></script>
-    <script src="assets/js/order-ui.js"></script>
+    <script src="../../assets/js/pos-utils.js"></script>
+    <script src="../../assets/js/notion-manager.js"></script>
+    <script src="../../assets/js/recipe-manager.js"></script>
+    <script src="../../assets/js/menu-manager.js"></script>
+    <script src="../../assets/js/table-manager.js"></script>
+    <script src="../../assets/js/purchase-manager.js"></script>
+    <script src="../../assets/js/reservation-manager.js"></script>
+    <script src="../../assets/js/order-manager.js"></script>
+    <script src="../../assets/js/order-ui.js"></script>
 
     <script>
         // 確保在所有腳本載入完成後初始化訂單系統
         document.addEventListener('DOMContentLoaded', function() {
             console.log('訂單管理系統正在載入...');
             
-            // 檢查所有必要的類別是否已載入
-            if (typeof OrderManager === 'undefined') {
-                console.error('OrderManager 未載入');
-                return;
-            }
-            
-            if (typeof OrderUI === 'undefined') {
-                console.error('OrderUI 未載入');
-                return;
-            }
-            
-            try {
-                // 初始化訂單管理系統
-                window.orderUI = new OrderUI();
-                console.log('訂單管理系統載入成功');
+            // 等待所有腳本載入完成
+            setTimeout(function() {
+                // 檢查所有必要的類別是否已載入
+                if (typeof OrderManager === 'undefined') {
+                    console.error('OrderManager 未載入，請檢查路徑: ../../assets/js/order-manager.js');
+                    document.getElementById('orders-container').innerHTML = `
+                        <div class="alert alert-error">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <strong>載入錯誤:</strong> OrderManager 未載入，請檢查瀏覽器控制台
+                        </div>
+                    `;
+                    return;
+                }
                 
-                // 載入測試資料（如果需要）
-                loadSampleData();
-            } catch (error) {
-                console.error('訂單管理系統載入失敗:', error);
-            }
+                if (typeof OrderUI === 'undefined') {
+                    console.error('OrderUI 未載入，請檢查路徑: ../../assets/js/order-ui.js');
+                    document.getElementById('orders-container').innerHTML = `
+                        <div class="alert alert-error">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <strong>載入錯誤:</strong> OrderUI 未載入，請檢查瀏覽器控制台
+                        </div>
+                    `;
+                    return;
+                }
+                
+                try {
+                    // 初始化訂單管理系統
+                    window.orderUI = new OrderUI();
+                    console.log('訂單管理系統載入成功');
+                    
+                    // 載入測試資料（如果需要）
+                    loadSampleData();
+                } catch (error) {
+                    console.error('訂單管理系統載入失敗:', error);
+                    document.getElementById('orders-container').innerHTML = `
+                        <div class="alert alert-error">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <strong>初始化錯誤:</strong> ${error.message}
+                        </div>
+                    `;
+                }
+            }, 1000); // 等待1秒確保所有腳本載入
         });
 
         // 載入測試資料

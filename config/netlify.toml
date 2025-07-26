@@ -17,9 +17,21 @@
     Referrer-Policy = "strict-origin-when-cross-origin"
 
 [[redirects]]
-  # SPA 路由支援 - 將所有路徑重定向到 index.html (移除 admin 條件，這會阻止正常訪問)
+  # SPA 路由支援 - 將所有路徑重定向到 index.html
   from = "/*"
   to = "/index.html"
+  status = 200
+
+# 確保管理頁面可以正常訪問
+[[redirects]]
+  from = "/pages/management/*"
+  to = "/pages/management/:splat"
+  status = 200
+
+# 確保靜態資源可以正常訪問
+[[redirects]]
+  from = "/assets/*"
+  to = "/assets/:splat"
   status = 200
 
 # 表單處理設定（如果需要）
