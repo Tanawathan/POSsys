@@ -832,20 +832,10 @@
                         method: 'POST',
                         body: {
                             filter: {
-                                and: [
-                                    {
-                                        property: '桌號',
-                                        rich_text: {
-                                            contains: tableNumber.toString()
-                                        }
-                                    },
-                                    {
-                                        property: '狀態',
-                                        select: {
-                                            does_not_equal: '已完成'
-                                        }
-                                    }
-                                ]
+                                property: '桌號',
+                                rich_text: {
+                                    contains: tableNumber.toString()
+                                }
                             },
                             sorts: [
                                 {
@@ -1343,6 +1333,15 @@
                     database_id: config.notion.databaseIds.orders
                 },
                 properties: {
+                    '訂單編號': {
+                        title: [
+                            {
+                                text: {
+                                    content: orderId
+                                }
+                            }
+                        ]
+                    },
                     '桌號': {
                         rich_text: [
                             {
@@ -1373,15 +1372,6 @@
                         date: {
                             start: new Date().toISOString()
                         }
-                    },
-                    '訂單編號': {
-                        rich_text: [
-                            {
-                                text: {
-                                    content: orderId
-                                }
-                            }
-                        ]
                     }
                 }
             };
