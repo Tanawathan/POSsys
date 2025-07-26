@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>結帳系統 - Tanawat Restaurant</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link href="../../assets/css/unified-design.css" rel="stylesheet">
@@ -191,6 +194,10 @@
     </div>
 
     <script>
+        // === 版本資訊 ===
+        const VERSION = '1.3.0-' + Date.now(); // 強制快取失效
+        console.log('🔧 結帳系統版本:', VERSION);
+
         // === 配置 ===
         const CONFIG = {
             netlifyFunctionBase: `${window.location.origin}/.netlify/functions`,
@@ -249,8 +256,17 @@
             console.log('🔄 正在獲取桌況資料...');
             console.log('🔗 API URL:', `${CONFIG.netlifyFunctionBase}/notion-api`);
             console.log('📋 請求資料庫 ID:', CONFIG.notion.databaseIds.tables);
+            
+            // 安全檢查：確保沒有使用 localhost
+            const apiUrl = `${CONFIG.netlifyFunctionBase}/notion-api`;
+            if (apiUrl.includes('localhost')) {
+                console.error('🚨 檢測到 localhost URL，這不應該發生!');
+                console.error('🔧 CONFIG.netlifyFunctionBase:', CONFIG.netlifyFunctionBase);
+                throw new Error('配置錯誤：仍在使用 localhost');
+            }
+            
             try {
-                const response = await fetch(`${CONFIG.netlifyFunctionBase}/notion-api`, {
+                const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -290,8 +306,17 @@
             console.log('🔄 正在獲取訂單資料...');
             console.log('🔗 API URL:', `${CONFIG.netlifyFunctionBase}/notion-api`);
             console.log('📋 請求資料庫 ID:', CONFIG.notion.databaseIds.orders);
+            
+            // 安全檢查：確保沒有使用 localhost
+            const apiUrl = `${CONFIG.netlifyFunctionBase}/notion-api`;
+            if (apiUrl.includes('localhost')) {
+                console.error('🚨 檢測到 localhost URL，這不應該發生!');
+                console.error('🔧 CONFIG.netlifyFunctionBase:', CONFIG.netlifyFunctionBase);
+                throw new Error('配置錯誤：仍在使用 localhost');
+            }
+            
             try {
-                const response = await fetch(`${CONFIG.netlifyFunctionBase}/notion-api`, {
+                const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
