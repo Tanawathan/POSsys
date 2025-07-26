@@ -284,11 +284,26 @@
         // === API 函數 ===
         async function callNotionAPI(path, method = 'GET', body = null) {
             try {
-                const response = await fetch(CONFIG.apiBase + path, {
+                let fetchUrl = CONFIG.apiBase + path;
+                let fetchOptions = {
                     method: method,
-                    headers: { 'Content-Type': 'application/json' },
-                    body: body ? JSON.stringify(body) : undefined
-                });
+                    headers: { 'Content-Type': 'application/json' }
+                };
+
+                // 若為 Netlify Functions，需包裝 body 給 notion-api function
+                if (CONFIG.apiBase.startsWith('/.netlify/functions/')) {
+                    fetchUrl = CONFIG.apiBase;
+                    fetchOptions = {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ path, method, body })
+                    };
+                } else {
+                    // 本地 Express API
+                    fetchOptions.body = body ? JSON.stringify(body) : undefined;
+                }
+
+                const response = await fetch(fetchUrl, fetchOptions);
 
                 if (!response.ok) {
                     throw new Error(`API 錯誤: ${response.status}`);
