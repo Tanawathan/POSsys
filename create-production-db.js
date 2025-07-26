@@ -69,7 +69,7 @@ async function createProductionRecordsDatabase() {
     try {
         console.log('🚀 開始創建製作記錄資料庫...');
         
-        const response = await fetch('http://localhost:3000/api/notion/databases', {
+        const response = await fetch('/.netlify/functions/notion-api/databases', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

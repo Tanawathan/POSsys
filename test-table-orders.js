@@ -5,7 +5,7 @@ async function testTableOrdersFeature() {
     try {
         // 測試載入所有現有訂單
         console.log('\n📋 1. 測試載入所有現有訂單...');
-        const response = await fetch('http://localhost:3000/api/notion/databases/23afd5adc30b80c39e71d1a640ccfb5d/query', {
+        const response = await fetch('/.netlify/functions/notion-api/databases/23afd5adc30b80c39e71d1a640ccfb5d/query', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

@@ -173,7 +173,7 @@
             showStatus('正在測試連線...', 'info');
             
             try {
-                const response = await fetch('/api/test-notion');
+                const response = await fetch('/.netlify/functions/notion-api/test-notion');
                 if (response.ok) {
                     const result = await response.json();
                     log('✅ Notion 連線測試成功');

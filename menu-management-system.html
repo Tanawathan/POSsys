@@ -238,7 +238,7 @@
                         }
                         
                         // 使用本地代理伺服器來避免 CORS 問題
-                        const response = await fetch(`/api/notion/databases/${databaseId}/query`, {
+                        const response = await fetch("/.netlify/functions/notion-api/databases/${databaseId}/query`, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json'

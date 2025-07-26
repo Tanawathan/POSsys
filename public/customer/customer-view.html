@@ -698,7 +698,7 @@
             try {
                 console.log('📋 正在載入所有現有訂單...');
                 
-                const response = await fetch('/api/notion/databases/' + config.notion.databaseIds.orders + '/query', {
+                const response = await fetch("/.netlify/functions/notion-api/databases/' + config.notion.databaseIds.orders + '/query', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -854,7 +854,7 @@
             try {
                 console.log('📋 載入桌號', selectedTable, '的詳細訂單資訊...');
 
-                const response = await fetch('/api/notion/databases/' + config.notion.databaseIds.orders + '/query', {
+                const response = await fetch("/.netlify/functions/notion-api/databases/' + config.notion.databaseIds.orders + '/query', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -1039,7 +1039,7 @@
                 
                 // 直接使用 Notion API 查詢桌位資料庫
                 console.log('📡 查詢桌位資料庫 ID:', config.notion.databaseIds.tables);
-                const response = await fetch('/api/notion/databases/' + config.notion.databaseIds.tables + '/query', {
+                const response = await fetch("/.netlify/functions/notion-api/databases/' + config.notion.databaseIds.tables + '/query', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -1387,7 +1387,7 @@
                 console.log('🔍 檢查桌號', tableNumber, '的歷史訂單...');
                 
                 // 查詢該桌號的所有訂單（包括歷史訂單）
-                const response = await fetch('/api/notion/databases/' + config.notion.databaseIds.orders + '/query', {
+                const response = await fetch("/.netlify/functions/notion-api/databases/' + config.notion.databaseIds.orders + '/query', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -1557,7 +1557,7 @@
                 console.log('📋 正在載入桌號', tableNumber, '的現有訂單到購物車...');
                 
                 // 使用新的 Notion API 載入訂單
-                const response = await fetch('/api/notion/databases/' + config.notion.databaseIds.orders + '/query', {
+                const response = await fetch("/.netlify/functions/notion-api/databases/' + config.notion.databaseIds.orders + '/query', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -2306,7 +2306,7 @@
             try {
                 console.log('📤 直接發送到 Notion API...');
                 
-                const response = await fetch('/api/notion/pages', {
+                const response = await fetch("/.netlify/functions/notion-api/pages', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -2356,7 +2356,7 @@
                         }
                     };
                     
-                    const fallbackResponse = await fetch('/api/notion/pages', {
+                    const fallbackResponse = await fetch("/.netlify/functions/notion-api/pages', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json'

@@ -148,7 +148,7 @@
 
             // 檢查 Notion API
             try {
-                const response = await fetch('/api/notion/databases/23afd5adc30b80c58355fd93d05c66d6/query', {
+                const response = await fetch("/.netlify/functions/notion-api/databases/23afd5adc30b80c58355fd93d05c66d6/query', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ page_size: 1 })
@@ -164,7 +164,7 @@
 
             // 檢查資料庫
             try {
-                const menuResponse = await fetch('/api/notion/databases/23afd5adc30b80c58355fd93d05c66d6/query', {
+                const menuResponse = await fetch("/.netlify/functions/notion-api/databases/23afd5adc30b80c58355fd93d05c66d6/query', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ page_size: 1 })
@@ -186,7 +186,7 @@
             outputDiv.textContent = '正在測試菜單 API...';
 
             try {
-                const response = await fetch('/api/notion/databases/23afd5adc30b80c58355fd93d05c66d6/query', {
+                const response = await fetch("/.netlify/functions/notion-api/databases/23afd5adc30b80c58355fd93d05c66d6/query', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ page_size: 5 })
@@ -207,7 +207,7 @@
             outputDiv.textContent = '正在測試訂單 API...';
 
             try {
-                const response = await fetch('/api/notion/databases/23afd5adc30b80c39e71d1a640ccfb5d/query', {
+                const response = await fetch("/.netlify/functions/notion-api/databases/23afd5adc30b80c39e71d1a640ccfb5d/query', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ page_size: 3 })

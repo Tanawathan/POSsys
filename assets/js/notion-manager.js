@@ -12,7 +12,7 @@ class NotionDataManager {
         this.databaseIds = window.APP_CONFIG?.notion?.databaseIds || {};
         
         // 使用本地代理伺服器來避免 CORS 問題
-        this.baseUrl = '/api/notion';
+        this.baseUrl = "/.netlify/functions/notion-api';
         this.proxyMode = true;
         
         console.log('⚙️ Notion 設定:');
@@ -497,7 +497,7 @@ class NotionDataManager {
 
         try {
             // 使用專門的測試端點
-            const response = await fetch('/api/test-notion');
+            const response = await fetch('/.netlify/functions/notion-api/test-notion');
             const result = await response.json();
             
             if (result.connected) {

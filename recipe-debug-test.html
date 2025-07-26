@@ -52,7 +52,7 @@
     <script>
         class RecipeNotionManager {
             constructor() {
-                this.baseUrl = '/api/notion/databases';
+                this.baseUrl = "/.netlify/functions/notion-api/databases';
                 this.recipesDbId = '237fd5adc30b80c09b59c03cd67c6432';
                 this.ingredientsDbId = '237fd5adc30b80f7aedfe94804d80218';
                 this.recipesData = [];
@@ -258,7 +258,7 @@
         document.getElementById('test-basic-api').addEventListener('click', async () => {
             addLog('🔗 開始測試基本 API 連接...');
             try {
-                const response = await fetch('/api/notion/databases/237fd5adc30b80c09b59c03cd67c6432/query', {
+                const response = await fetch("/.netlify/functions/notion-api/databases/237fd5adc30b80c09b59c03cd67c6432/query', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ page_size: 3 })

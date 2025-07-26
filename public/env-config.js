@@ -1,17 +1,34 @@
-// 環境配置
+// 自動生成的環境配置文件 - 由 Netlify 構建腳本創建
 window.ENV_CONFIG = {
-    // Notion API 配置
-    NOTION_API_KEY: 'secret_iSDhSCT8HPZMjPsX8YuMdhfzPJ2EYJrfXLdE17L88cV', // 請在生產環境中使用環境變數
-    
-    // 資料庫 ID
-    ORDERS_DATABASE_ID: '23afd5adc30b80c39e71d1a640ccfb5d',
-    MENU_DATABASE_ID: '142fd5adc30b8029b7f3d9ff35b59799',
-    TABLES_DATABASE_ID: '1234567890abcdef1234567890abcdef',
-    
-    // 餐廳配置
-    RESTAURANT_NAME: '數位餐廳點餐系統',
-    
-    // Notion API 端點
-    NOTION_API_BASE: 'https://api.notion.com/v1',
-    NOTION_VERSION: '2022-06-28'
+    NOTION_API_KEY: '',
+    MENU_DATABASE_ID: '',
+    ORDERS_DB_ID: '',
+    TABLES_DB_ID: '',
+    RESERVATIONS_DB_ID: '',
+    STAFF_DB_ID: '',
+    MAKE_MENU_WEBHOOK: '',
+    MAKE_ORDER_WEBHOOK: '',
+    MAKE_TABLE_WEBHOOK: '',
+    MAKE_KDS_WEBHOOK: '',
+    MAKE_CHECKOUT_WEBHOOK: '',
+    RESTAURANT_NAME: '',
+    NODE_ENV: 'production',
+    SYNC_METHOD: 'notion',
+    SYNC_INTERVAL: '30000',
+    PORT: '3000',
+    RESTAURANT_TIMEZONE: 'Asia/Taipei',
+    // Netlify 部署特定配置
+    DEPLOYMENT_TYPE: 'netlify',
+    API_BASE_URL: '/.netlify/functions/notion-api'
 };
+
+// 向後相容性 - 如果頁面期望某些全域變數
+window.NOTION_API_KEY = window.ENV_CONFIG.NOTION_API_KEY;
+window.MENU_DATABASE_ID = window.ENV_CONFIG.MENU_DATABASE_ID;
+window.ORDERS_DB_ID = window.ENV_CONFIG.ORDERS_DB_ID;
+window.TABLES_DB_ID = window.ENV_CONFIG.TABLES_DB_ID;
+window.RESERVATIONS_DB_ID = window.ENV_CONFIG.RESERVATIONS_DB_ID;
+window.STAFF_DB_ID = window.ENV_CONFIG.STAFF_DB_ID;
+
+// API 端點配置
+window.API_BASE_URL = window.ENV_CONFIG.API_BASE_URL;

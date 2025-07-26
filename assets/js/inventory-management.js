@@ -51,7 +51,7 @@ class InventoryManager {
                     JSON.stringify({ start_cursor: startCursor }) : 
                     JSON.stringify({});
                 
-                const response = await fetch('/api/notion/databases/237fd5adc30b808cbba3c03f8f2065fd/query', {
+                const response = await fetch("/.netlify/functions/notion-api/databases/237fd5adc30b808cbba3c03f8f2065fd/query', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'

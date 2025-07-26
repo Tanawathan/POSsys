@@ -248,7 +248,7 @@
                         JSON.stringify({ start_cursor: startCursor }) : 
                         JSON.stringify({});
                     
-                    const response = await fetch(`/api/notion/databases/237fd5adc30b808cbba3c03f8f2065fd/query?t=${timestamp}`, {
+                    const response = await fetch("/.netlify/functions/notion-api/databases/237fd5adc30b808cbba3c03f8f2065fd/query?t=${timestamp}`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',

@@ -5,7 +5,7 @@
 
 class RecipeNotionManager {
     constructor() {
-        this.baseUrl = '/api/notion/databases';
+        this.baseUrl = "/.netlify/functions/notion-api/databases';
         this.recipesDbId = '237fd5adc30b80c09b59c03cd67c6432'; // 半成品資料庫
         this.ingredientsDbId = '237fd5adc30b80f7aedfe94804d80218'; // 半成品組成項目資料庫
         

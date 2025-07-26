@@ -1,194 +1,174 @@
-# 🚀 Netlify 部署指南
+# Netlify 部署指南 (Serverless 版本)
 
-## 📋 專案概覽
-Tanawat Restaurant POS 系統 - 完整的餐廳管理系統，已完全配置好可部署至 Netlify。
+本指南將幫助您將 Tanawat 餐廳管理系統部署到 Netlify，使用 Netlify Functions 替代本地服務器。
 
-## ✅ 已準備好的配置
+## 🚀 部署概述
 
-### 1. 核心文件
-- ✅ `index.html` - 主要入口頁面
-- ✅ `netlify.toml` - Netlify 配置文件
-- ✅ `_redirects` - 路由重定向規則
-- ✅ `config/manifest.json` - PWA 配置
+系統已完全重構為 serverless 架構：
+- **前端**: 靜態 HTML/CSS/JS 文件
+- **後端**: Netlify Functions (取代 proxy-server.js)
+- **API**: 通過 `/.netlify/functions/notion-api` 提供服務
 
-### 2. 系統功能
-- ✅ 響應式設計 (桌面/平板/手機)
-- ✅ PWA 支援 (可安裝為應用程式)
-- ✅ API 代理設定 (Make.com 整合)
-- ✅ 靜態檔案快取優化
-- ✅ HTTPS 強制重定向
+## 📋 部署前準備
 
-## 🌐 部署方法
+### 1. 確認環境變數
+確保您有以下 Notion API 配置：
+```
+NOTION_API_KEY=ntn_xxxxxxxxx
+MENU_DATABASE_ID=xxxxxxxx
+ORDERS_DB_ID=xxxxxxxx
+TABLES_DB_ID=xxxxxxxx
+RESERVATIONS_DB_ID=xxxxxxxx
+STAFF_DB_ID=xxxxxxxx
+```
+
+### 2. 準備部署文件
+運行以下命令來準備部署：
+```bash
+npm run deploy-prep
+```
+
+這個命令會：
+- 更新所有 API 端點到 Netlify Functions
+- 生成環境配置文件
+- 準備構建文件
+
+## 🔧 Netlify 部署步驟
 
 ### 方法一：GitHub 自動部署 (推薦)
 
-1. **連接儲存庫**
-   - 登入 [Netlify](https://www.netlify.com/)
-   - 在主頁面尋找 **"New site from Git"** 按鈕：
-     
-     **🔍 按鈕位置：**
-     - **首次使用者**：頁面中央的大藍色按鈕
-     - **現有使用者**：右上角 "Add new site" → "Import an existing project"
-     - **Sites 頁面**：右上角的 "New site from Git" 按鈕
-   
-   - 選擇 "GitHub" 並授權
-   - 選擇 `POSsys` 儲存庫
+1. **推送代碼到 GitHub**
+   ```bash
+   git add .
+   git commit -m "Update for Netlify serverless deployment"
+   git push origin main
+   ```
 
-2. **部署設定**
-   
-   **在 Build settings 頁面中設定：**
-   
-   | 欄位 | 設定值 | 說明 |
-   |------|--------|------|
-   | **Branch to deploy** | `main` | 保持預設值 |
-   | **Base directory** | (留空) | 不填寫任何內容 |
-   | **Build command** | (留空) | 靜態網站無需建置 |
-   | **Publish directory** | `.` | 輸入一個點 |
-   | **Functions directory** | `netlify/functions` | 保持預設值 |
-   
-   **⚠️ 重要提醒：**
-   - Base directory 和 Build command 必須完全留空
-   - Publish directory 只填寫一個點 `.` 
-   - 不要加任何額外的斜線或路徑
+2. **連接到 Netlify**
+   - 登入 [Netlify](https://netlify.com)
+   - 點擊 "New site from Git"
+   - 選擇您的 GitHub 倉庫
 
-3. **環境變數** (必要！)
-   
-   **⚠️ 重要：您的專案使用 Notion API，必須設定以下環境變數：**
-   
-   點擊 **"Add environment variables"** 按鈕，然後添加：
-   
-   ### 🔑 核心必要變數 (一定要設定)
-   | 變數名稱 | 值 | 說明 |
-   |----------|----|----- |
-   | `NOTION_API_KEY` | `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` | Notion Integration Token |
-   | `NODE_VERSION` | `18` | Node.js 版本 |
-   
-   ### 📊 資料庫 ID 變數 (推薦設定)
-   | 變數名稱 | 值 | 說明 |
-   |----------|----|----- |
-   | `MENU_DB_ID` | `23afd5adc30b80c58355fd93d05c66d6` | 菜單資料庫 ID |
-   | `MENU_DATABASE_ID` | `23afd5adc30b80c58355fd93d05c66d6` | 菜單資料庫 ID (備用名稱) |
-   | `ORDERS_DB_ID` | `23afd5adc30b80c39e71d1a640ccfb5d` | 訂單資料庫 ID |
-   | `ORDER_DATABASE_ID` | `23afd5adc30b80c39e71d1a640ccfb5d` | 訂單資料庫 ID (備用名稱) |
-   | `TABLES_DB_ID` | `23afd5adc30b80fe86c9e086a54a0d61` | 桌況資料庫 ID |
-   | `RESERVATIONS_DB_ID` | `23afd5adc30b802fbe36d69085c495b7` | 訂位資料庫 ID |
-   | `STAFF_DB_ID` | `23afd5adc30b80b7a8e7dec998bf5aad` | 員工資料庫 ID |
-   
-   ### 🏢 系統配置變數 (可選)
-   | 變數名稱 | 值 | 說明 |
-   |----------|----|----- |
-   | `RESTAURANT_NAME` | `Tanawat Restaurant` | 餐廳名稱 |
-   | `RESTAURANT_TIMEZONE` | `Asia/Taipei` | 時區設定 |
-   | `NODE_ENV` | `production` | 運行環境 |
-   | `PORT` | `3000` | 伺服器端口 |
-   
-   **💡 快速設定方式：**
-   我已經為您創建了完整的 `.env` 檔案，您可以：
-   1. 使用檔案中的所有變數逐一添加到 Netlify
-   2. 或者只添加上面表格中的**核心必要變數**，其他的專案會使用預設值
-   
-   **如何添加環境變數：**
-   1. 在 Environment variables 區域點擊 "Add environment variables"
-   2. 逐一輸入上面表格中的每個變數名稱和值
-   3. 每添加一個變數後點擊 "Add" 按鈕
-   4. 確認所有必要的變數都已添加
+3. **配置構建設定**
+   - Build command: `node build-for-netlify.js`
+   - Publish directory: `.`
+   - Functions directory: `netlify/functions`
 
-### 方法二：手動拖放部署
+4. **設定環境變數**
+   在 Netlify 管理面板中設定：
+   ```
+   NOTION_API_KEY=您的_Notion_API_密鑰
+   MENU_DATABASE_ID=您的_菜單資料庫ID
+   ORDERS_DB_ID=您的_訂單資料庫ID
+   TABLES_DB_ID=您的_桌位資料庫ID
+   RESERVATIONS_DB_ID=您的_訂位資料庫ID
+   STAFF_DB_ID=您的_員工資料庫ID
+   RESTAURANT_NAME=您的餐廳名稱
+   RESTAURANT_TIMEZONE=Asia/Taipei
+   ```
 
-1. 打開 [Netlify Deploy](https://app.netlify.com/drop)
-2. 將整個專案資料夾拖放到部署區域
-3. 等待部署完成
+### 方法二：手動部署
 
-## 🔧 部署後設定
+1. **構建項目**
+   ```bash
+   npm run netlify-build
+   ```
 
-### 1. 自訂網域 (可選)
-```
-yourrestaurant.com → 指向 Netlify DNS
-```
+2. **安裝 Netlify CLI**
+   ```bash
+   npm install -g netlify-cli
+   ```
 
-### 2. HTTPS 設定
-- Netlify 會自動提供 Let's Encrypt SSL 憑證
-- 強制 HTTPS 已在 `_redirects` 中設定
+3. **登入並部署**
+   ```bash
+   netlify login
+   netlify deploy --prod
+   ```
 
-### 3. 表單處理 (可選)
-如需使用 Netlify Forms，在 HTML 中加入：
-```html
-<form name="contact" method="POST" data-netlify="true">
-```
+## 🧪 測試部署
 
-## 📱 功能測試
+部署完成後，訪問以下頁面進行測試：
 
-部署後請測試以下功能：
+1. **主系統**: `https://您的網站.netlify.app`
+2. **部署測試頁面**: `https://您的網站.netlify.app/public/netlify-test.html`
 
-### 管理系統
-- 主控台: `https://your-site.netlify.app/pages/management/dashboard.html`
-- 訂單管理: `https://your-site.netlify.app/pages/management/order-management.html`
-- 菜單管理: `https://your-site.netlify.app/pages/management/menu-management.html`
+### 測試檢查清單
 
-### 客戶端
-- 點餐系統: `https://your-site.netlify.app/pages/customer/customer-view.html`
-- 結帳系統: `https://your-site.netlify.app/pages/customer/checkout.html`
-- 廚房顯示: `https://your-site.netlify.app/pages/customer/kds.html`
+- [ ] 健康檢查端點正常工作
+- [ ] Notion API 連接成功
+- [ ] 菜單資料庫查詢正常
+- [ ] 訂單系統功能正常
+- [ ] 桌位管理功能正常
 
-### PWA 功能
-- 在手機瀏覽器中點擊 "新增至主畫面"
-- 離線功能測試
-
-## 🛠️ 故障排除
+## 🔍 故障排除
 
 ### 常見問題
 
-1. **404 錯誤**
-   - 檢查 `_redirects` 檔案是否在根目錄
-   - 確認所有路徑使用相對路徑
+1. **Netlify Function 404 錯誤**
+   - 確認 `netlify/functions/notion-api.js` 文件存在
+   - 檢查 `netlify.toml` 中的 functions 配置
 
-2. **API 錯誤**
-   - 檢查 Make.com webhook URL 是否正確
-   - 確認 CORS 設定
+2. **環境變數未載入**
+   - 在 Netlify 管理面板中檢查環境變數設定
+   - 確認變數名稱拼寫正確
 
-3. **CSS/JS 載入失敗**
-   - 檢查檔案路徑是否正確
-   - 確認所有靜態資源都已上傳
+3. **API 調用失敗**
+   - 檢查 Notion API 密鑰是否有效
+   - 確認資料庫 ID 正確
 
 ### 除錯工具
-- Netlify 部署日誌: 檢查建置過程
-- 瀏覽器開發者工具: 檢查網路請求
-- Netlify Functions 日誌: 檢查 API 呼叫
 
-## 📊 效能優化
-
-### 已啟用的優化
-- ✅ 靜態檔案壓縮
-- ✅ 圖片快取 (1年)
-- ✅ CSS/JS 最小化
-- ✅ Gzip 壓縮
-
-### 建議的額外優化
-- 使用 Netlify Image 服務進行圖片最佳化
-- 啟用 Netlify Analytics 監控流量
-- 設定 Split Testing 進行 A/B 測試
-
-## 🔐 安全性
-
-### 已配置的安全標頭
+使用內建的測試頁面：
 ```
-X-Frame-Options: SAMEORIGIN
-X-Content-Type-Options: nosniff
-X-XSS-Protection: 1; mode=block
-Referrer-Policy: strict-origin-when-cross-origin
+https://您的網站.netlify.app/public/netlify-test.html
 ```
 
-### 建議的額外安全措施
-- 啟用 Netlify Access Control (付費功能)
-- 設定 CSP (Content Security Policy)
-- 定期更新依賴套件
+## 📁 文件結構
 
-## 📞 支援資源
+```
+project/
+├── netlify/
+│   └── functions/
+│       └── notion-api.js      # 主要 API 函數
+├── public/
+│   ├── env-config.js          # 環境配置 (自動生成)
+│   ├── api-config.js          # API 配置 (自動生成)
+│   └── netlify-test.html      # 測試頁面
+├── netlify.toml               # Netlify 配置
+├── build-for-netlify.js       # 構建腳本
+└── update-api-endpoints.js    # API 端點更新腳本
+```
 
-- [Netlify 文件](https://docs.netlify.com/)
-- [Netlify 社群論壇](https://community.netlify.com/)
-- [專案 GitHub 儲存庫](https://github.com/Tanawathan/POSsys)
+## 🔄 更新部署
+
+當您需要更新系統時：
+
+1. **更新代碼**
+2. **運行準備腳本**
+   ```bash
+   npm run deploy-prep
+   ```
+3. **推送到 GitHub** (如果使用自動部署)
+   ```bash
+   git add .
+   git commit -m "Update system"
+   git push origin main
+   ```
+
+## 🚨 重要注意事項
+
+1. **安全性**: 環境變數中的敏感信息不會出現在前端代碼中
+2. **性能**: Netlify Functions 有冷啟動時間，首次調用可能較慢
+3. **限制**: 注意 Netlify Functions 的使用限制和配額
+4. **監控**: 使用 Netlify 的功能監控來追蹤 API 使用情況
+
+## 📞 支援
+
+如果遇到問題：
+1. 檢查 Netlify 部署日誌
+2. 使用測試頁面診斷問題
+3. 確認所有環境變數設定正確
 
 ---
 
-**部署完成後，您的餐廳 POS 系統將可在全球範圍內高效運行！** 🎉
+**部署成功後，您的餐廳管理系統將完全運行在 Netlify 的 serverless 架構上！** 🎉

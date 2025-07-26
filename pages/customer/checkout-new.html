@@ -237,7 +237,7 @@
         async function fetchTables() {
             console.log('🔄 正在獲取桌況資料...');
             try {
-                const response = await fetch('http://localhost:3000/api/notion/databases/23afd5adc30b80fe86c9e086a54a0d61/query', {
+                const response = await fetch('/.netlify/functions/notion-api/databases/23afd5adc30b80fe86c9e086a54a0d61/query', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({})
@@ -260,7 +260,7 @@
         async function fetchOrders() {
             console.log('🔄 正在獲取訂單資料...');
             try {
-                const response = await fetch('http://localhost:3000/api/notion/databases/23afd5adc30b80c39e71d1a640ccfb5d/query', {
+                const response = await fetch('/.netlify/functions/notion-api/databases/23afd5adc30b80c39e71d1a640ccfb5d/query', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({})
@@ -685,7 +685,7 @@
             console.log(`   - 訂單狀態: ${orderStatus}`);
             console.log(`   - 付款狀態: ${paymentStatus}`);
             
-            const response = await fetch(`http://localhost:3000/api/notion/pages/${orderId}`, {
+            const response = await fetch(`/.netlify/functions/notion-api/pages/${orderId}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -791,7 +791,7 @@
 
         async function updateOrderStatus(orderId, status) {
             console.log(`🔄 更新訂單 ${orderId} 狀態為 ${status}`);
-            const response = await fetch(`http://localhost:3000/api/notion/pages/${orderId}`, {
+            const response = await fetch(`/.netlify/functions/notion-api/pages/${orderId}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -812,7 +812,7 @@
 
         async function updateTableStatus(tableId, status) {
             console.log(`🔄 更新桌況 ${tableId} 狀態為 ${status}`);
-            const response = await fetch(`http://localhost:3000/api/notion/pages/${tableId}`, {
+            const response = await fetch(`/.netlify/functions/notion-api/pages/${tableId}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -833,7 +833,7 @@
 
         async function updateTableInfo(tableId, currentPeople, currentConsumption, currentOrder = '') {
             console.log(`🔄 更新桌位 ${tableId} 資訊: 人數=${currentPeople}, 消費=${currentConsumption}, 訂單=${currentOrder}`);
-            const response = await fetch(`http://localhost:3000/api/notion/pages/${tableId}`, {
+            const response = await fetch(`/.netlify/functions/notion-api/pages/${tableId}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

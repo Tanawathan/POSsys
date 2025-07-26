@@ -24,7 +24,7 @@
             try {
                 console.log('🔍 開始測試 API...');
                 
-                const response = await fetch('/api/notion/databases/23afd5adc30b80c58355fd93d05c66d6/query', {
+                const response = await fetch("/.netlify/functions/notion-api/databases/23afd5adc30b80c58355fd93d05c66d6/query', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'

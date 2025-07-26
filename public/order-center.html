@@ -275,7 +275,7 @@
                     fetchOptions.body = JSON.stringify(body);
                 }
                 
-                return await fetch(`/api/notion${path}`, fetchOptions);
+                return await fetch("/.netlify/functions/notion-api${path}`, fetchOptions);
             }
         }
 
