@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>庫存管理系統詳細診斷</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-6xl mx-auto">
+            <h1 class="text-3xl font-bold text-gray-800 mb-8">
+                <i class="fas fa-microscope text-blue-600"></i>
+                庫存管理系統詳細診斷
+            </h1>
+
+            <!-- 快速狀態概覽 -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                <div class="bg-white p-4 rounded-lg shadow">
+                    <div class="text-sm text-gray-500">API 狀態</div>
+                    <div id="api-status" class="text-xl font-bold">檢查中...</div>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow">
+                    <div class="text-sm text-gray-500">資料庫連接</div>
+                    <div id="db-status" class="text-xl font-bold">檢查中...</div>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow">
+                    <div class="text-sm text-gray-500">載入資料量</div>
+                    <div id="data-count" class="text-xl font-bold">0</div>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow">
+                    <div class="text-sm text-gray-500">回應時間</div>
+                    <div id="response-time" class="text-xl font-bold">-</div>
+                </div>
+            </div>
+
+            <!-- 詳細測試結果 -->
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                <h2 class="text-xl font-semibold mb-4">
+                    <i class="fas fa-list-check text-green-600"></i>
+                    詳細測試結果
+                </h2>
+                <div id="test-results" class="space-y-4">
+                    <div class="text-gray-500">準備執行測試...</div>
+                </div>
+                <button id="run-tests-btn" class="mt-4 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">
+                    <i class="fas fa-play"></i>
+                    執行完整測試
+                </button>
+            </div>
+
+            <!-- API 原始回應 -->
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                <h2 class="text-xl font-semibold mb-4">
+                    <i class="fas fa-code text-purple-600"></i>
+                    API 原始回應
+                </h2>
+                <div id="raw-response" class="bg-gray-100 p-4 rounded-lg overflow-x-auto">
+                    <pre class="text-sm">尚未執行 API 調用</pre>
+                </div>
+            </div>
+
+            <!-- 資料轉換測試 -->
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                <h2 class="text-xl font-semibold mb-4">
+                    <i class="fas fa-exchange-alt text-orange-600"></i>
+                    資料轉換測試
+                </h2>
+                <div id="data-transformation" class="space-y-4">
+                    <div class="text-gray-500">等待資料載入...</div>
+                </div>
+            </div>
+
+            <!-- 實際庫存資料預覽 -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h2 class="text-xl font-semibold mb-4">
+                    <i class="fas fa-table text-indigo-600"></i>
+                    實際庫存資料預覽
+                </h2>
+                <div id="inventory-preview" class="overflow-x-auto">
+                    <div class="text-gray-500">等待資料載入...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let testResults = [];
+        let rawApiResponse = null;
+        let processedData = [];
+
+        // 更新狀態顯示
+        function updateStatus(elementId, status, color = 'text-gray-600') {
+            const element = document.getElementById(elementId);
+            element.textContent = status;
+            element.className = `text-xl font-bold ${color}`;
+        }
+
+        // 添加測試結果
+        function addTestResult(name, status, message, details = null) {
+            const result = { name, status, message, details, timestamp: new Date() };
+            testResults.push(result);
+            renderTestResults();
+        }
+
+        // 渲染測試結果
+        function renderTestResults() {
+            const container = document.getElementById('test-results');
+            
+            container.innerHTML = testResults.map(result => {
+                const colorClass = {
+                    'success': 'text-green-600 bg-green-50 border-green-200',
+                    'warning': 'text-yellow-600 bg-yellow-50 border-yellow-200',
+                    'error': 'text-red-600 bg-red-50 border-red-200',
+                    'info': 'text-blue-600 bg-blue-50 border-blue-200'
+                }[result.status] || 'text-gray-600 bg-gray-50 border-gray-200';
+
+                const icon = {
+                    'success': 'fa-check-circle',
+                    'warning': 'fa-exclamation-triangle',
+                    'error': 'fa-times-circle',
+                    'info': 'fa-info-circle'
+                }[result.status] || 'fa-question-circle';
+
+                return `
+                    <div class="p-4 rounded-lg border ${colorClass}">
+                        <div class="flex items-start space-x-3">
+                            <i class="fas ${icon} mt-1"></i>
+                            <div class="flex-1">
+                                <div class="font-medium">${result.name}</div>
+                                <div class="text-sm mt-1">${result.message}</div>
+                                <div class="text-xs text-gray-500 mt-1">${result.timestamp.toLocaleTimeString()}</div>
+                                ${result.details ? `
+                                    <details class="mt-2">
+                                        <summary class="cursor-pointer text-xs text-gray-600">詳細資訊</summary>
+                                        <pre class="text-xs mt-2 p-2 bg-white rounded overflow-x-auto">${JSON.stringify(result.details, null, 2)}</pre>
+                                    </details>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 測試 1: API 健康檢查
+        async function testApiHealth() {
+            addTestResult('API 健康檢查', 'info', '正在檢查 API 端點...');
+            
+            try {
+                const start = Date.now();
+                const response = await fetch('/.netlify/functions/notion-api/health');
+                const end = Date.now();
+                
+                updateStatus('response-time', `${end - start}ms`, 'text-blue-600');
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    updateStatus('api-status', '正常', 'text-green-600');
+                    addTestResult('API 健康檢查', 'success', `API 運行正常，回應時間: ${end - start}ms`, data);
+                    return true;
+                } else {
+                    updateStatus('api-status', '異常', 'text-red-600');
+                    addTestResult('API 健康檢查', 'error', `API 回應錯誤: ${response.status}`);
+                    return false;
+                }
+            } catch (error) {
+                updateStatus('api-status', '失敗', 'text-red-600');
+                addTestResult('API 健康檢查', 'error', `API 連接失敗: ${error.message}`);
+                return false;
+            }
+        }
+
+        // 測試 2: Notion 連接
+        async function testNotionConnection() {
+            addTestResult('Notion 連接測試', 'info', '正在測試 Notion API 連接...');
+            
+            try {
+                const response = await fetch('/.netlify/functions/notion-api/test-notion');
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.connected) {
+                        updateStatus('db-status', '已連接', 'text-green-600');
+                        addTestResult('Notion 連接測試', 'success', `Notion API 連接成功 (用戶: ${data.user})`, data);
+                        return true;
+                    } else {
+                        updateStatus('db-status', '認證失敗', 'text-red-600');
+                        addTestResult('Notion 連接測試', 'error', `Notion API 認證失敗: ${data.error}`, data);
+                        return false;
+                    }
+                } else {
+                    updateStatus('db-status', '連接失敗', 'text-red-600');
+                    const errorText = await response.text();
+                    addTestResult('Notion 連接測試', 'error', `Notion API 測試失敗: ${response.status}`, { status: response.status, error: errorText });
+                    return false;
+                }
+            } catch (error) {
+                updateStatus('db-status', '錯誤', 'text-red-600');
+                addTestResult('Notion 連接測試', 'error', `Notion 連接測試錯誤: ${error.message}`);
+                return false;
+            }
+        }
+
+        // 測試 3: 食材庫資料獲取
+        async function testInventoryData() {
+            addTestResult('食材庫資料獲取', 'info', '正在從 Notion 食材庫載入資料...');
+            
+            try {
+                const start = Date.now();
+                const response = await fetch('/.netlify/functions/notion-api/databases/237fd5adc30b808cbba3c03f8f2065fd/query', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({})
+                });
+                const end = Date.now();
+
+                if (response.ok) {
+                    const data = await response.json();
+                    rawApiResponse = data;
+                    
+                    // 更新原始回應顯示
+                    document.getElementById('raw-response').innerHTML = `
+                        <pre class="text-sm">${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                    
+                    const itemCount = data.results ? data.results.length : 0;
+                    updateStatus('data-count', itemCount.toString(), 'text-green-600');
+                    
+                    addTestResult('食材庫資料獲取', 'success', 
+                        `成功載入 ${itemCount} 項食材資料，回應時間: ${end - start}ms`, 
+                        {
+                            itemCount,
+                            hasMore: data.has_more,
+                            responseTime: end - start,
+                            firstThreeItems: data.results.slice(0, 3).map(item => ({
+                                id: item.id,
+                                properties: Object.keys(item.properties)
+                            }))
+                        }
+                    );
+                    
+                    return data;
+                } else {
+                    const errorText = await response.text();
+                    updateStatus('data-count', '載入失敗', 'text-red-600');
+                    addTestResult('食材庫資料獲取', 'error', 
+                        `資料載入失敗: ${response.status}`, 
+                        { status: response.status, error: errorText }
+                    );
+                    return null;
+                }
+            } catch (error) {
+                updateStatus('data-count', '錯誤', 'text-red-600');
+                addTestResult('食材庫資料獲取', 'error', `資料載入錯誤: ${error.message}`);
+                return null;
+            }
+        }
+
+        // 測試 4: 資料轉換
+        function testDataTransformation(rawData) {
+            if (!rawData || !rawData.results) {
+                addTestResult('資料轉換測試', 'error', '沒有原始資料可供轉換');
+                return;
+            }
+
+            addTestResult('資料轉換測試', 'info', '正在測試資料轉換邏輯...');
+
+            try {
+                processedData = rawData.results.map((item, index) => {
+                    const properties = item.properties;
+                    
+                    // 從規格/單位欄位解析單位
+                    const specText = properties['規格/單位']?.rich_text?.[0]?.text?.content || '';
+                    const unitMatch = specText.match(/(克|公斤|毫升|公升|顆|斤|包|瓶|罐)/);
+                    const extractedUnit = unitMatch ? unitMatch[1] : '公克';
+                    
+                    const stock = properties['庫存量']?.number || 0;
+                    const safetyStock = properties['安全庫存量']?.number || 100;
+                    
+                    return {
+                        id: item.id,
+                        itemId: properties['品項ID']?.title?.[0]?.text?.content || `ITEM-${String(index + 1).padStart(3, '0')}`,
+                        name: properties['食材名稱']?.rich_text?.[0]?.text?.content || 
+                              properties['品項ID']?.title?.[0]?.text?.content || '未命名食材',
+                        supplier: properties['供應商']?.select?.name || '未指定供應商',
+                        specification: properties['規格/單位']?.rich_text?.[0]?.text?.content || '',
+                        unit: extractedUnit,
+                        stock: stock,
+                        safetyStock: safetyStock,
+                        unitCost: properties['單位成本']?.formula?.number || 0,
+                        purchasePrice: properties['進價']?.number || 0,
+                        category: properties['品項類別']?.select?.name || '一般食材',
+                        status: stock === 0 ? 'critical' : stock <= safetyStock ? 'low' : 'safe',
+                        lastPurchase: properties['最後進貨日']?.last_edited_time ? 
+                            new Date(properties['最後進貨日'].last_edited_time).toLocaleDateString('zh-TW') : 
+                            new Date().toLocaleDateString('zh-TW'),
+                        notes: properties['狀態']?.status?.name || '',
+                        totalPurchase: properties['總進貨量']?.rollup?.number || 0,
+                        // 保留原始屬性用於調試
+                        _originalProperties: Object.keys(properties)
+                    };
+                });
+
+                // 顯示轉換結果
+                const transformationContainer = document.getElementById('data-transformation');
+                transformationContainer.innerHTML = `
+                    <div class="space-y-4">
+                        <div class="p-4 bg-green-50 border border-green-200 rounded-lg">
+                            <div class="font-medium text-green-800">✅ 資料轉換成功</div>
+                            <div class="text-sm text-green-700 mt-1">成功轉換 ${processedData.length} 項食材資料</div>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="bg-blue-50 p-3 rounded">
+                                <div class="text-sm text-blue-600">庫存充足</div>
+                                <div class="text-xl font-bold text-blue-800">${processedData.filter(item => item.status === 'safe').length}</div>
+                            </div>
+                            <div class="bg-yellow-50 p-3 rounded">
+                                <div class="text-sm text-yellow-600">庫存偏低</div>
+                                <div class="text-xl font-bold text-yellow-800">${processedData.filter(item => item.status === 'low').length}</div>
+                            </div>
+                            <div class="bg-red-50 p-3 rounded">
+                                <div class="text-sm text-red-600">缺貨</div>
+                                <div class="text-xl font-bold text-red-800">${processedData.filter(item => item.status === 'critical').length}</div>
+                            </div>
+                        </div>
+
+                        <details class="mt-4">
+                            <summary class="cursor-pointer text-sm text-gray-600">查看轉換後的前3項資料</summary>
+                            <pre class="text-xs mt-2 p-3 bg-white border rounded overflow-x-auto">${JSON.stringify(processedData.slice(0, 3), null, 2)}</pre>
+                        </details>
+                    </div>
+                `;
+
+                addTestResult('資料轉換測試', 'success', 
+                    `成功轉換 ${processedData.length} 項資料`, 
+                    {
+                        totalItems: processedData.length,
+                        statusBreakdown: {
+                            safe: processedData.filter(item => item.status === 'safe').length,
+                            low: processedData.filter(item => item.status === 'low').length,
+                            critical: processedData.filter(item => item.status === 'critical').length
+                        }
+                    }
+                );
+
+                // 顯示資料預覽
+                renderInventoryPreview();
+
+            } catch (error) {
+                addTestResult('資料轉換測試', 'error', `資料轉換失敗: ${error.message}`);
+                
+                const transformationContainer = document.getElementById('data-transformation');
+                transformationContainer.innerHTML = `
+                    <div class="p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <div class="font-medium text-red-800">❌ 資料轉換失敗</div>
+                        <div class="text-sm text-red-700 mt-1">${error.message}</div>
+                    </div>
+                `;
+            }
+        }
+
+        // 渲染庫存資料預覽
+        function renderInventoryPreview() {
+            if (processedData.length === 0) {
+                document.getElementById('inventory-preview').innerHTML = '<div class="text-gray-500">沒有資料可顯示</div>';
+                return;
+            }
+
+            const previewData = processedData.slice(0, 10); // 顯示前10項
+            
+            const table = `
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">品項ID</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">食材名稱</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">供應商</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">庫存量</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">安全庫存</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">狀態</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        ${previewData.map(item => {
+                            const statusColor = {
+                                'safe': 'text-green-600',
+                                'low': 'text-yellow-600',
+                                'critical': 'text-red-600'
+                            }[item.status];
+
+                            const statusText = {
+                                'safe': '安全庫存',
+                                'low': '庫存偏低',
+                                'critical': '缺貨'
+                            }[item.status];
+
+                            return `
+                                <tr>
+                                    <td class="px-4 py-2 text-sm text-gray-900">${item.itemId}</td>
+                                    <td class="px-4 py-2 text-sm text-gray-900">${item.name}</td>
+                                    <td class="px-4 py-2 text-sm text-gray-500">${item.supplier}</td>
+                                    <td class="px-4 py-2 text-sm text-gray-900">${item.stock} ${item.unit}</td>
+                                    <td class="px-4 py-2 text-sm text-gray-500">${item.safetyStock} ${item.unit}</td>
+                                    <td class="px-4 py-2 text-sm ${statusColor}">${statusText}</td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+                
+                ${processedData.length > 10 ? `
+                    <div class="mt-4 text-sm text-gray-500 text-center">
+                        顯示前 10 項，共 ${processedData.length} 項資料
+                    </div>
+                ` : ''}
+            `;
+
+            document.getElementById('inventory-preview').innerHTML = table;
+        }
+
+        // 執行完整測試
+        async function runFullTests() {
+            const btn = document.getElementById('run-tests-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 執行測試中...';
+
+            // 清空之前的結果
+            testResults = [];
+            rawApiResponse = null;
+            processedData = [];
+            
+            // 重置狀態顯示
+            updateStatus('api-status', '檢查中...');
+            updateStatus('db-status', '檢查中...');
+            updateStatus('data-count', '0');
+            updateStatus('response-time', '-');
+
+            // 依序執行測試
+            const apiOk = await testApiHealth();
+            await new Promise(resolve => setTimeout(resolve, 500)); // 短暫延遲
+
+            const notionOk = await testNotionConnection();
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            if (apiOk && notionOk) {
+                const inventoryData = await testInventoryData();
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                if (inventoryData) {
+                    testDataTransformation(inventoryData);
+                }
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-play"></i> 執行完整測試';
+        }
+
+        // 事件監聽器
+        document.getElementById('run-tests-btn').addEventListener('click', runFullTests);
+
+        // 頁面載入時自動執行測試
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(runFullTests, 1000);
+        });
+    </script>
+</body>
+</html>
