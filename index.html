@@ -27,13 +27,13 @@
                 <h2 class="text-2xl font-semibold text-red-600 mb-4">🏢 管理系統</h2>
                 <p class="text-gray-600 mb-4">店員專用管理介面</p>
                 <div class="space-y-2">
-                    <button class="w-full text-left p-2 rounded hover:bg-gray-100 transition-colors" onclick="openPage('pages/management/order-management.html')">📋 訂單管理</button>
+                    <button class="w-full text-left p-2 rounded hover:bg-gray-100 transition-colors" onclick="openPage('public/order-center.html')">📋 訂單管理</button>
                     <button class="w-full text-left p-2 rounded hover:bg-gray-100 transition-colors" onclick="openPage('pages/management/menu-management.html')">🍽️ 菜單管理</button>
-                    <button class="w-full text-left p-2 rounded hover:bg-gray-100 transition-colors" onclick="openPage('pages/management/table-management.html')">🪑 桌況管理</button>
+                    <button class="w-full text-left p-2 rounded hover:bg-gray-100 transition-colors" onclick="openPage('public/management/table-management-v2.html')">🪑 桌況管理</button>
                     <button class="w-full text-left p-2 rounded hover:bg-gray-100 transition-colors" onclick="openPage('pages/management/purchase-management.html')">🛒 採購管理</button>
-                    <button class="w-full text-left p-2 rounded hover:bg-gray-100 transition-colors" onclick="openPage('pages/management/recipe-management.html')">👨‍🍳 食譜管理</button>
-                    <button class="w-full text-left p-2 rounded hover:bg-gray-100 transition-colors" onclick="openPage('pages/management/inventory-management.html')">📦 庫存管理</button>
-                    <button class="w-full text-left p-2 rounded hover:bg-gray-100 transition-colors" onclick="openPage('pages/management/cost-analysis.html')">💰 成本分析</button>
+                    <button class="w-full text-left p-2 rounded hover:bg-gray-100 transition-colors" onclick="openPage('public/management/recipe-management.html')">👨‍🍳 食譜管理</button>
+                    <button class="w-full text-left p-2 rounded hover:bg-gray-100 transition-colors" onclick="openPage('public/management/inventory-management.html')">📦 庫存管理</button>
+                    <button class="w-full text-left p-2 rounded hover:bg-gray-100 transition-colors" onclick="openPage('public/management/cost-analysis.html')">💰 成本分析</button>
                 </div>
                 <button class="w-full mt-4 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors" onclick="openManagementDashboard()">進入管理後台</button>
             </div>
@@ -45,9 +45,9 @@
                 <div class="space-y-2">
                     <button class="w-full text-left p-2 rounded hover:bg-gray-100 transition-colors" onclick="openPage('pages/customer/dashboard.html')">📊 主控台儀表板</button>
                     <button class="w-full text-left p-2 rounded hover:bg-gray-100 transition-colors" onclick="openPage('pages/customer/reservation.html')">📅 訂位管理</button>
-                    <button class="w-full text-left p-2 rounded hover:bg-gray-100 transition-colors" onclick="openPage('pages/customer/customer-view.html')">🍴 客戶點餐介面</button>
-                    <button class="w-full text-left p-2 rounded hover:bg-gray-100 transition-colors" onclick="openPage('pages/customer/checkout-new.html')">💳 結帳系統</button>
-                    <button class="w-full text-left p-2 rounded hover:bg-gray-100 transition-colors" onclick="openPage('pages/customer/kds.html')">🍳 廚房顯示系統 (KDS)</button>
+                    <button class="w-full text-left p-2 rounded hover:bg-gray-100 transition-colors" onclick="openPage('public/customer/customer-view.html')">🍴 客戶點餐介面</button>
+                    <button class="w-full text-left p-2 rounded hover:bg-gray-100 transition-colors" onclick="openPage('public/customer/checkout.html')">💳 結帳系統</button>
+                    <button class="w-full text-left p-2 rounded hover:bg-gray-100 transition-colors" onclick="openPage('public/customer/kds-new.html')">🍳 廚房顯示系統 (KDS)</button>
                 </div>
                 <button class="w-full mt-4 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors" onclick="startOrdering()">顧客點餐</button>
             </div>
@@ -202,7 +202,7 @@
         function openManagementDashboard() {
             const password = prompt('請輸入管理密碼：');
             if (password === 'admin123') {
-                window.open('pages/management/dashboard.html', '_blank');
+                window.open('public/main-dashboard.html', '_blank');
             } else if (password) {
                 alert('密碼錯誤');
             }
