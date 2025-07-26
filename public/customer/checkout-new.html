@@ -191,6 +191,17 @@
     </div>
 
     <script>
+        // === 配置 ===
+        const CONFIG = {
+            netlifyFunctionBase: `${window.location.origin}/.netlify/functions`,
+            notion: {
+                databaseIds: {
+                    tables: '23afd5adc30b80fe86c9e086a54a0d61',
+                    orders: '23afd5adc30b80c39e71d1a640ccfb5d'
+                }
+            }
+        };
+
         // === 全局變數 ===
         let allTables = [];
         let allOrders = [];
@@ -237,10 +248,22 @@
         async function fetchTables() {
             console.log('🔄 正在獲取桌況資料...');
             try {
-                const response = await fetch('http://localhost:3000/api/notion/databases/23afd5adc30b80fe86c9e086a54a0d61/query', {
+                const response = await fetch(`${CONFIG.netlifyFunctionBase}/notion-api`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({})
+                    body: JSON.stringify({
+                        path: `/databases/${CONFIG.notion.databaseIds.tables}/query`,
+                        method: 'POST',
+                        body: {
+                            page_size: 100,
+                            sorts: [
+                                {
+                                    property: '桌號',
+                                    direction: 'ascending'
+                                }
+                            ]
+                        }
+                    })
                 });
                 
                 if (!response.ok) {
@@ -260,10 +283,22 @@
         async function fetchOrders() {
             console.log('🔄 正在獲取訂單資料...');
             try {
-                const response = await fetch('http://localhost:3000/api/notion/databases/23afd5adc30b80c39e71d1a640ccfb5d/query', {
+                const response = await fetch(`${CONFIG.netlifyFunctionBase}/notion-api`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({})
+                    body: JSON.stringify({
+                        path: `/databases/${CONFIG.notion.databaseIds.orders}/query`,
+                        method: 'POST',
+                        body: {
+                            page_size: 100,
+                            sorts: [
+                                {
+                                    property: '建立時間',
+                                    direction: 'descending'
+                                }
+                            ]
+                        }
+                    })
                 });
                 
                 if (!response.ok) {
@@ -737,13 +772,17 @@
             console.log(`   - 訂單狀態: ${orderStatus}`);
             console.log(`   - 付款狀態: ${paymentStatus}`);
             
-            const response = await fetch(`http://localhost:3000/api/notion/pages/${orderId}`, {
-                method: 'PATCH',
+            const response = await fetch(`${CONFIG.netlifyFunctionBase}/notion-api`, {
+                method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    properties: {
-                        '狀態': { select: { name: orderStatus } },
-                        '付款狀態': { select: { name: paymentStatus } }
+                    path: `/pages/${orderId}`,
+                    method: 'PATCH',
+                    body: {
+                        properties: {
+                            '狀態': { select: { name: orderStatus } },
+                            '付款狀態': { select: { name: paymentStatus } }
+                        }
                     }
                 })
             });
@@ -761,12 +800,16 @@
 
         async function updateOrderStatus(orderId, status) {
             console.log(`🔄 更新訂單 ${orderId} 狀態為 ${status}`);
-            const response = await fetch(`http://localhost:3000/api/notion/pages/${orderId}`, {
-                method: 'PATCH',
+            const response = await fetch(`${CONFIG.netlifyFunctionBase}/notion-api`, {
+                method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    properties: {
-                        '狀態': { select: { name: status } }
+                    path: `/pages/${orderId}`,
+                    method: 'PATCH',
+                    body: {
+                        properties: {
+                            '狀態': { select: { name: status } }
+                        }
                     }
                 })
             });
@@ -782,12 +825,16 @@
 
         async function updateTableStatus(tableId, status) {
             console.log(`🔄 更新桌況 ${tableId} 狀態為 ${status}`);
-            const response = await fetch(`http://localhost:3000/api/notion/pages/${tableId}`, {
-                method: 'PATCH',
+            const response = await fetch(`${CONFIG.netlifyFunctionBase}/notion-api`, {
+                method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    properties: {
-                        '狀態': { select: { name: status } }
+                    path: `/pages/${tableId}`,
+                    method: 'PATCH',
+                    body: {
+                        properties: {
+                            '狀態': { select: { name: status } }
+                        }
                     }
                 })
             });
@@ -803,14 +850,18 @@
 
         async function updateTableInfo(tableId, currentPeople, currentConsumption, currentOrder = '') {
             console.log(`🔄 更新桌位 ${tableId} 資訊: 人數=${currentPeople}, 消費=${currentConsumption}, 訂單=${currentOrder}`);
-            const response = await fetch(`http://localhost:3000/api/notion/pages/${tableId}`, {
-                method: 'PATCH',
+            const response = await fetch(`${CONFIG.netlifyFunctionBase}/notion-api`, {
+                method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    properties: {
-                        '目前人數': { number: currentPeople },
-                        '目前消費': { number: currentConsumption },
-                        '目前訂單': { rich_text: [{ text: { content: currentOrder } }] }
+                    path: `/pages/${tableId}`,
+                    method: 'PATCH',
+                    body: {
+                        properties: {
+                            '目前人數': { number: currentPeople },
+                            '目前消費': { number: currentConsumption },
+                            '目前訂單': { rich_text: [{ text: { content: currentOrder } }] }
+                        }
                     }
                 })
             });
