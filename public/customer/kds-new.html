@@ -225,34 +225,21 @@
                         path: `/databases/${CONFIG.ordersDatabase}/query`,
                         method: 'POST',
                         body: {
+                            page_size: 100,
                             sorts: [
                                 {
                                     property: '建立時間',
                                     direction: 'descending'
                                 }
-                            ],
-                            filter: {
-                                or: [
-                                    {
-                                        property: '狀態',
-                                        select: {
-                                            equals: '準備中'
-                                        }
-                                    },
-                                    {
-                                        property: '狀態',
-                                        select: {
-                                            equals: '進行中'
-                                        }
-                                    }
-                                ]
-                            }
+                            ]
                         }
                     })
                 });
 
                 if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    const errorText = await response.text();
+                    console.error('API 錯誤回應:', errorText);
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
                 }
 
                 const data = await response.json();
@@ -261,6 +248,13 @@
                 if (data.results && Array.isArray(data.results)) {
                     // 將 Notion 資料映射為 KDS 可用格式
                     allOrders = data.results.map(mapNotionOrderToKDS);
+                    
+                    // 過濾出需要顯示的訂單（準備中和進行中）
+                    allOrders = allOrders.filter(order => {
+                        const status = order.properties['狀態']?.select?.name;
+                        return status === '準備中' || status === '進行中';
+                    });
+                    
                     processAndRenderOrders();
                     updateStats();
                     updateStatus(true);
