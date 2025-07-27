@@ -295,10 +295,6 @@ const config = {
     }
 };
 
-// 初始化 API
-const uberEatsAPI = new UberEatsAPI(config);
-const webhookHandler = new UberEatsWebhookHandler(uberEatsAPI, notionAPI);
-
 // 匯出模組
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
