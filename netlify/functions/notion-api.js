@@ -75,6 +75,9 @@ exports.handler = async (event) => {
                 } else if (dbId === process.env.NOTION_MENU_DATABASE_ID || dbId === '23afd5adc30b80c58355fd93d05c66d6') {
                     action = 'getMenu';
                     body = requestBodyData || {};
+                } else if (dbId === process.env.NOTION_ORDERS_DATABASE_ID || dbId === '23afd5adc30b80c39e71d1a640ccfb5d') {
+                    action = 'getOrders';
+                    body = requestBodyData || {};
                 } else {
                     console.error('Unknown database ID:', dbId);
                     return { statusCode: 400, body: JSON.stringify({ error: 'Unknown database ID' }) };
@@ -172,6 +175,42 @@ exports.handler = async (event) => {
                         body: menuError.body
                     });
                     throw menuError;
+                }
+                break;
+            
+            case 'getOrders':
+                const ordersDbId = process.env.NOTION_ORDERS_DATABASE_ID || '23afd5adc30b80c39e71d1a640ccfb5d';
+                console.log(`Querying Notion orders with DB ID: ${ordersDbId}`);
+                
+                const orderQueryOptions = {
+                    database_id: ordersDbId,
+                    page_size: body.page_size || 100
+                };
+                
+                if (body.sorts) {
+                    orderQueryOptions.sorts = body.sorts;
+                }
+                
+                if (body.filter) {
+                    orderQueryOptions.filter = body.filter;
+                }
+                
+                try {
+                    const ordersResponse = await notion.databases.query(orderQueryOptions);
+                    responseData = {
+                        results: ordersResponse.results,
+                        next_cursor: ordersResponse.next_cursor,
+                        has_more: ordersResponse.has_more
+                    };
+                } catch (orderError) {
+                    console.error('Orders database query failed:', orderError);
+                    console.error('Order error details:', {
+                        code: orderError.code,
+                        status: orderError.status,
+                        message: orderError.message,
+                        body: orderError.body
+                    });
+                    throw orderError;
                 }
                 break;
             
