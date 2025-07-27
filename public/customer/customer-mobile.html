@@ -600,7 +600,7 @@
                         method: 'POST',
                         body: {
                             page_size: 100,
-                            sorts: [{ property: '品項名稱', direction: 'ascending' }]
+                            sorts: [{ property: '名稱', direction: 'ascending' }]
                         }
                     })
                 });
@@ -620,10 +620,11 @@
                         const properties = item.properties;
                         return {
                             id: item.id,
-                            name: properties['品項名稱']?.title?.[0]?.text?.content || 
-                                  properties['名稱']?.title?.[0]?.text?.content || '未命名商品',
+                            name: properties['名稱']?.title?.[0]?.text?.content || 
+                                  properties['餐點名稱']?.title?.[0]?.text?.content || '未命名商品',
                             price: properties['價格']?.number || 0,
-                            category: properties['分類']?.select?.name || '其他',
+                            category: properties['分類']?.select?.name || 
+                                     properties['餐點類型']?.select?.name || '其他',
                             description: properties['描述']?.rich_text?.[0]?.text?.content || '',
                             isUnavailable: properties['供應狀態']?.checkbox !== true
                         };
