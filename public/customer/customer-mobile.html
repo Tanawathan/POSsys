@@ -358,14 +358,17 @@
             try {
                 const data = await callNotionAPI(`/databases/${CONFIG.databases.menu}/query`, 'POST', {
                     page_size: 100,
-                    filter: {
-                        property: '狀態',
-                        select: { equals: '可供應' }
-                    },
+                    // 暫時移除 filter 來測試基本連接
+                    // filter: {
+                    //     property: '狀態',
+                    //     select: { equals: '可供應' }
+                    // },
                     sorts: [{ property: '品項名稱', direction: 'ascending' }]
                 });
                 
                 allMenuItems = data.results || [];
+                console.log('📋 載入菜單項目數量:', allMenuItems.length);
+                console.log('📋 菜單項目範例:', allMenuItems[0]);
                 return allMenuItems;
             } catch (error) {
                 console.error('載入菜單失敗:', error);
