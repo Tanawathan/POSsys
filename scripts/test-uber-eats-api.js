@@ -5,22 +5,27 @@
 
 // 引入必要的模組
 const { UberEatsAPI, UberEatsWebhookHandler } = require('./uber-eats-integration');
+require('dotenv').config({ path: '.env.local' });
 
 // 測試配置
 const TEST_CONFIG = {
     sandbox: {
         baseURL: 'https://api.uber.com/v2/eats',
-        clientId: 'YOUR_CLIENT_ID_HERE', // 請從 Uber 開發者面板取得
-        clientSecret: 'YOUR_CLIENT_SECRET_HERE' // 請從 Uber 開發者面板取得
+        clientId: process.env.UBER_EATS_CLIENT_ID || 'YOUR_CLIENT_ID_HERE',
+        clientSecret: process.env.UBER_EATS_CLIENT_SECRET || 'YOUR_CLIENT_SECRET_HERE'
     },
-    storeId: 'YOUR_STORE_ID_HERE' // 申請通過後會取得
+    storeId: process.env.UBER_EATS_STORE_ID || 'YOUR_STORE_ID_HERE'
 };
 
 class UberEatsAPITester {
     constructor() {
         this.api = new UberEatsAPI({
             sandbox: true,
-            ...TEST_CONFIG.sandbox
+            clientId: TEST_CONFIG.sandbox.clientId,
+            clientSecret: TEST_CONFIG.sandbox.clientSecret,
+            sandbox: {
+                baseURL: 'https://api.uber.com/v2/eats'
+            }
         });
         this.results = {
             passed: 0,
@@ -79,7 +84,9 @@ class UberEatsAPITester {
         
         try {
             // 如果沒有 Store ID，跳過此測試
-            if (!TEST_CONFIG.storeId || TEST_CONFIG.storeId === 'YOUR_STORE_ID_HERE') {
+            if (!TEST_CONFIG.storeId || 
+                TEST_CONFIG.storeId === 'YOUR_STORE_ID_HERE' || 
+                TEST_CONFIG.storeId.includes('等待審核')) {
                 this.recordTest('餐廳資訊', 'skipped', '尚未設定 Store ID');
                 console.log('⏭️ 跳過 - 尚未設定 Store ID');
                 console.log('');

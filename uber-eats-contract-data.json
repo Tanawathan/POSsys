@@ -1,0 +1,61 @@
+{
+  "timestamp": "2025-07-27T11:53:55.487Z",
+  "data": {
+    "restaurant": {
+      "nameZh": "塔娜瓦小吃店",
+      "nameEn": "TanawatThai",
+      "legalName": "塔娜瓦小吃店",
+      "taxId": "87385308",
+      "businessLicense": "561115",
+      "establishedDate": "2020/07/07"
+    },
+    "address": {
+      "street": "基隆市中正區新富里新豐街251巷4弄33號1樓",
+      "city": "基隆市",
+      "district": "中正區",
+      "postalCode": "202",
+      "country": "Taiwan"
+    },
+    "contact": {
+      "name": "韓潤龍",
+      "title": "負責人",
+      "idNumber": "A126020281",
+      "phone": "0971715711",
+      "email": "info@tanawat.tw"
+    },
+    "banking": {
+      "bankName": "中國信託銀行",
+      "branchName": "Keelung Branch",
+      "accountNumber": "381540580385",
+      "branchCode": "8220381",
+      "swiftCode": "CTCBTWTP168",
+      "accountName": "HAN JUN LUNG"
+    },
+    "business": {
+      "hours": {
+        "monday": "休假",
+        "tuesday": "休假",
+        "wednesday": "14:00-21:00",
+        "thursday": "14:00-21:00",
+        "friday": "14:00-21:00",
+        "saturday": "14:00-21:00",
+        "sunday": "14:00-21:00"
+      },
+      "cuisineType": "泰式料理",
+      "avgOrderValue": "300",
+      "expectedOrders": "10"
+    },
+    "technical": {
+      "currentPOS": "自建系統",
+      "website": "www.tanawat.tw",
+      "apiStatus": "85% 完成",
+      "webhookUrl": "https://tanawatthaipos.netlify.app/.netlify/functions/uber-eats-webhook"
+    }
+  },
+  "metadata": {
+    "apiIntegrationStatus": "85%",
+    "webhookUrl": "https://tanawatthaipos.netlify.app/.netlify/functions/uber-eats-webhook",
+    "clientId": "cIVLSsW2jTLPx06BSc7nifdp7JsB45Aj",
+    "version": "1.0"
+  }
+}

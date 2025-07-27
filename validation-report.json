@@ -1,0 +1,10 @@
+{
+  "timestamp": "2025-07-27T11:54:17.177Z",
+  "errors": [],
+  "warnings": [
+    "週一營業時間格式不正確 (應為 HH:MM-HH:MM 或 \"休息\")",
+    "週二營業時間格式不正確 (應為 HH:MM-HH:MM 或 \"休息\")"
+  ],
+  "completeness": 100,
+  "readyForSubmission": true
+}
