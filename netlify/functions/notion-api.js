@@ -1,146 +1,153 @@
-// 使用內建的 fetch API (Node.js 18+) 或動態 import node-fetch
-let fetch;
-if (typeof globalThis.fetch === 'undefined') {
-    fetch = require('node-fetch');
-} else {
-    fetch = globalThis.fetch;
-}
+const { Client } = require('@notionhq/client');
+const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 
-exports.handler = async (event, context) => {
-    // 設定 CORS 標頭
-    const headers = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization, Notion-Version',
-        'Access-Control-Allow-Methods': 'GET, POST, PATCH, PUT, DELETE, OPTIONS',
-    };
+// Notion and S3 clients initialization
+const notion = new Client({ auth: process.env.NOTION_API_KEY });
+const s3Client = new S3Client({
+    region: process.env.AWS_REGION,
+    credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    }
+});
 
-    // 處理 OPTIONS 請求 (CORS preflight)
-    if (event.httpMethod === 'OPTIONS') {
-        return {
-            statusCode: 200,
-            headers,
-            body: ''
-        };
+// Helper function to extract property value from Notion page
+const getPropertyValue = (page, propertyName, propertyType) => {
+    const property = page.properties[propertyName];
+    if (!property) return null;
+
+    switch (propertyType) {
+        case 'title':
+            return property.title[0]?.plain_text || null;
+        case 'rich_text':
+            return property.rich_text[0]?.plain_text || null;
+        case 'number':
+            return property.number;
+        case 'select':
+            return property.select?.name || null;
+        case 'status':
+            return property.status?.name || null;
+        case 'relation':
+            return property.relation.map(rel => rel.id);
+        case 'rollup':
+            if (property.rollup.type === 'array' && property.rollup.array.length > 0) {
+                const firstItem = property.rollup.array[0];
+                if (firstItem.type === 'number') return firstItem.number;
+                if (firstItem.type === 'title') return firstItem.title[0]?.plain_text;
+            }
+            return null;
+        case 'formula':
+            return property.formula?.number ?? property.formula?.string ?? null;
+        default:
+            return null;
+    }
+};
+
+// Main handler function for Netlify
+exports.handler = async (event) => {
+    if (event.httpMethod !== 'POST') {
+        return { statusCode: 405, body: 'Method Not Allowed' };
     }
 
-    // 從環境變數獲取配置
-    const NOTION_API_KEY = process.env.NOTION_API_KEY;
-    const NOTION_VERSION = '2022-06-28';
-    const NOTION_BASE_URL = 'https://api.notion.com/v1';
-
-    // 從路徑中提取 API 路由
-    const path = event.path.replace('/.netlify/functions/notion-api', '');
-
     try {
-        // 特殊路由處理
-        if (path === '/health') {
-            return {
-                statusCode: 200,
-                headers,
-                body: JSON.stringify({
-                    status: 'ok',
-                    timestamp: new Date().toISOString(),
-                    notion_api_configured: !!NOTION_API_KEY,
-                    environment: 'netlify'
-                })
-            };
-        }
+        const { action, ...body } = JSON.parse(event.body);
+        let responseData;
 
-        if (path === '/test-notion') {
-            try {
-                const response = await fetch(`${NOTION_BASE_URL}/users/me`, {
-                    headers: {
-                        'Authorization': `Bearer ${NOTION_API_KEY}`,
-                        'Notion-Version': NOTION_VERSION
+        // Enhanced logging for incoming requests
+        console.log(`Received action: ${action} with body:`, body);
+
+        switch (action) {
+            case 'getTables':
+                const tableDbId = process.env.NOTION_TABLE_DATABASE_ID;
+                if (!tableDbId) {
+                    console.error('Error: NOTION_TABLE_DATABASE_ID is not set in environment variables.');
+                    return { statusCode: 500, body: JSON.stringify({ error: '伺服器端桌況資料庫設定遺失。' }) };
+                }
+                
+                console.log(`Querying Notion with Table DB ID: ${tableDbId}`);
+                const tablesResponse = await notion.databases.query({ database_id: tableDbId });
+                
+                responseData = tablesResponse.results.map(page => ({
+                    id: page.id,
+                    tableName: getPropertyValue(page, '桌號', 'title'),
+                    status: getPropertyValue(page, '狀態', 'status'),
+                    zone: getPropertyValue(page, '區域', 'select'),
+                }));
+                break;
+
+            case 'getMenu':
+                const menuDbId = process.env.NOTION_MENU_DATABASE_ID;
+                 if (!menuDbId) {
+                    console.error('Error: NOTION_MENU_DATABASE_ID is not set in environment variables.');
+                    return { statusCode: 500, body: JSON.stringify({ error: '伺服器端菜單資料庫設定遺失。' }) };
+                }
+
+                console.log(`Querying Notion with Menu DB ID: ${menuDbId}`);
+                const menuResponse = await notion.databases.query({ database_id: menuDbId });
+
+                responseData = menuResponse.results.map(page => ({
+                    id: page.id,
+                    name: getPropertyValue(page, '菜色名稱', 'title'),
+                    price: getPropertyValue(page, '價格', 'number'),
+                    category: getPropertyValue(page, '分類', 'select'),
+                    cost: getPropertyValue(page, '成本', 'rollup') 
+                }));
+                break;
+            
+            case 'createOrder':
+                const orderDbId = process.env.NOTION_ORDERS_DATABASE_ID;
+                if (!orderDbId) {
+                    console.error('Error: NOTION_ORDERS_DATABASE_ID is not set in environment variables.');
+                    return { statusCode: 500, body: JSON.stringify({ error: '伺服器端訂單資料庫設定遺失。' }) };
+                }
+
+                console.log(`Creating order in Notion with DB ID: ${orderDbId}`);
+                const { tableId, items, total, orderId } = body;
+                const newOrder = await notion.pages.create({
+                    parent: { database_id: orderDbId },
+                    properties: {
+                        '訂單號碼': { title: [{ text: { content: orderId } }] },
+                        '桌號': { relation: [{ id: tableId }] },
+                        '總金額': { number: total },
+                        '訂單狀態': { status: { name: '進行中' } },
+                        '訂單品項 (JSON)': { rich_text: [{ text: { content: JSON.stringify(items) } }] }
                     }
                 });
-                
-                if (response.ok) {
-                    const user = await response.json();
-                    return {
-                        statusCode: 200,
-                        headers,
-                        body: JSON.stringify({
-                            connected: true,
-                            user: user.name || user.person?.email || 'Unknown',
-                            id: user.id
-                        })
-                    };
-                } else {
-                    const error = await response.json();
-                    return {
-                        statusCode: response.status,
-                        headers,
-                        body: JSON.stringify({
-                            connected: false,
-                            error: error.message || '連線失敗'
-                        })
-                    };
-                }
-            } catch (error) {
-                return {
-                    statusCode: 500,
-                    headers,
-                    body: JSON.stringify({
-                        connected: false,
-                        error: error.message
-                    })
-                };
-            }
+                responseData = { success: true, order: newOrder };
+                break;
+            
+            // Add other cases as needed...
+
+            default:
+                console.warn(`Unknown action received: ${action}`);
+                return { statusCode: 400, body: JSON.stringify({ error: `Unknown action: ${action}` }) };
         }
 
-        // 處理 Notion API 代理請求
-        if (path.startsWith('/')) {
-            const notionUrl = `${NOTION_BASE_URL}${path}`;
-            
-            console.log(`🔄 代理請求: ${event.httpMethod} ${notionUrl}`);
-            
-            const options = {
-                method: event.httpMethod,
-                headers: {
-                    'Authorization': `Bearer ${NOTION_API_KEY}`,
-                    'Content-Type': 'application/json',
-                    'Notion-Version': NOTION_VERSION
-                }
-            };
-            
-            // 處理請求體
-            if (event.httpMethod !== 'GET' && event.body) {
-                options.body = event.body;
-            }
-            
-            const response = await fetch(notionUrl, options);
-            const data = await response.json();
-            
-            if (response.ok) {
-                console.log(`✅ 請求成功: ${response.status}`);
-            } else {
-                console.log(`❌ 請求失敗: ${response.status}`, data);
-            }
-            
-            return {
-                statusCode: response.status,
-                headers,
-                body: JSON.stringify(data)
-            };
-        }
-
-        // 如果沒有匹配的路由
         return {
-            statusCode: 404,
-            headers,
-            body: JSON.stringify({ error: '找不到指定的 API 端點' })
+            statusCode: 200,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(responseData),
         };
 
     } catch (error) {
-        console.error('❌ Notion API 調用錯誤:', error);
+        // Enhanced error logging
+        console.error('Error executing Netlify function:', {
+            errorMessage: error.message,
+            errorStack: error.stack,
+            requestBody: event.body,
+        });
+        
+        // Check for Notion specific errors
+        if (error.code === 'unauthorized' || error.code === 'restricted_resource') {
+             return { statusCode: 500, body: JSON.stringify({ error: 'Notion API 權限不足或金鑰錯誤。' }) };
+        }
+        if (error.code === 'object_not_found') {
+             return { statusCode: 500, body: JSON.stringify({ error: '找不到指定的 Notion 資料庫，請檢查 ID 是否正確。' }) };
+        }
+
         return {
             statusCode: 500,
-            headers,
-            body: JSON.stringify({ 
-                error: '服務器錯誤',
-                message: error.message 
-            })
+            body: JSON.stringify({ error: '後端伺服器發生內部錯誤。', details: error.message }),
         };
     }
 };
