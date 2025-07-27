@@ -140,10 +140,23 @@
         const CONFIG = {
             notionApiKey: window.ENV_CONFIG?.NOTION_API_KEY || 'secret_iSDhSCT8HPZMjPsX8YuMdhfzPJ2EYJrfXLdE17L88cV',
             netlifyFunctionBase: `${window.location.origin}/.netlify/functions`,
-            ordersDatabase: window.ENV_CONFIG?.ORDERS_DATABASE_ID || '23afd5adc30b80c39e71d1a640ccfb5d',
+            ordersDatabase: formatNotionId('23afd5adc30b80c39e71d1a640ccfb5d'),
             autoRefreshInterval: 30000, // 30秒
             soundEnabled: true
         };
+
+        // 格式化 Notion ID（添加連字號）
+        function formatNotionId(id) {
+            // 如果已經有連字號，直接返回
+            if (id.includes('-')) return id;
+            
+            // 將32字符的ID格式化為 8-4-4-4-12 格式
+            if (id.length === 32) {
+                return `${id.slice(0, 8)}-${id.slice(8, 12)}-${id.slice(12, 16)}-${id.slice(16, 20)}-${id.slice(20)}`;
+            }
+            
+            return id; // 如果格式不對，返回原始ID
+        }
 
         // --- STATE ---
         let allOrders = [];
@@ -213,6 +226,7 @@
         // --- DATA FETCHING ---
         async function fetchOrders() {
             console.log('📥 開始從 Notion 獲取訂單資料...');
+            console.log('🔍 使用的資料庫 ID:', CONFIG.ordersDatabase);
             updateRefreshButton(true);
 
             try {
