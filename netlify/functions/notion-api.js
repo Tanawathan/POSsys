@@ -72,7 +72,7 @@ exports.handler = async (event) => {
                 if (dbId === process.env.NOTION_TABLE_DATABASE_ID || dbId === '23afd5adc30b80fe86c9e086a54a0d61') {
                     action = 'getTables';
                     body = requestBodyData || {};
-                } else if (dbId === process.env.NOTION_MENU_DATABASE_ID || dbId === '23afd5adc30b80a2818ffeb6b2d22265') {
+                } else if (dbId === process.env.NOTION_MENU_DATABASE_ID || dbId === '23afd5adc30b80c58355fd93d05c66d6') {
                     action = 'getMenu';
                     body = requestBodyData || {};
                 } else {
@@ -125,10 +125,10 @@ exports.handler = async (event) => {
                 break;
 
             case 'getMenu':
-                const menuDbId = process.env.NOTION_MENU_DATABASE_ID || '23afd5adc30b80a2818ffeb6b2d22265';
+                const menuDbId = process.env.NOTION_MENU_DATABASE_ID || '23afd5adc30b80c58355fd93d05c66d6';
                 console.log(`Querying Notion menu with DB ID: ${menuDbId}`);
                 console.log(`Environment NOTION_MENU_DATABASE_ID: ${process.env.NOTION_MENU_DATABASE_ID}`);
-                console.log(`Fallback menu DB ID: 23afd5adc30b80a2818ffeb6b2d22265`);
+                console.log(`Fallback menu DB ID: 23afd5adc30b80c58355fd93d05c66d6`);
                 
                 const menuQueryOptions = {
                     database_id: menuDbId,
