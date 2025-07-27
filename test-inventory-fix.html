@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>庫存系統修復測試</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- 載入環境配置 -->
+    <script src="/public/env-config.js"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold text-gray-900 mb-6">
+            <i class="fas fa-tools text-blue-600"></i>
+            庫存系統修復測試
+        </h1>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- ENV_CONFIG 測試 -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold mb-4">
+                    <i class="fas fa-cog text-green-600"></i>
+                    ENV_CONFIG 測試
+                </h2>
+                <div id="env-test-results" class="space-y-2">
+                    <div class="text-gray-500">準備測試環境配置...</div>
+                </div>
+                <button id="test-env-btn" class="mt-4 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
+                    <i class="fas fa-play"></i>
+                    測試 ENV_CONFIG
+                </button>
+            </div>
+
+            <!-- InventoryManager 測試 -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h2 class="text-xl font-semibold mb-4">
+                    <i class="fas fa-warehouse text-blue-600"></i>
+                    InventoryManager 測試
+                </h2>
+                <div id="inventory-test-results" class="space-y-2">
+                    <div class="text-gray-500">準備測試庫存管理器...</div>
+                </div>
+                <button id="test-inventory-btn" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                    <i class="fas fa-play"></i>
+                    測試 InventoryManager
+                </button>
+            </div>
+        </div>
+
+        <!-- 綜合測試結果 -->
+        <div class="mt-6 bg-white rounded-lg shadow p-6">
+            <h2 class="text-xl font-semibold mb-4">
+                <i class="fas fa-clipboard-check text-purple-600"></i>
+                綜合測試結果
+            </h2>
+            <div id="overall-results" class="space-y-2">
+                <div class="text-gray-500">點擊上方按鈕開始測試...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 測試 ENV_CONFIG
+        function testEnvConfig() {
+            const resultsDiv = document.getElementById('env-test-results');
+            const results = [];
+
+            try {
+                // 檢查 ENV_CONFIG 是否存在
+                if (typeof window.ENV_CONFIG !== 'undefined') {
+                    results.push('<div class="text-green-600">✅ ENV_CONFIG 已載入</div>');
+                    
+                    // 檢查關鍵配置項目
+                    const keys = ['NOTION_API_KEY', 'MENU_DATABASE_ID', 'RESTAURANT_NAME', 'API_BASE_URL'];
+                    keys.forEach(key => {
+                        if (window.ENV_CONFIG[key]) {
+                            results.push(`<div class="text-green-600">✅ ${key}: 已配置</div>`);
+                        } else {
+                            results.push(`<div class="text-yellow-600">⚠️ ${key}: 未配置或為空</div>`);
+                        }
+                    });
+                } else {
+                    results.push('<div class="text-red-600">❌ ENV_CONFIG 未載入</div>');
+                }
+            } catch (error) {
+                results.push(`<div class="text-red-600">❌ 錯誤: ${error.message}</div>`);
+            }
+
+            resultsDiv.innerHTML = results.join('');
+            updateOverallResults();
+        }
+
+        // 測試 InventoryManager
+        async function testInventoryManager() {
+            const resultsDiv = document.getElementById('inventory-test-results');
+            const results = [];
+
+            try {
+                // 檢查 InventoryManager 是否存在
+                if (typeof InventoryManager !== 'undefined') {
+                    results.push('<div class="text-green-600">✅ InventoryManager 類別已載入</div>');
+                    
+                    // 嘗試創建實例
+                    try {
+                        const manager = new InventoryManager(false); // 不自動初始化
+                        results.push('<div class="text-green-600">✅ InventoryManager 實例創建成功</div>');
+                        
+                        // 檢查方法
+                        const methods = ['loadFromNotion', 'renderTable', 'updateStatistics', 'bindEvents'];
+                        methods.forEach(method => {
+                            if (typeof manager[method] === 'function') {
+                                results.push(`<div class="text-green-600">✅ 方法 ${method} 存在</div>`);
+                            } else {
+                                results.push(`<div class="text-red-600">❌ 方法 ${method} 不存在</div>`);
+                            }
+                        });
+                    } catch (error) {
+                        results.push(`<div class="text-red-600">❌ 無法創建實例: ${error.message}</div>`);
+                    }
+                } else {
+                    results.push('<div class="text-red-600">❌ InventoryManager 類別未載入</div>');
+                    
+                    // 嘗試載入腳本
+                    results.push('<div class="text-blue-600">🔄 嘗試載入 InventoryManager...</div>');
+                    const script = document.createElement('script');
+                    script.src = '/assets/js/inventory-management.js';
+                    script.onload = () => {
+                        results.push('<div class="text-green-600">✅ InventoryManager 腳本載入成功</div>');
+                        resultsDiv.innerHTML = results.join('');
+                    };
+                    script.onerror = () => {
+                        results.push('<div class="text-red-600">❌ InventoryManager 腳本載入失敗</div>');
+                        resultsDiv.innerHTML = results.join('');
+                    };
+                    document.head.appendChild(script);
+                }
+            } catch (error) {
+                results.push(`<div class="text-red-600">❌ 錯誤: ${error.message}</div>`);
+            }
+
+            resultsDiv.innerHTML = results.join('');
+            updateOverallResults();
+        }
+
+        // 更新綜合結果
+        function updateOverallResults() {
+            const overallDiv = document.getElementById('overall-results');
+            const envResults = document.getElementById('env-test-results');
+            const inventoryResults = document.getElementById('inventory-test-results');
+            
+            const envSuccess = envResults.innerHTML.includes('✅ ENV_CONFIG 已載入');
+            const inventorySuccess = inventoryResults.innerHTML.includes('✅ InventoryManager 類別已載入');
+            
+            let overallStatus = '';
+            if (envSuccess && inventorySuccess) {
+                overallStatus = '<div class="text-green-600 text-lg font-semibold">🎉 所有測試通過！系統應該可以正常運行。</div>';
+            } else if (envSuccess || inventorySuccess) {
+                overallStatus = '<div class="text-yellow-600 text-lg font-semibold">⚠️ 部分測試通過，請檢查失敗的項目。</div>';
+            } else {
+                overallStatus = '<div class="text-red-600 text-lg font-semibold">❌ 測試失敗，需要進一步檢查。</div>';
+            }
+            
+            overallDiv.innerHTML = overallStatus;
+        }
+
+        // 事件監聽器
+        document.getElementById('test-env-btn').addEventListener('click', testEnvConfig);
+        document.getElementById('test-inventory-btn').addEventListener('click', testInventoryManager);
+
+        // 頁面載入時自動運行測試
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                testEnvConfig();
+                setTimeout(() => {
+                    testInventoryManager();
+                }, 500);
+            }, 1000);
+        });
+    </script>
+
+    <!-- 載入 InventoryManager -->
+    <script src="/assets/js/inventory-management.js"></script>
+</body>
+</html>
