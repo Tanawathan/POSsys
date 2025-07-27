@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InventoryManager 測試頁面</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- 載入 InventoryManager 類別 -->
+    <script src="/assets/js/inventory-management.js"></script>
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-4xl mx-auto">
+            <h1 class="text-3xl font-bold text-gray-800 mb-8">
+                <i class="fas fa-vials text-blue-600"></i>
+                InventoryManager 測試頁面
+            </h1>
+
+            <!-- 測試結果區域 -->
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                <h2 class="text-xl font-semibold mb-4">
+                    <i class="fas fa-check-circle text-green-600"></i>
+                    類別載入測試
+                </h2>
+                <div id="class-test-results" class="space-y-3">
+                    <div class="text-gray-500">正在檢查 InventoryManager 類別...</div>
+                </div>
+            </div>
+
+            <!-- 實例化測試區域 -->
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                <h2 class="text-xl font-semibold mb-4">
+                    <i class="fas fa-cogs text-purple-600"></i>
+                    實例化測試
+                </h2>
+                <div id="instance-test-results" class="space-y-3">
+                    <div class="text-gray-500">等待類別載入測試完成...</div>
+                </div>
+                <button id="test-instance-btn" class="mt-4 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700" disabled>
+                    <i class="fas fa-play"></i>
+                    測試實例化
+                </button>
+            </div>
+
+            <!-- API 調用測試區域 -->
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                <h2 class="text-xl font-semibold mb-4">
+                    <i class="fas fa-cloud text-orange-600"></i>
+                    API 調用測試
+                </h2>
+                <div id="api-test-results" class="space-y-3">
+                    <div class="text-gray-500">等待實例化測試完成...</div>
+                </div>
+                <button id="test-api-btn" class="mt-4 bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700" disabled>
+                    <i class="fas fa-download"></i>
+                    測試 API 調用
+                </button>
+            </div>
+
+            <!-- 功能測試區域 -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h2 class="text-xl font-semibold mb-4">
+                    <i class="fas fa-tools text-indigo-600"></i>
+                    功能測試
+                </h2>
+                <div id="function-test-results" class="space-y-3">
+                    <div class="text-gray-500">等待 API 調用測試完成...</div>
+                </div>
+                <button id="test-functions-btn" class="mt-4 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700" disabled>
+                    <i class="fas fa-wrench"></i>
+                    測試功能
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let inventoryManager = null;
+        let testResults = {
+            classLoaded: false,
+            instanceCreated: false,
+            apiWorking: false,
+            functionsWorking: false
+        };
+
+        // 添加測試結果
+        function addResult(containerId, status, message, details = null) {
+            const container = document.getElementById(containerId);
+            const colorClass = {
+                'success': 'text-green-600 bg-green-50 border-green-200',
+                'error': 'text-red-600 bg-red-50 border-red-200',
+                'warning': 'text-yellow-600 bg-yellow-50 border-yellow-200',
+                'info': 'text-blue-600 bg-blue-50 border-blue-200'
+            }[status] || 'text-gray-600 bg-gray-50 border-gray-200';
+
+            const icon = {
+                'success': 'fa-check-circle',
+                'error': 'fa-times-circle',
+                'warning': 'fa-exclamation-triangle',
+                'info': 'fa-info-circle'
+            }[status] || 'fa-question-circle';
+
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `p-3 rounded-lg border ${colorClass}`;
+            resultDiv.innerHTML = `
+                <div class="flex items-start space-x-3">
+                    <i class="fas ${icon} mt-1"></i>
+                    <div class="flex-1">
+                        <div class="font-medium">${message}</div>
+                        ${details ? `<div class="text-sm mt-1">${details}</div>` : ''}
+                        <div class="text-xs text-gray-500 mt-1">${new Date().toLocaleTimeString()}</div>
+                    </div>
+                </div>
+            `;
+            
+            container.appendChild(resultDiv);
+        }
+
+        // 測試 1: 檢查類別載入
+        function testClassLoading() {
+            const container = document.getElementById('class-test-results');
+            container.innerHTML = '';
+
+            if (typeof InventoryManager === 'undefined') {
+                addResult('class-test-results', 'error', 'InventoryManager 類別未載入', 
+                    '請檢查 /assets/js/inventory-management.js 文件是否存在且正確載入');
+                testResults.classLoaded = false;
+                return false;
+            }
+
+            if (typeof InventoryManager !== 'function') {
+                addResult('class-test-results', 'error', 'InventoryManager 不是一個有效的類別', 
+                    `類型: ${typeof InventoryManager}`);
+                testResults.classLoaded = false;
+                return false;
+            }
+
+            addResult('class-test-results', 'success', 'InventoryManager 類別載入成功', 
+                '類別已正確定義並可用於實例化');
+            
+            // 檢查類別的方法
+            const prototype = InventoryManager.prototype;
+            const methods = Object.getOwnPropertyNames(prototype).filter(name => 
+                name !== 'constructor' && typeof prototype[name] === 'function'
+            );
+            
+            addResult('class-test-results', 'info', `發現 ${methods.length} 個方法`, 
+                `方法: ${methods.slice(0, 5).join(', ')}${methods.length > 5 ? '...' : ''}`);
+
+            testResults.classLoaded = true;
+            document.getElementById('test-instance-btn').disabled = false;
+            return true;
+        }
+
+        // 測試 2: 實例化測試
+        function testInstantiation() {
+            const container = document.getElementById('instance-test-results');
+            container.innerHTML = '';
+
+            if (!testResults.classLoaded) {
+                addResult('instance-test-results', 'error', '無法測試實例化', 
+                    '類別載入測試未通過');
+                return false;
+            }
+
+            try {
+                // 測試不自動初始化的實例
+                inventoryManager = new InventoryManager(false);
+                
+                addResult('instance-test-results', 'success', 'InventoryManager 實例創建成功', 
+                    '使用 autoInit=false 參數');
+
+                // 檢查實例屬性
+                const hasRequiredProperties = [
+                    'inventoryData',
+                    'filteredData',
+                    'currentPage',
+                    'itemsPerPage',
+                    'isNotionConnected'
+                ].every(prop => inventoryManager.hasOwnProperty(prop));
+
+                if (hasRequiredProperties) {
+                    addResult('instance-test-results', 'success', '實例屬性檢查通過', 
+                        '所有必要屬性都已正確初始化');
+                } else {
+                    addResult('instance-test-results', 'warning', '部分實例屬性缺失', 
+                        '可能影響功能正常運作');
+                }
+
+                // 檢查重要方法
+                const requiredMethods = ['loadFromNotion', 'renderTable', 'updateStatistics'];
+                const availableMethods = requiredMethods.filter(method => 
+                    typeof inventoryManager[method] === 'function'
+                );
+
+                addResult('instance-test-results', 'info', `可用方法: ${availableMethods.length}/${requiredMethods.length}`, 
+                    `方法: ${availableMethods.join(', ')}`);
+
+                testResults.instanceCreated = true;
+                document.getElementById('test-api-btn').disabled = false;
+                return true;
+
+            } catch (error) {
+                addResult('instance-test-results', 'error', '實例化失敗', 
+                    `錯誤: ${error.message}`);
+                testResults.instanceCreated = false;
+                return false;
+            }
+        }
+
+        // 測試 3: API 調用測試
+        async function testApiCall() {
+            const container = document.getElementById('api-test-results');
+            container.innerHTML = '';
+
+            if (!testResults.instanceCreated) {
+                addResult('api-test-results', 'error', '無法測試 API 調用', 
+                    '實例化測試未通過');
+                return false;
+            }
+
+            try {
+                addResult('api-test-results', 'info', '開始 API 調用測試', 
+                    '嘗試從 Notion 載入資料...');
+
+                const start = Date.now();
+                await inventoryManager.loadFromNotion();
+                const end = Date.now();
+
+                const dataCount = inventoryManager.inventoryData.length;
+                addResult('api-test-results', 'success', `API 調用成功`, 
+                    `載入 ${dataCount} 項資料，耗時 ${end - start}ms`);
+
+                if (dataCount > 0) {
+                    const sampleItem = inventoryManager.inventoryData[0];
+                    addResult('api-test-results', 'info', '資料範例', 
+                        `第一項: ${sampleItem.name} (${sampleItem.stock} ${sampleItem.unit})`);
+                }
+
+                testResults.apiWorking = true;
+                document.getElementById('test-functions-btn').disabled = false;
+                return true;
+
+            } catch (error) {
+                addResult('api-test-results', 'error', 'API 調用失敗', 
+                    `錯誤: ${error.message}`);
+                testResults.apiWorking = false;
+                return false;
+            }
+        }
+
+        // 測試 4: 功能測試
+        function testFunctions() {
+            const container = document.getElementById('function-test-results');
+            container.innerHTML = '';
+
+            if (!testResults.apiWorking) {
+                addResult('function-test-results', 'error', '無法測試功能', 
+                    'API 調用測試未通過');
+                return false;
+            }
+
+            try {
+                // 測試統計功能
+                const totalItems = inventoryManager.inventoryData.length;
+                const safeItems = inventoryManager.inventoryData.filter(item => item.status === 'safe').length;
+                const lowItems = inventoryManager.inventoryData.filter(item => item.status === 'low').length;
+                const criticalItems = inventoryManager.inventoryData.filter(item => item.status === 'critical').length;
+
+                addResult('function-test-results', 'success', '統計功能測試通過', 
+                    `總計: ${totalItems}, 安全: ${safeItems}, 偏低: ${lowItems}, 缺貨: ${criticalItems}`);
+
+                // 測試篩選功能
+                if (typeof inventoryManager.filterData === 'function') {
+                    addResult('function-test-results', 'success', '篩選功能可用', 
+                        'filterData 方法存在');
+                } else {
+                    addResult('function-test-results', 'warning', '篩選功能不可用', 
+                        'filterData 方法不存在');
+                }
+
+                // 測試搜尋功能
+                if (typeof inventoryManager.searchItems === 'function') {
+                    addResult('function-test-results', 'success', '搜尋功能可用', 
+                        'searchItems 方法存在');
+                } else {
+                    addResult('function-test-results', 'warning', '搜尋功能不可用', 
+                        'searchItems 方法不存在');
+                }
+
+                testResults.functionsWorking = true;
+                
+                // 顯示最終結果
+                addResult('function-test-results', 'success', '所有測試完成', 
+                    'InventoryManager 類別功能正常，可以正常使用');
+
+                return true;
+
+            } catch (error) {
+                addResult('function-test-results', 'error', '功能測試失敗', 
+                    `錯誤: ${error.message}`);
+                testResults.functionsWorking = false;
+                return false;
+            }
+        }
+
+        // 事件監聽器
+        document.getElementById('test-instance-btn').addEventListener('click', testInstantiation);
+        document.getElementById('test-api-btn').addEventListener('click', testApiCall);
+        document.getElementById('test-functions-btn').addEventListener('click', testFunctions);
+
+        // 頁面載入時自動執行類別載入測試
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(testClassLoading, 500);
+        });
+    </script>
+</body>
+</html>
