@@ -549,7 +549,7 @@
             try {
                 console.log('🏗️ 載入桌位資料...');
                 
-                const response = await fetch(`/.netlify/functions/notion-api`, {
+                const response = await fetch('/.netlify/functions/notion-api', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -563,7 +563,9 @@
                 });
                 
                 if (!response.ok) {
-                    throw new Error(`API 錯誤: ${response.status}`);
+                    const errorText = await response.text();
+                    console.error('API 錯誤回應:', errorText);
+                    throw new Error(`API 錯誤: ${response.status} - ${errorText}`);
                 }
                 
                 const data = await response.json();
@@ -590,7 +592,7 @@
                 dom.menuContainer.classList.add('hidden');
                 dom.errorState.classList.add('hidden');
                 
-                const response = await fetch(`/.netlify/functions/notion-api`, {
+                const response = await fetch('/.netlify/functions/notion-api', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -604,7 +606,9 @@
                 });
                 
                 if (!response.ok) {
-                    throw new Error(`API 錯誤: ${response.status}`);
+                    const errorText = await response.text();
+                    console.error('API 錯誤回應:', errorText);
+                    throw new Error(`API 錯誤: ${response.status} - ${errorText}`);
                 }
                 
                 const data = await response.json();
@@ -1074,7 +1078,7 @@
                     }
                 };
                 
-                const response = await fetch(`/.netlify/functions/notion-api`, {
+                const response = await fetch('/.netlify/functions/notion-api', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -1085,7 +1089,9 @@
                 });
                 
                 if (!response.ok) {
-                    throw new Error(`訂單提交失敗: ${response.status}`);
+                    const errorText = await response.text();
+                    console.error('訂單提交錯誤:', errorText);
+                    throw new Error(`訂單提交失敗: ${response.status} - ${errorText}`);
                 }
                 
                 const result = await response.json();
@@ -1117,7 +1123,7 @@
             dom.existingOrdersSummary.textContent = '載入中...';
             
             try {
-                const response = await fetch(`/.netlify/functions/notion-api`, {
+                const response = await fetch('/.netlify/functions/notion-api', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -1131,7 +1137,9 @@
                 });
                 
                 if (!response.ok) {
-                    throw new Error(`載入失敗: ${response.status}`);
+                    const errorText = await response.text();
+                    console.error('載入訂單錯誤:', errorText);
+                    throw new Error(`載入失敗: ${response.status} - ${errorText}`);
                 }
                 
                 const data = await response.json();
