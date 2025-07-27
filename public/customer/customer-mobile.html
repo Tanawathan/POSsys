@@ -303,13 +303,35 @@
                     fetchOptions.body = body ? JSON.stringify(body) : undefined;
                 }
 
+                // 調試日誌
+                console.log('🔍 API 呼叫詳情:', {
+                    fetchUrl,
+                    fetchOptions,
+                    originalPath: path,
+                    originalMethod: method,
+                    originalBody: body
+                });
+
                 const response = await fetch(fetchUrl, fetchOptions);
 
+                // 調試回應
+                console.log('📡 API 回應狀態:', response.status, response.statusText);
+
                 if (!response.ok) {
-                    throw new Error(`API 錯誤: ${response.status}`);
+                    // 嘗試讀取錯誤回應內容
+                    let errorText = '';
+                    try {
+                        errorText = await response.text();
+                        console.error('❌ API 錯誤回應內容:', errorText);
+                    } catch (e) {
+                        console.error('❌ 無法讀取錯誤回應內容');
+                    }
+                    throw new Error(`API 錯誤: ${response.status} - ${errorText}`);
                 }
 
-                return await response.json();
+                const result = await response.json();
+                console.log('✅ API 成功回應:', result);
+                return result;
             } catch (error) {
                 console.error('❌ API 呼叫失敗:', error);
                 throw error;
