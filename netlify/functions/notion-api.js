@@ -127,6 +127,8 @@ exports.handler = async (event) => {
             case 'getMenu':
                 const menuDbId = process.env.NOTION_MENU_DATABASE_ID || '23afd5adc30b80a2818ffeb6b2d22265';
                 console.log(`Querying Notion menu with DB ID: ${menuDbId}`);
+                console.log(`Environment NOTION_MENU_DATABASE_ID: ${process.env.NOTION_MENU_DATABASE_ID}`);
+                console.log(`Fallback menu DB ID: 23afd5adc30b80a2818ffeb6b2d22265`);
                 
                 const menuQueryOptions = {
                     database_id: menuDbId,
@@ -135,26 +137,42 @@ exports.handler = async (event) => {
                 
                 if (body.filter) {
                     menuQueryOptions.filter = body.filter;
+                    console.log(`Menu query filter:`, JSON.stringify(body.filter, null, 2));
                 }
                 
                 if (body.sorts) {
                     menuQueryOptions.sorts = body.sorts;
+                    console.log(`Menu query sorts:`, JSON.stringify(body.sorts, null, 2));
                 }
 
-                const menuResponse = await notion.databases.query(menuQueryOptions);
+                console.log(`Final menu query options:`, JSON.stringify(menuQueryOptions, null, 2));
 
-                responseData = {
-                    results: menuResponse.results.map(page => ({
-                        id: page.id,
-                        properties: page.properties,
-                        // Also include parsed data for compatibility
-                        name: getPropertyValue(page, '品項名稱', 'title'),
-                        price: getPropertyValue(page, '價格', 'number'),
-                        category: getPropertyValue(page, '分類', 'select'),
-                        description: getPropertyValue(page, '描述', 'rich_text'),
-                        status: getPropertyValue(page, '狀態', 'select')
-                    }))
-                };
+                try {
+                    const menuResponse = await notion.databases.query(menuQueryOptions);
+                    console.log(`Menu query successful, found ${menuResponse.results.length} items`);
+
+                    responseData = {
+                        results: menuResponse.results.map(page => ({
+                            id: page.id,
+                            properties: page.properties,
+                            // Also include parsed data for compatibility
+                            name: getPropertyValue(page, '品項名稱', 'title'),
+                            price: getPropertyValue(page, '價格', 'number'),
+                            category: getPropertyValue(page, '分類', 'select'),
+                            description: getPropertyValue(page, '描述', 'rich_text'),
+                            status: getPropertyValue(page, '狀態', 'select')
+                        }))
+                    };
+                } catch (menuError) {
+                    console.error('Menu database query failed:', menuError);
+                    console.error('Menu error details:', {
+                        code: menuError.code,
+                        status: menuError.status,
+                        message: menuError.message,
+                        body: menuError.body
+                    });
+                    throw menuError;
+                }
                 break;
             
             case 'createOrder':
@@ -200,20 +218,42 @@ exports.handler = async (event) => {
         console.error('Error executing Netlify function:', {
             errorMessage: error.message,
             errorStack: error.stack,
+            errorCode: error.code,
+            errorStatus: error.status,
             requestBody: event.body,
         });
         
         // Check for Notion specific errors
         if (error.code === 'unauthorized' || error.code === 'restricted_resource') {
-             return { statusCode: 500, body: JSON.stringify({ error: 'Notion API 權限不足或金鑰錯誤。' }) };
+             return { statusCode: 500, body: JSON.stringify({ 
+                 error: 'Notion API 權限不足或金鑰錯誤。',
+                 details: `Error code: ${error.code}`,
+                 suggestion: '請檢查 NOTION_API_KEY 是否正確，且 integration 已被邀請到資料庫。'
+             }) };
         }
         if (error.code === 'object_not_found') {
-             return { statusCode: 500, body: JSON.stringify({ error: '找不到指定的 Notion 資料庫，請檢查 ID 是否正確。' }) };
+             return { statusCode: 500, body: JSON.stringify({ 
+                 error: '找不到指定的 Notion 資料庫，請檢查 ID 是否正確。',
+                 details: `Error code: ${error.code}`,
+                 suggestion: '請檢查資料庫 ID 格式是否正確，且 integration 有權限存取該資料庫。'
+             }) };
+        }
+        if (error.code === 'validation_error') {
+             return { statusCode: 500, body: JSON.stringify({ 
+                 error: 'Notion API 請求格式錯誤。',
+                 details: error.message,
+                 suggestion: '請檢查資料庫欄位名稱或查詢條件是否正確。'
+             }) };
         }
 
         return {
             statusCode: 500,
-            body: JSON.stringify({ error: '後端伺服器發生內部錯誤。', details: error.message }),
+            body: JSON.stringify({ 
+                error: '後端伺服器發生內部錯誤。', 
+                details: error.message,
+                code: error.code || 'unknown',
+                suggestion: '請聯繫系統管理員或檢查 Netlify function logs。'
+            }),
         };
     }
 };
