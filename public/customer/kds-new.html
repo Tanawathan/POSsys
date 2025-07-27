@@ -217,23 +217,19 @@
             updateRefreshButton(true);
 
             try {
-                const response = await fetch(`${CONFIG.netlifyFunctionBase}/notion-api`, {
+                const response = await fetch(`${CONFIG.netlifyFunctionBase}/notion-api/databases/${CONFIG.ordersDatabase}/query`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        path: `/databases/${CONFIG.ordersDatabase}/query`,
-                        method: 'POST',
-                        body: {
-                            page_size: 100,
-                            sorts: [
-                                {
-                                    property: '建立時間',
-                                    direction: 'descending'
-                                }
-                            ]
-                        }
+                        page_size: 100,
+                        sorts: [
+                            {
+                                property: '建立時間',
+                                direction: 'descending'
+                            }
+                        ]
                     })
                 });
 
@@ -594,20 +590,16 @@
                 }
 
                 // 使用 Netlify Functions 調用 Notion API
-                const response = await fetch(`${CONFIG.netlifyFunctionBase}/notion-api`, {
-                    method: 'POST',
+                const response = await fetch(`${CONFIG.netlifyFunctionBase}/notion-api/pages/${order.notionPageId}`, {
+                    method: 'PATCH',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        path: `/pages/${order.notionPageId}`,
-                        method: 'PATCH',
-                        body: {
-                            properties: {
-                                '狀態': {
-                                    select: {
-                                        name: newStatus
-                                    }
+                        properties: {
+                            '狀態': {
+                                select: {
+                                    name: newStatus
                                 }
                             }
                         }
