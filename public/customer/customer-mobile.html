@@ -1059,7 +1059,7 @@
                             rich_text: [{ text: { content: String(selectedTable) } }] 
                         },
                         '狀態': { 
-                            select: { name: '進行中' } 
+                            select: { name: '待處理' } 
                         },
                         '總金額': { 
                             number: totalPrice 
@@ -1177,18 +1177,27 @@
                     let statusIcon = '⚪';
                     let statusColor = 'bg-gray-600';
                     
-                    if (status === '進行中') {
-                        statusIcon = '🟢';
-                        statusColor = 'bg-green-600';
-                    } else if (status === '準備中') {
+                    if (status === '待處理') {
+                        statusIcon = '�';
+                        statusColor = 'bg-orange-600';
+                    } else if (status === '製作中') {
                         statusIcon = '🟡';
                         statusColor = 'bg-yellow-600';
-                    } else if (status === '已完成') {
+                    } else if (status === '等待甜點') {
+                        statusIcon = '�';
+                        statusColor = 'bg-green-600';
+                    } else if (status === '等待結帳') {
                         statusIcon = '🔵';
                         statusColor = 'bg-blue-600';
                     } else if (status === '已取消') {
                         statusIcon = '🔴';
                         statusColor = 'bg-red-600';
+                    } else if (status === '結帳完成') {
+                        statusIcon = '💰';
+                        statusColor = 'bg-purple-600';
+                    } else if (status === '已完成') {
+                        statusIcon = '✅';
+                        statusColor = 'bg-emerald-600';
                     }
                     
                     const formattedTime = createTime ? new Date(createTime).toLocaleString('zh-TW') : '未知時間';
@@ -1222,7 +1231,7 @@
                 // 更新摘要
                 const activeOrders = tableOrders.filter(order => {
                     const status = order.properties?.['狀態']?.select?.name;
-                    return status === '進行中' || status === '準備中';
+                    return status === '待處理' || status === '製作中' || status === '等待甜點' || status === '等待結帳';
                 });
                 
                 const totalAmount = tableOrders.reduce((sum, order) => {

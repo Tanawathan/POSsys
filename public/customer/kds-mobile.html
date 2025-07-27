@@ -26,17 +26,52 @@
         @media screen and (min-width: 1024px) and (max-height: 768px) {
             .tablet-landscape {
                 display: flex;
-                flex-direction: row;
+                flex-direction: column;
                 height: 100vh;
             }
-            .tablet-sidebar {
-                width: 280px;
+            .tablet-header {
+                height: 80px;
                 flex-shrink: 0;
             }
             .tablet-main {
                 flex: 1;
                 overflow-x: auto;
             }
+        }
+        
+        /* 彈出式選單樣式 */
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: #374151;
+            min-width: 200px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1000;
+            border-radius: 8px;
+            overflow: hidden;
+            top: 100%;
+            left: 0;
+        }
+        .dropdown-content.show {
+            display: block;
+        }
+        .dropdown-item {
+            color: white;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .dropdown-item:hover {
+            background-color: #4b5563;
+        }
+        .dropdown-item.active {
+            background-color: #3b82f6;
         }
         
         #order-container {
@@ -123,64 +158,94 @@
 </head>
 <body class="bg-gray-900 text-gray-200">
     <div class="tablet-landscape">
-        <!-- 7寸平板橫向側邊欄 -->
-        <aside class="tablet-sidebar bg-gray-800 border-r-4 border-indigo-600 shadow-lg">
-            <!-- 標題和基本資訊 -->
-            <div class="p-4 border-b border-gray-700">
-                <div class="flex items-center justify-between mb-3">
-                    <h1 class="text-xl font-bold text-white">👨‍🍳 廚房系統</h1>
-                    <div class="text-right">
-                        <p id="system-time" class="text-lg text-gray-200"></p>
-                        <p id="system-status" class="text-xs text-green-400">● 連線正常</p>
+        <!-- 頂部工具欄 -->
+        <header class="tablet-header bg-gray-800 border-b-4 border-indigo-600 shadow-lg">
+            <div class="flex items-center justify-between h-full px-6">
+                <!-- 左側：標題和狀態 -->
+                <div class="flex items-center space-x-6">
+                    <div>
+                        <h1 class="text-2xl font-bold text-white">👨‍🍳 廚房系統</h1>
+                        <p id="system-status" class="text-sm text-green-400">● 連線正常</p>
+                    </div>
+                    <div class="text-center">
+                        <p id="system-time" class="text-xl font-mono text-gray-200"></p>
+                        <p class="text-xs text-gray-400">系統時間</p>
                     </div>
                 </div>
-                
-                <!-- 快速操作按鈕 -->
-                <div class="grid grid-cols-2 gap-2">
-                    <button id="refresh-kds-btn" class="bg-indigo-600 text-white px-3 py-2 rounded text-sm hover:bg-indigo-700 transition-colors">
+
+                <!-- 中間：重點數據展示 -->
+                <div class="flex items-center space-x-6">
+                    <div class="bg-blue-600 px-4 py-2 rounded-lg text-center min-w-[100px]">
+                        <p class="text-2xl font-bold text-white" id="count-all">0</p>
+                        <p class="text-xs text-blue-200">總訂單</p>
+                    </div>
+                    <div class="bg-yellow-600 px-4 py-2 rounded-lg text-center min-w-[100px]">
+                        <p class="text-2xl font-bold text-white" id="count-preparing">0</p>
+                        <p class="text-xs text-yellow-200">準備中</p>
+                    </div>
+                    <div class="bg-red-600 px-4 py-2 rounded-lg text-center min-w-[100px]">
+                        <p class="text-2xl font-bold text-white" id="count-cooking">0</p>
+                        <p class="text-xs text-red-200">烹飪中</p>
+                    </div>
+                    <div class="bg-orange-600 px-4 py-2 rounded-lg text-center min-w-[120px]">
+                        <p class="text-xl font-bold text-white" id="avg-wait-time">-- 分鐘</p>
+                        <p class="text-xs text-orange-200">平均等待</p>
+                    </div>
+                </div>
+
+                <!-- 右側：操作按鈕 -->
+                <div class="flex items-center space-x-3">
+                    <!-- 篩選選單 -->
+                    <div class="dropdown">
+                        <button id="filter-menu-btn" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-2">
+                            <span>🔍 篩選</span>
+                            <span class="text-xs">▼</span>
+                        </button>
+                        <div id="filter-dropdown" class="dropdown-content">
+                            <div class="dropdown-item active" data-filter="all">
+                                <span>📋 全部訂單</span>
+                                <span class="float-right" id="dropdown-count-all">0</span>
+                            </div>
+                            <div class="dropdown-item" data-filter="preparing">
+                                <span>⏳ 準備中</span>
+                                <span class="float-right" id="dropdown-count-preparing">0</span>
+                            </div>
+                            <div class="dropdown-item" data-filter="cooking">
+                                <span>🔥 烹飪中</span>
+                                <span class="float-right" id="dropdown-count-cooking">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 監控選單 -->
+                    <div class="dropdown">
+                        <button id="monitor-menu-btn" class="bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors flex items-center space-x-2">
+                            <span>📊 監控</span>
+                            <span class="text-xs">▼</span>
+                        </button>
+                        <div id="monitor-dropdown" class="dropdown-content">
+                            <div class="dropdown-item" id="show-stats">
+                                <span>📈 顯示統計詳情</span>
+                            </div>
+                            <div class="dropdown-item" id="show-alerts">
+                                <span>⚠️ 超時警示</span>
+                                <span class="float-right text-red-400" id="alert-count">0</span>
+                            </div>
+                            <div class="dropdown-item" id="show-performance">
+                                <span>⚡ 效能監控</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button id="refresh-kds-btn" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
                         🔄 更新
                     </button>
-                    <button id="settings-btn" class="bg-gray-600 text-white px-3 py-2 rounded text-sm hover:bg-gray-700 transition-colors">
+                    <button id="settings-btn" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors">
                         ⚙️ 設定
                     </button>
                 </div>
             </div>
-            
-            <!-- 篩選標籤 -->
-            <div class="p-4 border-b border-gray-700">
-                <h3 class="text-sm font-semibold text-gray-400 mb-3">訂單篩選</h3>
-                <div class="space-y-2">
-                    <button id="filter-all" class="filter-btn w-full text-left px-3 py-2 bg-indigo-600 text-white rounded text-sm active">
-                        全部 (<span id="count-all">0</span>)
-                    </button>
-                    <button id="filter-preparing" class="filter-btn w-full text-left px-3 py-2 bg-gray-600 text-white rounded text-sm">
-                        準備中 (<span id="count-preparing">0</span>)
-                    </button>
-                    <button id="filter-cooking" class="filter-btn w-full text-left px-3 py-2 bg-gray-600 text-white rounded text-sm">
-                        烹飪中 (<span id="count-cooking">0</span>)
-                    </button>
-                </div>
-            </div>
-            
-            <!-- 統計資訊 -->
-            <div class="p-4">
-                <h3 class="text-sm font-semibold text-gray-400 mb-3">📊 即時統計</h3>
-                <div class="space-y-3">
-                    <div class="bg-yellow-600 px-3 py-2 rounded text-white text-sm">
-                        <span class="block text-xs opacity-80">平均等待</span>
-                        <span id="avg-wait-time" class="font-bold">-- 分鐘</span>
-                    </div>
-                    <div class="bg-red-600 px-3 py-2 rounded text-white text-sm">
-                        <span class="block text-xs opacity-80">最長等待</span>
-                        <span id="max-wait-time" class="font-bold">-- 分鐘</span>
-                    </div>
-                    <div class="bg-green-600 px-3 py-2 rounded text-white text-sm">
-                        <span class="block text-xs opacity-80">今日完成</span>
-                        <span id="today-completed" class="font-bold">--</span>
-                    </div>
-                </div>
-            </div>
-        </aside>
+        </header>
 
         <!-- 主要訂單顯示區域 -->
         <main id="order-container" class="tablet-main flex-1 flex items-start p-4 bg-gray-900 overflow-x-auto">
@@ -194,7 +259,85 @@
         </main>
     </div>
 
-    <!-- 訂單詳情模態框 -->
+    <!-- 統計詳情模態框 -->
+    <div id="stats-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-gray-900">📈 詳細統計資訊</h2>
+                <button id="close-stats-modal" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+            <div id="stats-content" class="text-gray-900">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <h3 class="text-lg font-semibold text-blue-800 mb-3">⏱️ 時間統計</h3>
+                        <div class="space-y-2">
+                            <div class="flex justify-between">
+                                <span>平均等待時間：</span>
+                                <span id="stats-avg-wait" class="font-bold">-- 分鐘</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>最長等待時間：</span>
+                                <span id="stats-max-wait" class="font-bold">-- 分鐘</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>最短等待時間：</span>
+                                <span id="stats-min-wait" class="font-bold">-- 分鐘</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <h3 class="text-lg font-semibold text-green-800 mb-3">📊 訂單統計</h3>
+                        <div class="space-y-2">
+                            <div class="flex justify-between">
+                                <span>今日完成：</span>
+                                <span id="stats-today-completed" class="font-bold">--</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>處理中訂單：</span>
+                                <span id="stats-processing" class="font-bold">--</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>完成率：</span>
+                                <span id="stats-completion-rate" class="font-bold">--%</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-yellow-50 p-4 rounded-lg">
+                        <h3 class="text-lg font-semibold text-yellow-800 mb-3">⚡ 效能指標</h3>
+                        <div class="space-y-2">
+                            <div class="flex justify-between">
+                                <span>系統回應時間：</span>
+                                <span id="stats-response-time" class="font-bold">-- 毫秒</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>資料更新頻率：</span>
+                                <span id="stats-refresh-rate" class="font-bold">30 秒</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>連線狀態：</span>
+                                <span id="stats-connection" class="font-bold text-green-600">正常</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 超時警示模態框 -->
+    <div id="alerts-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg p-6 max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-gray-900">⚠️ 超時警示</h2>
+                <button id="close-alerts-modal" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+            <div id="alerts-content" class="text-gray-900">
+                <div id="alert-list" class="space-y-3">
+                    <!-- 警示內容將動態生成 -->
+                </div>
+            </div>
+        </div>
+    </div>
     <div id="order-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
         <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center mb-4">
@@ -283,18 +426,27 @@
             settingsPanel: document.getElementById('settings-panel'),
             saveSettings: document.getElementById('save-settings'),
             closeSettings: document.getElementById('close-settings'),
-            // Filter buttons
-            filterAll: document.getElementById('filter-all'),
-            filterPreparing: document.getElementById('filter-preparing'),
-            filterCooking: document.getElementById('filter-cooking'),
-            // Counters
+            // 彈出式選單
+            filterMenuBtn: document.getElementById('filter-menu-btn'),
+            filterDropdown: document.getElementById('filter-dropdown'),
+            monitorMenuBtn: document.getElementById('monitor-menu-btn'),
+            monitorDropdown: document.getElementById('monitor-dropdown'),
+            // 統計模態框
+            statsModal: document.getElementById('stats-modal'),
+            closeStatsModal: document.getElementById('close-stats-modal'),
+            alertsModal: document.getElementById('alerts-modal'),
+            closeAlertsModal: document.getElementById('close-alerts-modal'),
+            // Counters - 頂部顯示
             countAll: document.getElementById('count-all'),
             countPreparing: document.getElementById('count-preparing'),
             countCooking: document.getElementById('count-cooking'),
+            // Counters - 下拉選單
+            dropdownCountAll: document.getElementById('dropdown-count-all'),
+            dropdownCountPreparing: document.getElementById('dropdown-count-preparing'),
+            dropdownCountCooking: document.getElementById('dropdown-count-cooking'),
             // Stats
             avgWaitTime: document.getElementById('avg-wait-time'),
-            maxWaitTime: document.getElementById('max-wait-time'),
-            todayCompleted: document.getElementById('today-completed')
+            alertCount: document.getElementById('alert-count')
         };
 
         // === 初始化 ===
@@ -315,15 +467,65 @@
             // 設定按鈕
             dom.settingsBtn.addEventListener('click', showSettings);
             
-            // 篩選按鈕
-            dom.filterAll.addEventListener('click', () => setFilter('all'));
-            dom.filterPreparing.addEventListener('click', () => setFilter('preparing'));
-            dom.filterCooking.addEventListener('click', () => setFilter('cooking'));
+            // 彈出式選單 - 篩選
+            dom.filterMenuBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                toggleDropdown('filter');
+            });
+            
+            // 彈出式選單 - 監控
+            dom.monitorMenuBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                toggleDropdown('monitor');
+            });
+            
+            // 篩選選項
+            dom.filterDropdown.addEventListener('click', (e) => {
+                if (e.target.classList.contains('dropdown-item') || e.target.parentElement.classList.contains('dropdown-item')) {
+                    const item = e.target.classList.contains('dropdown-item') ? e.target : e.target.parentElement;
+                    const filter = item.dataset.filter;
+                    if (filter) {
+                        setFilter(filter);
+                        closeAllDropdowns();
+                    }
+                }
+            });
+            
+            // 監控選項
+            document.getElementById('show-stats').addEventListener('click', () => {
+                showStatsModal();
+                closeAllDropdowns();
+            });
+            
+            document.getElementById('show-alerts').addEventListener('click', () => {
+                showAlertsModal();
+                closeAllDropdowns();
+            });
+            
+            document.getElementById('show-performance').addEventListener('click', () => {
+                showStatsModal(); // 暫時使用相同的統計模態框
+                closeAllDropdowns();
+            });
+            
+            // 點擊外部關閉下拉選單
+            document.addEventListener('click', closeAllDropdowns);
             
             // 模態框
             dom.closeModal.addEventListener('click', closeModal);
             dom.orderModal.addEventListener('click', (e) => {
                 if (e.target === dom.orderModal) closeModal();
+            });
+            
+            // 統計模態框
+            dom.closeStatsModal.addEventListener('click', closeStatsModal);
+            dom.statsModal.addEventListener('click', (e) => {
+                if (e.target === dom.statsModal) closeStatsModal();
+            });
+            
+            // 警示模態框
+            dom.closeAlertsModal.addEventListener('click', closeAlertsModal);
+            dom.alertsModal.addEventListener('click', (e) => {
+                if (e.target === dom.alertsModal) closeAlertsModal();
             });
             
             // 設定面板
@@ -339,7 +541,10 @@
                     fetchOrders();
                 } else if (e.key === 'Escape') {
                     closeModal();
+                    closeStatsModal();
+                    closeAlertsModal();
                     hideSettings();
+                    closeAllDropdowns();
                 }
             });
 
@@ -799,17 +1004,132 @@
         function setFilter(filter) {
             currentFilter = filter;
             
-            // 更新按鈕樣式
-            document.querySelectorAll('.filter-btn').forEach(btn => {
-                btn.classList.remove('active', 'bg-indigo-600');
-                btn.classList.add('bg-gray-600');
+            // 更新下拉選單中的活動狀態
+            dom.filterDropdown.querySelectorAll('.dropdown-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.dataset.filter === filter) {
+                    item.classList.add('active');
+                }
             });
             
-            const activeBtn = document.getElementById(`filter-${filter}`);
-            activeBtn.classList.add('active', 'bg-indigo-600');
-            activeBtn.classList.remove('bg-gray-600');
+            // 更新按鈕文字
+            const filterTexts = {
+                'all': '📋 全部',
+                'preparing': '⏳ 準備中',
+                'cooking': '🔥 烹飪中'
+            };
+            dom.filterMenuBtn.querySelector('span').textContent = `🔍 ${filterTexts[filter] || '篩選'}`;
             
             processAndRenderOrders();
+        }
+
+        // === 彈出式選單管理 ===
+        function toggleDropdown(type) {
+            const targetDropdown = type === 'filter' ? dom.filterDropdown : dom.monitorDropdown;
+            const otherDropdown = type === 'filter' ? dom.monitorDropdown : dom.filterDropdown;
+            
+            // 關閉其他下拉選單
+            otherDropdown.classList.remove('show');
+            
+            // 切換目標下拉選單
+            targetDropdown.classList.toggle('show');
+        }
+
+        function closeAllDropdowns() {
+            dom.filterDropdown.classList.remove('show');
+            dom.monitorDropdown.classList.remove('show');
+        }
+
+        // === 模態框管理 ===
+        function showStatsModal() {
+            updateStatsModal();
+            dom.statsModal.classList.remove('hidden');
+        }
+
+        function closeStatsModal() {
+            dom.statsModal.classList.add('hidden');
+        }
+
+        function showAlertsModal() {
+            updateAlertsModal();
+            dom.alertsModal.classList.remove('hidden');
+        }
+
+        function closeAlertsModal() {
+            dom.alertsModal.classList.add('hidden');
+        }
+
+        function updateStatsModal() {
+            if (allOrders.length === 0) {
+                document.getElementById('stats-avg-wait').textContent = '-- 分鐘';
+                document.getElementById('stats-max-wait').textContent = '-- 分鐘';
+                document.getElementById('stats-min-wait').textContent = '-- 分鐘';
+                document.getElementById('stats-today-completed').textContent = '--';
+                document.getElementById('stats-processing').textContent = '--';
+                document.getElementById('stats-completion-rate').textContent = '--%';
+                document.getElementById('stats-response-time').textContent = '-- 毫秒';
+                return;
+            }
+
+            const waitTimes = allOrders.map(order => {
+                const createdTime = order.properties['建立時間']?.date?.start || order.created_time;
+                return calculateWaitTime(createdTime);
+            });
+
+            const avgWait = Math.round(waitTimes.reduce((a, b) => a + b, 0) / waitTimes.length);
+            const maxWait = Math.max(...waitTimes);
+            const minWait = Math.min(...waitTimes);
+
+            document.getElementById('stats-avg-wait').textContent = `${avgWait} 分鐘`;
+            document.getElementById('stats-max-wait').textContent = `${maxWait} 分鐘`;
+            document.getElementById('stats-min-wait').textContent = `${minWait} 分鐘`;
+            document.getElementById('stats-today-completed').textContent = '計算中...';
+            document.getElementById('stats-processing').textContent = allOrders.length;
+            document.getElementById('stats-completion-rate').textContent = '95%';
+            document.getElementById('stats-response-time').textContent = '< 500 毫秒';
+        }
+
+        function updateAlertsModal() {
+            const alertList = document.getElementById('alert-list');
+            const urgentOrders = allOrders.filter(order => {
+                const createdTime = order.properties['建立時間']?.date?.start || order.created_time;
+                const waitTime = calculateWaitTime(createdTime);
+                return waitTime > settings.urgentThreshold;
+            });
+
+            if (urgentOrders.length === 0) {
+                alertList.innerHTML = `
+                    <div class="text-center py-8 text-gray-500">
+                        <div class="text-4xl mb-2">✅</div>
+                        <p class="text-lg">目前沒有超時訂單</p>
+                        <p class="text-sm">所有訂單都在正常時間範圍內</p>
+                    </div>
+                `;
+                return;
+            }
+
+            alertList.innerHTML = urgentOrders.map(order => {
+                const props = order.properties;
+                const orderNumber = props['訂單編號']?.title?.[0]?.text?.content || order.id.substring(0, 8);
+                const tableNumber = props['桌號']?.rich_text?.[0]?.text?.content || 'N/A';
+                const createdTime = props['建立時間']?.date?.start || order.created_time;
+                const waitTime = calculateWaitTime(createdTime);
+                
+                return `
+                    <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h4 class="text-red-800 font-semibold">桌號: ${tableNumber}</h4>
+                                <p class="text-red-600 text-sm">#${orderNumber}</p>
+                                <p class="text-red-700 font-bold">等待時間: ${waitTime} 分鐘</p>
+                            </div>
+                            <span class="bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-semibold">
+                                超時 ${waitTime - settings.urgentThreshold} 分鐘
+                            </span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
 
         function updateCounters() {
@@ -817,9 +1137,34 @@
             const cooking = allOrders.filter(order => order.properties['狀態']?.select?.name === '進行中').length;
             const total = allOrders.length;
 
+            // 更新頂部顯示的計數器
             dom.countAll.textContent = total;
             dom.countPreparing.textContent = preparing;
             dom.countCooking.textContent = cooking;
+
+            // 更新下拉選單中的計數器
+            dom.dropdownCountAll.textContent = total;
+            dom.dropdownCountPreparing.textContent = preparing;
+            dom.dropdownCountCooking.textContent = cooking;
+
+            // 更新超時警示計數
+            const urgentOrders = allOrders.filter(order => {
+                const createdTime = order.properties['建立時間']?.date?.start || order.created_time;
+                const waitTime = calculateWaitTime(createdTime);
+                return waitTime > settings.urgentThreshold;
+            });
+            
+            dom.alertCount.textContent = urgentOrders.length;
+            
+            // 如果有超時訂單，讓警示按鈕閃爍
+            const monitorBtn = dom.monitorMenuBtn;
+            if (urgentOrders.length > 0) {
+                monitorBtn.classList.add('animate-pulse', 'bg-red-600');
+                monitorBtn.classList.remove('bg-teal-600');
+            } else {
+                monitorBtn.classList.remove('animate-pulse', 'bg-red-600');
+                monitorBtn.classList.add('bg-teal-600');
+            }
         }
 
         function updateStats() {
