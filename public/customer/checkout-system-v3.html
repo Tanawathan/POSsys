@@ -189,9 +189,10 @@
             <p class="text-gray-600 mb-6">總金額：<span id="modalTotalAmount" class="font-semibold text-green-600"></span></p>
             <p class="text-gray-600 mb-6">確定要進行結帳嗎？此操作將：</p>
             <ul class="text-sm text-gray-500 mb-6 space-y-1">
-                <li>• 將所有訂單標記為已付款</li>
-                <li>• 清空桌位狀態</li>
-                <li>• 重置桌位人數和消費</li>
+                <li>• 將所有訂單狀態更新為「結帳完成」</li>
+                <li>• 將所有訂單付款狀態標記為「已付款」</li>
+                <li>• 清空桌位狀態並重置為「空閒中」</li>
+                <li>• 重置桌位人數和消費金額</li>
             </ul>
             <div class="flex space-x-3">
                 <button id="confirmCheckout" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg font-semibold">
@@ -284,12 +285,34 @@
             try {
                 const data = await callNotionAPI(`/databases/${CONFIG.databases.orders}/query`, 'POST', {
                     page_size: 100,
+                    filter: {
+                        and: [
+                            {
+                                property: '狀態',
+                                select: { 
+                                    does_not_equal: '已取消' 
+                                }
+                            },
+                            {
+                                property: '狀態',
+                                select: { 
+                                    does_not_equal: '結帳完成' 
+                                }
+                            },
+                            {
+                                property: '狀態',
+                                select: { 
+                                    does_not_equal: '已完成' 
+                                }
+                            }
+                        ]
+                    },
                     sorts: [{ property: '建立時間', direction: 'descending' }]
                 });
                 
                 allOrders = data.results || [];
-                console.log(`✅ 載入了 ${allOrders.length} 個訂單`);
-                updateSystemStatus(`已載入 ${allOrders.length} 個訂單`);
+                console.log(`✅ 載入了 ${allOrders.length} 個活動訂單`);
+                updateSystemStatus(`已載入 ${allOrders.length} 個活動訂單`);
                 return allOrders;
             } catch (error) {
                 console.error('❌ 載入訂單失敗:', error);
@@ -381,7 +404,11 @@
             const unpaidTableNumbers = new Set();
             allOrders.forEach(order => {
                 const parsed = parseOrder(order);
-                if (parsed.status !== '已取消' && parsed.paymentStatus !== '已付款') {
+                // 新的 7 階段狀態系統：排除已取消、結帳完成、已完成的訂單
+                if (parsed.status !== '已取消' && 
+                    parsed.status !== '結帳完成' && 
+                    parsed.status !== '已完成' && 
+                    parsed.paymentStatus !== '已付款') {
                     unpaidTableNumbers.add(parsed.tableNumber);
                 }
             });
@@ -407,7 +434,13 @@
         function getTableOrders(tableNumber) {
             return allOrders
                 .map(parseOrder)
-                .filter(order => order.tableNumber === tableNumber);
+                .filter(order => {
+                    // 只顯示未完成的訂單（排除已取消、結帳完成、已完成）
+                    return order.tableNumber === tableNumber && 
+                           order.status !== '已取消' && 
+                           order.status !== '結帳完成' && 
+                           order.status !== '已完成';
+                });
         }
 
         // === 🎨 UI 渲染函數 ===
@@ -459,8 +492,16 @@
                             <div class="text-sm text-gray-600 space-y-1">
                                 <div>👥 ${table.currentPeople}/${table.capacity} 人</div>
                                 ${hasOrders ? `
-                                    <div>📋 ${unpaidOrders.length} 個未付款訂單</div>
+                                    <div>📋 ${unpaidOrders.length} 個待處理訂單</div>
                                     <div class="font-semibold text-green-600">💰 NT$ ${totalAmount}</div>
+                                    <div class="text-xs text-blue-600 mt-1">
+                                        ${unpaidOrders.filter(o => o.status === '等待結帳').length > 0 ? 
+                                          '🔵 有訂單等待結帳' : 
+                                          unpaidOrders.filter(o => o.status === '製作中').length > 0 ? 
+                                          '🟡 製作中' : 
+                                          unpaidOrders.filter(o => o.status === '待處理').length > 0 ? 
+                                          '🟠 待處理' : '📋 處理中'}
+                                    </div>
                                 ` : `
                                     <div class="text-orange-500">⚠️ 無訂單，需清空</div>
                                 `}
@@ -532,16 +573,24 @@
 
             setTimeout(() => {
                 const orders = getTableOrders(tableNumber);
-                const unpaidOrders = orders.filter(o => o.paymentStatus !== '已付款');
+                // 篩選出需要處理的訂單（未付款且狀態為等待結帳或其他活動狀態）
+                const needProcessing = orders.filter(o => {
+                    return o.paymentStatus !== '已付款' && (
+                        o.status === '等待結帳' ||
+                        o.status === '待處理' ||
+                        o.status === '製作中' ||
+                        o.status === '等待甜點'
+                    );
+                });
 
                 loading.classList.add('hidden');
 
-                if (unpaidOrders.length === 0) {
+                if (needProcessing.length === 0) {
                     noOrders.classList.remove('hidden');
                     return;
                 }
 
-                renderOrders(unpaidOrders);
+                renderOrders(needProcessing);
                 list.classList.remove('hidden');
             }, 500);
         }
@@ -588,9 +637,16 @@
 
         function getOrderStatusColor(status) {
             switch (status) {
+                case '待處理': return 'bg-orange-100 text-orange-800';
+                case '製作中': return 'bg-yellow-100 text-yellow-800';
+                case '等待甜點': return 'bg-green-100 text-green-800';
+                case '等待結帳': return 'bg-blue-100 text-blue-800';
                 case '已送達': return 'bg-green-100 text-green-800';
                 case '準備中': return 'bg-yellow-100 text-yellow-800';
                 case '點餐中': return 'bg-purple-100 text-purple-800';
+                case '已取消': return 'bg-red-100 text-red-800';
+                case '結帳完成': return 'bg-green-100 text-green-800';
+                case '已完成': return 'bg-gray-100 text-gray-800';
                 default: return 'bg-gray-100 text-gray-800';
             }
         }
@@ -645,7 +701,7 @@
                 for (const order of unpaidOrders) {
                     await callNotionAPI(`/pages/${order.id}`, 'PATCH', {
                         properties: {
-                            '狀態': { select: { name: '已送達' } },
+                            '狀態': { select: { name: '結帳完成' } },
                             '付款狀態': { select: { name: '已付款' } }
                         }
                     });
@@ -664,7 +720,7 @@
                 console.log('✅ 結帳完成');
                 updateSystemStatus(`桌號 ${parsed.number} 結帳完成`);
                 
-                alert(`✅ 桌號 ${parsed.number} 結帳完成！\n\n• 已更新 ${unpaidOrders.length} 個訂單為已付款\n• 桌位狀態已重置為空閒中`);
+                alert(`✅ 桌號 ${parsed.number} 結帳完成！\n\n• 已更新 ${unpaidOrders.length} 個訂單狀態為「結帳完成」\n• 所有訂單付款狀態已更新為「已付款」\n• 桌位狀態已重置為空閒中`);
                 
                 hideCheckoutModal();
                 await refreshData();
