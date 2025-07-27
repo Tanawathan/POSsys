@@ -1,3 +1,33 @@
+# Tanawat Restaurant POS 系統
+
+本專案為餐廳管理系統，包含 API Proxy 與多種管理功能。
+
+## 啟動方式
+
+1. 安裝依賴：
+   ```bash
+   npm install
+   ```
+2. 啟動伺服器：
+   ```bash
+   npm run start
+   ```
+
+伺服器啟動後，預設網址為 http://localhost:3000
+
+## 主要功能
+- 訂單管理、菜單管理、桌況管理、採購管理、食譜管理、訂位管理、庫存管理、供應商管理、成本分析
+- 客戶端點餐、結帳、廚房顯示系統
+- Notion 整合與 CSV 同步工具
+
+## 相關指令
+- `npm run dev`：開發模式（自動重啟）
+- `npm run build`：Netlify 部署用
+- `npm run sync-csv`：同步 CSV 資料
+
+---
+如需更多說明，請參閱原始碼與 `pages/` 目錄。
+
 # Tanawat Restaurant 管理系統
 
 ## 📁 資料夾結構

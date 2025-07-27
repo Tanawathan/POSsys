@@ -6,243 +6,239 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>📱 手機廚房系統 - Tanawat Restaurant</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <title>📱 7寸平板廚房系統 - Tanawat Restaurant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- 環境配置 (必須在其他腳本之前載入) -->
+    <script src="../env-config.js"></script>
     <style>
-        .loading-spinner {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            border: 2px solid #f3f3f3;
-            border-top: 2px solid #3498db;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
         }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        body::-webkit-scrollbar {
+            display: none;
         }
+        
+        /* 7寸平板橫向優化 */
+        @media screen and (min-width: 1024px) and (max-height: 768px) {
+            .tablet-landscape {
+                display: flex;
+                flex-direction: row;
+                height: 100vh;
+            }
+            .tablet-sidebar {
+                width: 280px;
+                flex-shrink: 0;
+            }
+            .tablet-main {
+                flex: 1;
+                overflow-x: auto;
+            }
+        }
+        
+        #order-container {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        #order-container::-webkit-scrollbar {
+            display: none;
+        }
+        
         .order-card {
+            animation: slideIn 0.5s ease-out;
             transition: all 0.2s ease;
             touch-action: manipulation;
         }
         .order-card:active {
             transform: scale(0.98);
         }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .completed-order {
+            animation: slideOut 0.3s ease-in;
+        }
+        @keyframes slideOut {
+            to {
+                opacity: 0;
+                transform: translateX(20px) scale(0.8);
+            }
+        }
+        
+        .status-preparing { 
+            border-left: 6px solid #f59e0b;
+            background: linear-gradient(135deg, #fef3c7 0%, #fbbf24 100%);
+        }
+        .status-cooking { 
+            border-left: 6px solid #ef4444;
+            background: linear-gradient(135deg, #fee2e2 0%, #ef4444 100%);
+            color: white;
+        }
+        .status-ready { 
+            border-left: 6px solid #10b981;
+            background: linear-gradient(135deg, #dcfce7 0%, #16a34a 100%);
+        }
+        
+        .priority-high { 
+            background: linear-gradient(135deg, #fee2e2, #fef2f2);
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+            animation: pulse 2s infinite;
+        }
+        .priority-normal { 
+            background: linear-gradient(135deg, #f3f4f6, #ffffff); 
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.9; }
+        }
+        
+        .filter-btn {
+            transition: all 0.2s ease;
+        }
+        .filter-btn.active {
+            background: #3b82f6 !important;
+            color: white;
+        }
+        
         .mobile-header {
             position: sticky;
             top: 0;
             z-index: 50;
             backdrop-filter: blur(10px);
         }
-        .status-new {
-            background: linear-gradient(135deg, #fef3c7 0%, #fbbf24 100%);
-            border-left: 4px solid #f59e0b;
-        }
-        .status-preparing {
-            background: linear-gradient(135deg, #dbeafe 0%, #3b82f6 100%);
-            border-left: 4px solid #2563eb;
-            color: white;
-        }
-        .status-ready {
-            background: linear-gradient(135deg, #dcfce7 0%, #16a34a 100%);
-            border-left: 4px solid #15803d;
-        }
-        .status-delivered {
-            background: linear-gradient(135deg, #f3f4f6 0%, #6b7280 100%);
-            border-left: 4px solid #4b5563;
-        }
-        .tab-button {
-            transition: all 0.2s ease;
-        }
-        .tab-button.active {
-            background: #3b82f6;
-            color: white;
-        }
-        .time-badge {
-            font-family: monospace;
-            font-weight: bold;
-        }
-        .urgent {
-            animation: pulse 2s infinite;
-        }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
-        }
-        .priority-high {
-            box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
-        }
-        .swipe-action {
-            position: relative;
-            overflow: hidden;
-        }
-        .action-buttons {
-            position: absolute;
-            right: 0;
-            top: 0;
-            height: 100%;
-            display: flex;
-            transform: translateX(100%);
-            transition: transform 0.3s ease;
-        }
-        .order-card.swiped .action-buttons {
-            transform: translateX(0);
-        }
     </style>
 </head>
-<body class="bg-gray-50">
-    <!-- 手機專用頭部 -->
-    <header class="mobile-header bg-white shadow-sm border-b">
-        <div class="px-4 py-3">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h1 class="text-lg font-bold text-gray-900">👨‍🍳 廚房系統</h1>
-                    <p class="text-xs text-gray-500" id="statusInfo">載入中...</p>
+<body class="bg-gray-900 text-gray-200">
+    <div class="tablet-landscape">
+        <!-- 7寸平板橫向側邊欄 -->
+        <aside class="tablet-sidebar bg-gray-800 border-r-4 border-indigo-600 shadow-lg">
+            <!-- 標題和基本資訊 -->
+            <div class="p-4 border-b border-gray-700">
+                <div class="flex items-center justify-between mb-3">
+                    <h1 class="text-xl font-bold text-white">👨‍🍳 廚房系統</h1>
+                    <div class="text-right">
+                        <p id="system-time" class="text-lg text-gray-200"></p>
+                        <p id="system-status" class="text-xs text-green-400">● 連線正常</p>
+                    </div>
                 </div>
-                <div class="flex space-x-2">
-                    <button id="refreshBtn" class="bg-blue-500 text-white px-3 py-1 rounded text-sm">
-                        🔄
+                
+                <!-- 快速操作按鈕 -->
+                <div class="grid grid-cols-2 gap-2">
+                    <button id="refresh-kds-btn" class="bg-indigo-600 text-white px-3 py-2 rounded text-sm hover:bg-indigo-700 transition-colors">
+                        🔄 更新
                     </button>
-                    <button id="settingsBtn" class="bg-gray-500 text-white px-3 py-1 rounded text-sm">
-                        ⚙️
+                    <button id="settings-btn" class="bg-gray-600 text-white px-3 py-2 rounded text-sm hover:bg-gray-700 transition-colors">
+                        ⚙️ 設定
                     </button>
                 </div>
             </div>
-        </div>
-        
-        <!-- 標籤切換 -->
-        <div class="flex bg-gray-100 text-sm">
-            <button id="tabNew" class="tab-button flex-1 py-2 font-medium active">
-                🔔 新訂單 (<span id="newCount">0</span>)
-            </button>
-            <button id="tabPreparing" class="tab-button flex-1 py-2 font-medium">
-                🔥 準備中 (<span id="preparingCount">0</span>)
-            </button>
-            <button id="tabReady" class="tab-button flex-1 py-2 font-medium">
-                ✅ 完成 (<span id="readyCount">0</span>)
-            </button>
-        </div>
-    </header>
-
-    <!-- 統計面板（可收縮） -->
-    <div id="statsPanel" class="bg-white border-b">
-        <button id="statsToggle" class="w-full px-4 py-2 text-left text-sm flex items-center justify-between">
-            <span>📊 今日統計</span>
-            <span id="statsIcon">▼</span>
-        </button>
-        <div id="statsContent" class="px-4 pb-2 hidden">
-            <div class="grid grid-cols-3 gap-3 text-center text-xs">
-                <div class="bg-yellow-50 p-2 rounded">
-                    <div class="font-semibold text-yellow-700" id="todayNew">0</div>
-                    <div class="text-yellow-600">新訂單</div>
-                </div>
-                <div class="bg-blue-50 p-2 rounded">
-                    <div class="font-semibold text-blue-700" id="todayCompleted">0</div>
-                    <div class="text-blue-600">已完成</div>
-                </div>
-                <div class="bg-green-50 p-2 rounded">
-                    <div class="font-semibold text-green-700" id="avgTime">-</div>
-                    <div class="text-green-600">平均時間</div>
+            
+            <!-- 篩選標籤 -->
+            <div class="p-4 border-b border-gray-700">
+                <h3 class="text-sm font-semibold text-gray-400 mb-3">訂單篩選</h3>
+                <div class="space-y-2">
+                    <button id="filter-all" class="filter-btn w-full text-left px-3 py-2 bg-indigo-600 text-white rounded text-sm active">
+                        全部 (<span id="count-all">0</span>)
+                    </button>
+                    <button id="filter-preparing" class="filter-btn w-full text-left px-3 py-2 bg-gray-600 text-white rounded text-sm">
+                        準備中 (<span id="count-preparing">0</span>)
+                    </button>
+                    <button id="filter-cooking" class="filter-btn w-full text-left px-3 py-2 bg-gray-600 text-white rounded text-sm">
+                        烹飪中 (<span id="count-cooking">0</span>)
+                    </button>
                 </div>
             </div>
-        </div>
+            
+            <!-- 統計資訊 -->
+            <div class="p-4">
+                <h3 class="text-sm font-semibold text-gray-400 mb-3">📊 即時統計</h3>
+                <div class="space-y-3">
+                    <div class="bg-yellow-600 px-3 py-2 rounded text-white text-sm">
+                        <span class="block text-xs opacity-80">平均等待</span>
+                        <span id="avg-wait-time" class="font-bold">-- 分鐘</span>
+                    </div>
+                    <div class="bg-red-600 px-3 py-2 rounded text-white text-sm">
+                        <span class="block text-xs opacity-80">最長等待</span>
+                        <span id="max-wait-time" class="font-bold">-- 分鐘</span>
+                    </div>
+                    <div class="bg-green-600 px-3 py-2 rounded text-white text-sm">
+                        <span class="block text-xs opacity-80">今日完成</span>
+                        <span id="today-completed" class="font-bold">--</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 主要訂單顯示區域 -->
+        <main id="order-container" class="tablet-main flex-1 flex items-start p-4 bg-gray-900 overflow-x-auto">
+            <div id="order-wrapper" class="flex flex-nowrap space-x-4 h-full min-w-full">
+                <div id="loading-placeholder" class="text-center py-16 text-gray-400 w-screen">
+                    <div class="animate-spin rounded-full border-8 border-t-8 border-gray-200 h-24 w-24 mb-4 mx-auto"></div>
+                    <p class="text-xl">正在連接 Notion 資料庫...</p>
+                    <p class="text-sm mt-2">載入訂單資料中</p>
+                </div>
+            </div>
+        </main>
     </div>
 
-    <!-- 新訂單列表 -->
-    <div id="newOrdersSection" class="p-4">
-        <!-- 載入狀態 -->
-        <div id="newOrdersLoading" class="text-center py-8">
-            <div class="loading-spinner mx-auto mb-2"></div>
-            <p class="text-sm text-gray-500">載入新訂單...</p>
-        </div>
-
-        <!-- 訂單列表 -->
-        <div id="newOrdersList" class="space-y-3 hidden"></div>
-
-        <!-- 無訂單 -->
-        <div id="noNewOrders" class="text-center py-12 hidden">
-            <div class="text-6xl mb-4">🎉</div>
-            <h3 class="text-lg font-semibold text-gray-700 mb-2">太棒了！</h3>
-            <p class="text-sm text-gray-500">目前沒有新訂單</p>
-        </div>
-
-        <!-- 錯誤 -->
-        <div id="newOrdersError" class="text-center py-8 hidden">
-            <div class="text-4xl mb-2 text-red-400">⚠️</div>
-            <p class="text-sm text-red-500 mb-3">載入失敗</p>
-            <button onclick="loadOrders()" class="bg-red-500 text-white px-4 py-2 rounded text-sm">
-                重試
-            </button>
-        </div>
-    </div>
-
-    <!-- 準備中訂單列表 -->
-    <div id="preparingOrdersSection" class="p-4 hidden">
-        <div id="preparingOrdersList" class="space-y-3"></div>
-        <div id="noPreparingOrders" class="text-center py-12 hidden">
-            <div class="text-4xl mb-4">⏳</div>
-            <p class="text-sm text-gray-500">沒有準備中的訂單</p>
-        </div>
-    </div>
-
-    <!-- 完成訂單列表 -->
-    <div id="readyOrdersSection" class="p-4 hidden">
-        <div id="readyOrdersList" class="space-y-3"></div>
-        <div id="noReadyOrders" class="text-center py-12 hidden">
-            <div class="text-4xl mb-4">📦</div>
-            <p class="text-sm text-gray-500">沒有等待送達的訂單</p>
-        </div>
-    </div>
-
-    <!-- 操作確認模態框 -->
-    <div id="actionModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-lg p-4 max-w-sm w-full">
-            <h3 class="text-lg font-semibold mb-3" id="modalTitle">確認操作</h3>
-            <p class="text-gray-600 mb-4" id="modalMessage">確定要執行此操作嗎？</p>
-            <div class="flex space-x-2">
-                <button id="confirmAction" class="flex-1 bg-blue-600 text-white py-2 px-3 rounded text-sm font-semibold">
-                    確認
-                </button>
-                <button id="cancelAction" class="flex-1 bg-gray-300 text-gray-700 py-2 px-3 rounded text-sm">
-                    取消
-                </button>
+    <!-- 訂單詳情模態框 -->
+    <div id="order-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-gray-900">訂單詳情</h2>
+                <button id="close-modal" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+            <div id="modal-content" class="text-gray-900">
+                <!-- Modal content will be populated here -->
             </div>
         </div>
     </div>
 
     <!-- 設定面板 -->
-    <div id="settingsPanel" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-lg p-4 max-w-sm w-full">
-            <h3 class="text-lg font-semibold mb-4">⚙️ 系統設定</h3>
+    <div id="settings-panel" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 class="text-lg font-semibold mb-4 text-gray-900">⚙️ 系統設定</h3>
             <div class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium mb-2">自動刷新間隔</label>
-                    <select id="refreshInterval" class="w-full border rounded px-3 py-2 text-sm">
-                        <option value="5000">5 秒</option>
-                        <option value="10000" selected>10 秒</option>
-                        <option value="30000">30 秒</option>
+                    <label class="block text-sm font-medium mb-2 text-gray-700">自動刷新間隔</label>
+                    <select id="refresh-interval" class="w-full border rounded px-3 py-2 text-sm">
+                        <option value="15000">15 秒</option>
+                        <option value="30000" selected>30 秒</option>
+                        <option value="60000">1 分鐘</option>
                         <option value="0">關閉</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium mb-2">音效通知</label>
+                    <label class="block text-sm font-medium mb-2 text-gray-700">音效通知</label>
                     <div class="flex items-center">
-                        <input type="checkbox" id="soundEnabled" checked class="mr-2">
-                        <span class="text-sm">新訂單音效提醒</span>
+                        <input type="checkbox" id="sound-enabled" checked class="mr-2">
+                        <span class="text-sm text-gray-700">新訂單音效提醒</span>
                     </div>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium mb-2">緊急訂單閾值（分鐘）</label>
-                    <input type="number" id="urgentThreshold" value="15" min="5" max="60" 
+                    <label class="block text-sm font-medium mb-2 text-gray-700">緊急訂單閾值（分鐘）</label>
+                    <input type="number" id="urgent-threshold" value="30" min="15" max="60" 
                            class="w-full border rounded px-3 py-2 text-sm">
                 </div>
             </div>
             <div class="flex space-x-2 mt-6">
-                <button id="saveSettings" class="flex-1 bg-blue-600 text-white py-2 px-3 rounded text-sm font-semibold">
+                <button id="save-settings" class="flex-1 bg-blue-600 text-white py-2 px-3 rounded text-sm font-semibold">
                     儲存
                 </button>
-                <button id="closeSettings" class="flex-1 bg-gray-300 text-gray-700 py-2 px-3 rounded text-sm">
+                <button id="close-settings" class="flex-1 bg-gray-300 text-gray-700 py-2 px-3 rounded text-sm">
                     取消
                 </button>
             </div>
@@ -251,100 +247,701 @@
 
     <script>
         // === 配置 ===
-        const VERSION = 'mobile-kds-v1.0-' + Date.now();
-        console.log('📱 手機廚房系統版本:', VERSION);
+        const VERSION = 'tablet-kds-v2.0-' + Date.now();
+        console.log('📱 7寸平板廚房系統版本:', VERSION);
 
         const CONFIG = {
-            apiBase: `${window.location.origin}/.netlify/functions/notion-api`,
-            databases: {
-                orders: '23afd5adc30b80c39e71d1a640ccfb5d'
-            }
+            notionApiKey: window.ENV_CONFIG?.NOTION_API_KEY || 'secret_iSDhSCT8HPZMjPsX8YuMdhfzPJ2EYJrfXLdE17L88cV',
+            netlifyFunctionBase: `${window.location.origin}/.netlify/functions`,
+            ordersDatabase: '23afd5adc30b80c39e71d1a640ccfb5d',
+            autoRefreshInterval: 30000, // 30秒
+            soundEnabled: true
         };
 
         // === 全域變數 ===
         let allOrders = [];
-        let currentTab = 'new';
-        let refreshTimer = null;
+        let displayedOrderIds = new Set();
+        let currentFilter = 'all';
+        let autoRefreshTimer = null;
         let settings = {
-            refreshInterval: 10000,
+            refreshInterval: 30000,
             soundEnabled: true,
-            urgentThreshold: 15
+            urgentThreshold: 30
         };
-        let lastOrderCount = 0;
 
-        // === API 函數 ===
-        async function callNotionAPI(path, method = 'GET', body = null) {
+        // === DOM 元素 ===
+        const dom = {
+            orderWrapper: document.getElementById('order-wrapper'),
+            systemTime: document.getElementById('system-time'),
+            systemStatus: document.getElementById('system-status'),
+            loadingPlaceholder: document.getElementById('loading-placeholder'),
+            refreshKdsBtn: document.getElementById('refresh-kds-btn'),
+            settingsBtn: document.getElementById('settings-btn'),
+            orderModal: document.getElementById('order-modal'),
+            modalContent: document.getElementById('modal-content'),
+            closeModal: document.getElementById('close-modal'),
+            settingsPanel: document.getElementById('settings-panel'),
+            saveSettings: document.getElementById('save-settings'),
+            closeSettings: document.getElementById('close-settings'),
+            // Filter buttons
+            filterAll: document.getElementById('filter-all'),
+            filterPreparing: document.getElementById('filter-preparing'),
+            filterCooking: document.getElementById('filter-cooking'),
+            // Counters
+            countAll: document.getElementById('count-all'),
+            countPreparing: document.getElementById('count-preparing'),
+            countCooking: document.getElementById('count-cooking'),
+            // Stats
+            avgWaitTime: document.getElementById('avg-wait-time'),
+            maxWaitTime: document.getElementById('max-wait-time'),
+            todayCompleted: document.getElementById('today-completed')
+        };
+
+        // === 初始化 ===
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 7寸平板 KDS 系統初始化');
+            loadSettings();
+            initEventListeners();
+            fetchOrders();
+            updateTime();
+            setInterval(updateTime, 1000);
+            startAutoRefresh();
+        });
+
+        function initEventListeners() {
+            // 刷新按鈕
+            dom.refreshKdsBtn.addEventListener('click', fetchOrders);
+            
+            // 設定按鈕
+            dom.settingsBtn.addEventListener('click', showSettings);
+            
+            // 篩選按鈕
+            dom.filterAll.addEventListener('click', () => setFilter('all'));
+            dom.filterPreparing.addEventListener('click', () => setFilter('preparing'));
+            dom.filterCooking.addEventListener('click', () => setFilter('cooking'));
+            
+            // 模態框
+            dom.closeModal.addEventListener('click', closeModal);
+            dom.orderModal.addEventListener('click', (e) => {
+                if (e.target === dom.orderModal) closeModal();
+            });
+            
+            // 設定面板
+            dom.saveSettings.addEventListener('click', saveSettings);
+            dom.closeSettings.addEventListener('click', hideSettings);
+            dom.settingsPanel.addEventListener('click', (e) => {
+                if (e.target === dom.settingsPanel) hideSettings();
+            });
+            
+            // 鍵盤快捷鍵
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'r' || e.key === 'R') {
+                    fetchOrders();
+                } else if (e.key === 'Escape') {
+                    closeModal();
+                    hideSettings();
+                }
+            });
+
+            // 請求通知權限
+            if ('Notification' in window && Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+        }
+
+        // === 資料獲取 ===
+        async function fetchOrders() {
+            console.log('📥 開始從 Notion 獲取訂單資料...');
+            updateRefreshButton(true);
+
             try {
-                const response = await fetch(CONFIG.apiBase, {
+                const response = await fetch(`${CONFIG.netlifyFunctionBase}/notion-api`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ path, method, body })
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        path: `/databases/${CONFIG.ordersDatabase}/query`,
+                        method: 'POST',
+                        body: {
+                            page_size: 100,
+                            filter: {
+                                and: [
+                                    {
+                                        property: '狀態',
+                                        select: { 
+                                            does_not_equal: '已取消' 
+                                        }
+                                    },
+                                    {
+                                        or: [
+                                            {
+                                                property: '狀態',
+                                                select: { equals: '準備中' }
+                                            },
+                                            {
+                                                property: '狀態',
+                                                select: { equals: '進行中' }
+                                            }
+                                        ]
+                                    }
+                                ]
+                            },
+                            sorts: [
+                                {
+                                    property: '建立時間',
+                                    direction: 'descending'
+                                }
+                            ]
+                        }
+                    })
                 });
 
                 if (!response.ok) {
-                    throw new Error(`API 錯誤: ${response.status}`);
+                    const errorText = await response.text();
+                    console.error('API 錯誤回應:', errorText);
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
                 }
 
-                return await response.json();
+                const data = await response.json();
+                console.log('📦 收到 Notion 訂單資料:', data);
+
+                if (data.results && Array.isArray(data.results)) {
+                    const oldOrderCount = allOrders.length;
+                    allOrders = data.results.map(mapNotionOrderToKDS);
+                    
+                    // 檢查新訂單通知
+                    if (allOrders.length > oldOrderCount && oldOrderCount > 0) {
+                        checkNewOrders();
+                    }
+                    
+                    processAndRenderOrders();
+                    updateStats();
+                    updateStatus(true);
+                    console.log(`✅ 成功載入 ${allOrders.length} 筆訂單`);
+                } else {
+                    console.warn('⚠️ 資料格式異常:', data);
+                    showError('資料格式異常');
+                }
             } catch (error) {
-                console.error('❌ API 呼叫失敗:', error);
-                throw error;
+                console.error('❌ 獲取訂單失敗:', error);
+                updateStatus(false);
+                showError(`連線失敗: ${error.message}`);
+            } finally {
+                updateRefreshButton(false);
             }
         }
 
-        // === 資料載入 ===
-        async function loadOrders() {
-            updateStatus('載入訂單中...');
+        // === Notion 資料映射 ===
+        function mapNotionOrderToKDS(notionOrder) {
+            console.log('🔄 映射 Notion 訂單到 KDS 格式:', notionOrder);
+            const props = notionOrder.properties;
+            
+            // 解析訂單編號
+            const orderId = props['訂單編號']?.title?.[0]?.text?.content || 
+                           props['訂單編號']?.rich_text?.[0]?.text?.content || 
+                           `ORDER-${Date.now()}`;
+            
+            // 解析桌號
+            const tableNumber = props['桌號']?.rich_text?.[0]?.text?.content || 
+                               props['桌號']?.title?.[0]?.text?.content || '未知';
+            
+            // 解析狀態
+            const status = props['狀態']?.select?.name || '準備中';
+            
+            // 解析總金額
+            const total = props['總金額']?.number || 0;
+            
+            // 解析用餐人數
+            const customerCount = props['用餐人數']?.number || 1;
+            
+            // 解析建立時間
+            const createdTime = props['建立時間']?.date?.start || 
+                               props['建立時間']?.created_time || 
+                               notionOrder.created_time;
+            
+            // 解析備註和訂單項目
+            const notesText = props['備註']?.rich_text?.[0]?.text?.content || '';
+            const orderItemsText = props['訂單項目']?.rich_text?.[0]?.text?.content || '';
+            let items = [];
+            let customerNote = '';
+            
+            // 從訂單項目欄位解析
+            if (orderItemsText) {
+                const itemLines = orderItemsText.split('\n').filter(line => line.trim());
+                items = itemLines.map(line => {
+                    const match = line.match(/^(.+?)\s*x(\d+)\s*-\s*(?:NT\$|\$)(\d+)(?:\s*\((.*?)\))?/);
+                    if (match) {
+                        const [, name, qty, totalPrice, notes] = match;
+                        const quantity = parseInt(qty);
+                        const itemPrice = parseInt(totalPrice) / quantity;
+                        return {
+                            name: name.trim(),
+                            quantity: quantity,
+                            price: itemPrice,
+                            note: notes ? notes.trim() : ''
+                        };
+                    }
+                    return null;
+                }).filter(item => item !== null);
+                
+                customerNote = notesText;
+            } else if (notesText) {
+                // 備用：從備註中提取
+                const systemDataMatch = notesText.match(/\[系統資料\]\s*({.*?})\s*(?:\[\/系統資料\]|$)/s);
+                
+                if (systemDataMatch) {
+                    try {
+                        const systemData = JSON.parse(systemDataMatch[1]);
+                        items = systemData.items || [];
+                    } catch (e) {
+                        console.warn('解析系統資料失敗:', e);
+                    }
+                    
+                    const systemDataStart = notesText.indexOf('[系統資料]');
+                    if (systemDataStart > 0) {
+                        customerNote = notesText.substring(0, systemDataStart).trim();
+                    }
+                } else {
+                    customerNote = notesText;
+                }
+            }
+            
+            // 如果沒有解析到項目，創建預設項目
+            if (items.length === 0 && total > 0) {
+                items = [{
+                    name: '訂單項目',
+                    quantity: 1,
+                    price: total
+                }];
+            }
+            
+            return {
+                id: orderId,
+                properties: {
+                    '訂單編號': { title: [{ text: { content: orderId } }] },
+                    '桌號': { rich_text: [{ text: { content: tableNumber } }] },
+                    '狀態': { select: { name: status } },
+                    '總金額': { number: total },
+                    '用餐人數': { number: customerCount },
+                    '建立時間': { date: { start: createdTime } },
+                    '備註': { rich_text: [{ text: { content: notesText } }] }
+                },
+                created_time: createdTime,
+                items: items,
+                customerNote: customerNote,
+                notionPageId: notionOrder.id
+            };
+        }
+
+        // === 資料處理 ===
+        function processAndRenderOrders() {
+            removeLoadingPlaceholder();
+            
+            const filteredOrders = filterOrders(allOrders);
+            renderOrders(filteredOrders);
+            updateCounters();
+        }
+
+        function filterOrders(orders) {
+            switch (currentFilter) {
+                case 'preparing':
+                    return orders.filter(order => order.properties['狀態']?.select?.name === '準備中');
+                case 'cooking':
+                    return orders.filter(order => order.properties['狀態']?.select?.name === '進行中');
+                default:
+                    return orders;
+            }
+        }
+
+        function renderOrders(orders) {
+            // 清除不再存在的訂單
+            const currentOrderIds = new Set(orders.map(order => order.id));
+            displayedOrderIds.forEach(id => {
+                if (!currentOrderIds.has(id)) {
+                    const ticket = document.getElementById(`order-${id}`);
+                    if (ticket) {
+                        ticket.classList.add('completed-order');
+                        setTimeout(() => ticket.remove(), 300);
+                    }
+                    displayedOrderIds.delete(id);
+                }
+            });
+
+            if (orders.length === 0) {
+                showNoOrdersMessage();
+                return;
+            } else {
+                removeNoOrdersMessage();
+            }
+
+            // 渲染新訂單或更新現有訂單
+            orders.forEach(order => {
+                const orderId = order.id;
+                const existingTicket = document.getElementById(`order-${orderId}`);
+                
+                if (existingTicket) {
+                    updateOrderTicket(existingTicket, order);
+                } else {
+                    createOrderTicket(order);
+                    displayedOrderIds.add(orderId);
+                }
+            });
+
+            updateTimers();
+        }
+
+        function createOrderTicket(order) {
+            const orderId = order.id;
+            const props = order.properties;
+            
+            // 提取訂單資訊
+            const orderNumber = props['訂單編號']?.title?.[0]?.text?.content || orderId.substring(0, 8);
+            const tableNumber = props['桌號']?.rich_text?.[0]?.text?.content || 'N/A';
+            const status = props['狀態']?.select?.name || '準備中';
+            const createdTime = props['建立時間']?.date?.start || order.created_time;
+            const orderItems = order.items || [];
+            const customerNote = order.customerNote || '';
+            const totalAmount = props['總金額']?.number || 0;
+
+            // 計算等待時間
+            const waitTime = calculateWaitTime(createdTime);
+            const priority = waitTime > settings.urgentThreshold ? 'high' : 'normal';
+
+            const ticket = document.createElement('div');
+            ticket.id = `order-${orderId}`;
+            ticket.className = `order-card bg-white text-gray-900 rounded-lg shadow-2xl w-72 h-full flex flex-col flex-shrink-0 status-${status.toLowerCase().replace('中', '').replace('行', 'cooking')} priority-${priority}`;
+            
+            // 構建項目列表
+            let itemsHtml = '';
+            if (orderItems && Array.isArray(orderItems)) {
+                itemsHtml = orderItems.map(item => {
+                    const note = item.note ? `<p class="text-red-600 font-semibold text-sm ml-4">備註: ${item.note}</p>` : '';
+                    return `
+                        <li class="py-2 border-b border-gray-200 last:border-b-0">
+                            <div class="flex justify-between items-center">
+                                <span class="text-lg font-semibold">${item.name || '未知項目'}</span>
+                                <span class="text-xl font-bold text-indigo-600">x${item.quantity || 1}</span>
+                            </div>
+                            ${note}
+                        </li>
+                    `;
+                }).join('');
+            } else {
+                itemsHtml = '<li class="text-gray-500 italic">訂單內容載入中...</li>';
+            }
+
+            // 狀態顏色配置
+            const statusConfig = {
+                '準備中': { bg: 'bg-yellow-500', text: '準備中' },
+                '進行中': { bg: 'bg-red-500', text: '烹飪中' },
+                '已完成': { bg: 'bg-green-500', text: '已完成' }
+            };
+            const statusInfo = statusConfig[status] || statusConfig['準備中'];
+
+            ticket.innerHTML = `
+                <div class="p-4 bg-gray-800 text-white rounded-t-lg">
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <p class="text-2xl font-bold">桌號: ${tableNumber}</p>
+                            <p class="text-sm text-gray-400">#${orderNumber}</p>
+                        </div>
+                        <span class="${statusInfo.bg} px-2 py-1 rounded text-xs font-semibold">
+                            ${statusInfo.text}
+                        </span>
+                    </div>
+                    <p class="text-sm text-yellow-400 font-semibold" data-timestamp="${createdTime}">
+                        已等待 ${waitTime} 分鐘
+                    </p>
+                    ${totalAmount > 0 ? `<p class="text-sm text-green-400">總額: $${totalAmount}</p>` : ''}
+                </div>
+                
+                <div class="flex-1 p-3 overflow-y-auto">
+                    <ul class="space-y-1">
+                        ${itemsHtml}
+                    </ul>
+                    ${customerNote ? `<div class="mt-3 p-2 bg-yellow-50 border-l-4 border-yellow-400">
+                        <p class="text-sm font-semibold text-yellow-800">客戶備註:</p>
+                        <p class="text-sm text-yellow-700">${customerNote}</p>
+                    </div>` : ''}
+                </div>
+                
+                <div class="p-3 space-y-2">
+                    <div class="flex space-x-2">
+                        ${status === '準備中' ? `
+                            <button class="action-btn cooking-btn flex-1 bg-orange-600 text-white py-3 rounded-md text-lg font-bold hover:bg-orange-700 transition-colors">
+                                開始烹飪
+                            </button>
+                        ` : ''}
+                        ${status === '進行中' ? `
+                            <button class="action-btn complete-btn flex-1 bg-green-600 text-white py-3 rounded-md text-lg font-bold hover:bg-green-700 transition-colors">
+                                完成出餐
+                            </button>
+                        ` : ''}
+                        <button class="detail-btn bg-gray-600 text-white py-3 px-4 rounded-md text-lg hover:bg-gray-700 transition-colors">
+                            詳情
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            // 添加事件監聽器
+            const cookingBtn = ticket.querySelector('.cooking-btn');
+            const completeBtn = ticket.querySelector('.complete-btn');
+            const detailBtn = ticket.querySelector('.detail-btn');
+
+            if (cookingBtn) {
+                cookingBtn.addEventListener('click', () => updateOrderStatus(orderId, '進行中', cookingBtn));
+            }
+            if (completeBtn) {
+                completeBtn.addEventListener('click', () => updateOrderStatus(orderId, '已完成', completeBtn));
+            }
+            if (detailBtn) {
+                detailBtn.addEventListener('click', () => showOrderDetail(order));
+            }
+
+            dom.orderWrapper.appendChild(ticket);
+        }
+
+        function updateOrderTicket(ticket, order) {
+            const waitTimeElement = ticket.querySelector('[data-timestamp]');
+            if (waitTimeElement) {
+                const createdTime = order.properties['建立時間']?.date?.start || order.created_time;
+                const waitTime = calculateWaitTime(createdTime);
+                waitTimeElement.textContent = `已等待 ${waitTime} 分鐘`;
+                
+                // 根據等待時間調整顏色
+                if (waitTime > 45) {
+                    waitTimeElement.className = 'text-sm text-red-400 font-bold animate-pulse';
+                } else if (waitTime > settings.urgentThreshold) {
+                    waitTimeElement.className = 'text-sm text-orange-400 font-semibold';
+                } else {
+                    waitTimeElement.className = 'text-sm text-yellow-400 font-semibold';
+                }
+            }
+        }
+
+        // === 訂單操作 ===
+        async function updateOrderStatus(orderId, newStatus, buttonElement) {
+            console.log(`🔄 更新訂單 ${orderId} 狀態為 ${newStatus}`);
+            
+            if (buttonElement) {
+                buttonElement.disabled = true;
+                buttonElement.textContent = '處理中...';
+            }
+
             try {
-                const data = await callNotionAPI(`/databases/${CONFIG.databases.orders}/query`, 'POST', {
-                    page_size: 100,
-                    filter: {
-                        and: [
-                            {
-                                property: '狀態',
-                                select: { does_not_equal: '已取消' }
-                            },
-                            {
-                                property: '付款狀態',
-                                select: { does_not_equal: '已付款' }
-                            }
-                        ]
+                const order = allOrders.find(o => o.id === orderId);
+                if (!order || !order.notionPageId) {
+                    throw new Error('找不到訂單或 Notion 頁面 ID');
+                }
+
+                const response = await fetch(`${CONFIG.netlifyFunctionBase}/notion-api`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
                     },
-                    sorts: [{ property: '建立時間', direction: 'descending' }]
+                    body: JSON.stringify({
+                        path: `/pages/${order.notionPageId}`,
+                        method: 'PATCH',
+                        body: {
+                            properties: {
+                                '狀態': {
+                                    select: {
+                                        name: newStatus
+                                    }
+                                }
+                            }
+                        }
+                    })
                 });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                console.log(`✅ 訂單 ${orderId} 狀態更新成功`);
                 
-                allOrders = data.results || [];
-                
-                // 檢查新訂單通知
-                checkNewOrders();
-                
-                updateStatus(`已載入 ${allOrders.length} 個活躍訂單`);
-                return allOrders;
+                if (newStatus === '已完成') {
+                    const ticket = document.getElementById(`order-${orderId}`);
+                    if (ticket) {
+                        ticket.classList.add('completed-order');
+                        setTimeout(() => {
+                            ticket.remove();
+                            displayedOrderIds.delete(orderId);
+                            allOrders = allOrders.filter(order => order.id !== orderId);
+                            updateCounters();
+                            updateStats();
+                        }, 300);
+                    }
+                } else {
+                    setTimeout(fetchOrders, 1000);
+                }
+
             } catch (error) {
-                updateStatus(`載入失敗: ${error.message}`);
-                throw error;
+                console.error('❌ 更新訂單狀態失敗:', error);
+                alert(`更新訂單狀態失敗: ${error.message}`);
+                
+                if (buttonElement) {
+                    buttonElement.disabled = false;
+                    buttonElement.textContent = newStatus === '進行中' ? '開始烹飪' : '完成出餐';
+                }
             }
         }
 
-        function checkNewOrders() {
-            const newOrders = getOrdersByStatus('點餐中');
-            if (newOrders.length > lastOrderCount && lastOrderCount > 0) {
-                if (settings.soundEnabled) {
-                    playNotificationSound();
-                }
-                // 顯示通知（如果支援）
-                if ('Notification' in window && Notification.permission === 'granted') {
-                    new Notification('新訂單！', {
-                        body: `收到 ${newOrders.length - lastOrderCount} 個新訂單`,
-                        icon: '🔔'
-                    });
-                }
+        // === 工具函數 ===
+        function calculateWaitTime(createdTime) {
+            const orderTime = new Date(createdTime);
+            const now = new Date();
+            return Math.floor((now - orderTime) / 60000); // 分鐘
+        }
+
+        function setFilter(filter) {
+            currentFilter = filter;
+            
+            // 更新按鈕樣式
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active', 'bg-indigo-600');
+                btn.classList.add('bg-gray-600');
+            });
+            
+            const activeBtn = document.getElementById(`filter-${filter}`);
+            activeBtn.classList.add('active', 'bg-indigo-600');
+            activeBtn.classList.remove('bg-gray-600');
+            
+            processAndRenderOrders();
+        }
+
+        function updateCounters() {
+            const preparing = allOrders.filter(order => order.properties['狀態']?.select?.name === '準備中').length;
+            const cooking = allOrders.filter(order => order.properties['狀態']?.select?.name === '進行中').length;
+            const total = allOrders.length;
+
+            dom.countAll.textContent = total;
+            dom.countPreparing.textContent = preparing;
+            dom.countCooking.textContent = cooking;
+        }
+
+        function updateStats() {
+            if (allOrders.length === 0) {
+                dom.avgWaitTime.textContent = '-- 分鐘';
+                dom.maxWaitTime.textContent = '-- 分鐘';
+                return;
             }
-            lastOrderCount = newOrders.length;
+
+            const waitTimes = allOrders.map(order => {
+                const createdTime = order.properties['建立時間']?.date?.start || order.created_time;
+                return calculateWaitTime(createdTime);
+            });
+
+            const avgWait = Math.round(waitTimes.reduce((a, b) => a + b, 0) / waitTimes.length);
+            const maxWait = Math.max(...waitTimes);
+
+            dom.avgWaitTime.textContent = `${avgWait} 分鐘`;
+            dom.maxWaitTime.textContent = `${maxWait} 分鐘`;
+        }
+
+        function updateTimers() {
+            document.querySelectorAll('[data-timestamp]').forEach(el => {
+                const createdTime = el.dataset.timestamp;
+                const waitTime = calculateWaitTime(createdTime);
+                el.textContent = `已等待 ${waitTime} 分鐘`;
+                
+                if (waitTime > 45) {
+                    el.className = 'text-sm text-red-400 font-bold animate-pulse';
+                } else if (waitTime > settings.urgentThreshold) {
+                    el.className = 'text-sm text-orange-400 font-semibold';
+                } else {
+                    el.className = 'text-sm text-yellow-400 font-semibold';
+                }
+            });
+        }
+
+        function updateTime() {
+            const now = new Date();
+            dom.systemTime.textContent = now.toLocaleTimeString('zh-TW', { hour12: false });
+        }
+
+        function updateStatus(isOnline) {
+            if (isOnline) {
+                dom.systemStatus.textContent = '● Notion 連線正常';
+                dom.systemStatus.classList.remove('text-red-400');
+                dom.systemStatus.classList.add('text-green-400');
+            } else {
+                dom.systemStatus.textContent = '❗ Notion 連線異常';
+                dom.systemStatus.classList.add('text-red-400');
+                dom.systemStatus.classList.remove('text-green-400');
+            }
+        }
+
+        function updateRefreshButton(isLoading) {
+            const btn = dom.refreshKdsBtn;
+            if (isLoading) {
+                btn.disabled = true;
+                btn.innerHTML = '⏳ 更新中...';
+            } else {
+                btn.disabled = false;
+                btn.innerHTML = '🔄 更新';
+            }
+        }
+
+        function removeLoadingPlaceholder() {
+            if (dom.loadingPlaceholder) {
+                dom.loadingPlaceholder.remove();
+                dom.loadingPlaceholder = null;
+            }
+        }
+
+        function showNoOrdersMessage() {
+            removeNoOrdersMessage();
+            const noOrdersMsg = document.createElement('div');
+            noOrdersMsg.id = 'no-orders-msg';
+            noOrdersMsg.className = 'text-center py-16 text-gray-500 w-screen';
+            noOrdersMsg.innerHTML = `
+                <div class="text-6xl mb-4">🍽️</div>
+                <p class="text-2xl font-semibold mb-2">目前沒有待處理訂單</p>
+                <p class="text-lg text-gray-400">所有訂單都已完成！</p>
+            `;
+            dom.orderWrapper.appendChild(noOrdersMsg);
+        }
+
+        function removeNoOrdersMessage() {
+            const noOrdersMsg = document.getElementById('no-orders-msg');
+            if (noOrdersMsg) noOrdersMsg.remove();
+        }
+
+        function showError(message) {
+            console.error('❌ KDS 錯誤:', message);
+        }
+
+        function startAutoRefresh() {
+            if (autoRefreshTimer) {
+                clearInterval(autoRefreshTimer);
+            }
+            
+            if (settings.refreshInterval > 0) {
+                autoRefreshTimer = setInterval(() => {
+                    console.log('🔄 自動刷新訂單...');
+                    fetchOrders();
+                }, settings.refreshInterval);
+            }
+        }
+
+        // === 通知功能 ===
+        function checkNewOrders() {
+            if (settings.soundEnabled) {
+                playNotificationSound();
+            }
+            
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification('新訂單！', {
+                    body: '收到新的訂單，請查看廚房系統',
+                    icon: '🔔'
+                });
+            }
         }
 
         function playNotificationSound() {
-            // 使用 Web Audio API 產生簡單音效
             try {
                 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 const oscillator = audioContext.createOscillator();
@@ -366,307 +963,36 @@
             }
         }
 
-        // === 資料解析 ===
-        function getProperty(obj, propName, type = 'text') {
-            try {
-                const prop = obj.properties?.[propName];
-                if (!prop) return null;
-
-                switch (type) {
-                    case 'title': return prop.title?.[0]?.text?.content || null;
-                    case 'text': return prop.rich_text?.[0]?.text?.content || null;
-                    case 'number': return prop.number || 0;
-                    case 'select': return prop.select?.name || null;
-                    default: return null;
-                }
-            } catch (error) {
-                return null;
-            }
-        }
-
-        function parseOrder(order) {
-            const itemsText = getProperty(order, '訂單項目', 'text');
-            let items = [];
-            if (itemsText) {
-                try { items = JSON.parse(itemsText); } catch (e) {}
-            }
-
-            const createTimeText = getProperty(order, '建立時間', 'text');
-            let createTime = null;
-            if (createTimeText) {
-                createTime = new Date(createTimeText);
-            }
-
-            return {
-                id: order.id,
-                number: getProperty(order, '訂單編號', 'title'),
-                tableNumber: getProperty(order, '桌號', 'text'),
-                items: items,
-                total: getProperty(order, '總金額', 'number'),
-                status: getProperty(order, '狀態', 'select'),
-                paymentStatus: getProperty(order, '付款狀態', 'select'),
-                createTime: createTime
-            };
-        }
-
-        // === 訂單篩選 ===
-        function getOrdersByStatus(status) {
-            return allOrders.map(parseOrder).filter(order => order.status === status);
-        }
-
-        function getElapsedTime(createTime) {
-            if (!createTime) return 0;
-            return Math.floor((Date.now() - createTime.getTime()) / 1000 / 60); // 分鐘
-        }
-
-        function isUrgent(order) {
-            const elapsed = getElapsedTime(order.createTime);
-            return elapsed >= settings.urgentThreshold;
-        }
-
-        // === UI 更新 ===
-        function updateStatus(message) {
-            const timestamp = new Date().toLocaleTimeString();
-            document.getElementById('statusInfo').textContent = `${message} (${timestamp})`;
-        }
-
-        function switchTab(tab) {
-            currentTab = tab;
-            
-            // 更新標籤樣式
-            document.querySelectorAll('.tab-button').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            document.getElementById(`tab${tab.charAt(0).toUpperCase() + tab.slice(1)}`).classList.add('active');
-            
-            // 顯示對應內容
-            document.getElementById('newOrdersSection').classList.toggle('hidden', tab !== 'new');
-            document.getElementById('preparingOrdersSection').classList.toggle('hidden', tab !== 'preparing');
-            document.getElementById('readyOrdersSection').classList.toggle('hidden', tab !== 'ready');
-            
-            renderOrders();
-        }
-
-        function updateOrderCounts() {
-            const newOrders = getOrdersByStatus('點餐中');
-            const preparingOrders = getOrdersByStatus('準備中');
-            const readyOrders = getOrdersByStatus('已送達');
-
-            document.getElementById('newCount').textContent = newOrders.length;
-            document.getElementById('preparingCount').textContent = preparingOrders.length;
-            document.getElementById('readyCount').textContent = readyOrders.length;
-        }
-
-        function updateStats() {
-            const today = new Date().toDateString();
-            const todayOrders = allOrders
-                .map(parseOrder)
-                .filter(order => order.createTime && order.createTime.toDateString() === today);
-
-            const newToday = todayOrders.filter(o => o.status === '點餐中').length;
-            const completedToday = todayOrders.filter(o => o.status === '已送達').length;
-            
-            // 計算平均處理時間
-            const completedWithTime = todayOrders.filter(o => 
-                o.status === '已送達' && o.createTime
-            );
-            
-            let avgTime = '-';
-            if (completedWithTime.length > 0) {
-                const totalMinutes = completedWithTime.reduce((sum, order) => {
-                    return sum + getElapsedTime(order.createTime);
-                }, 0);
-                avgTime = Math.round(totalMinutes / completedWithTime.length) + '分';
-            }
-
-            document.getElementById('todayNew').textContent = newToday;
-            document.getElementById('todayCompleted').textContent = completedToday;
-            document.getElementById('avgTime').textContent = avgTime;
-        }
-
-        function renderOrders() {
-            let orders, container, emptyContainer;
-
-            switch (currentTab) {
-                case 'new':
-                    orders = getOrdersByStatus('點餐中');
-                    container = document.getElementById('newOrdersList');
-                    emptyContainer = document.getElementById('noNewOrders');
-                    break;
-                case 'preparing':
-                    orders = getOrdersByStatus('準備中');
-                    container = document.getElementById('preparingOrdersList');
-                    emptyContainer = document.getElementById('noPreparingOrders');
-                    break;
-                case 'ready':
-                    orders = getOrdersByStatus('已送達');
-                    container = document.getElementById('readyOrdersList');
-                    emptyContainer = document.getElementById('noReadyOrders');
-                    break;
-                default:
-                    return;
-            }
-
-            if (orders.length === 0) {
-                container.classList.add('hidden');
-                emptyContainer.classList.remove('hidden');
-                return;
-            }
-
-            emptyContainer.classList.add('hidden');
-            container.classList.remove('hidden');
-
-            // 按時間排序，緊急訂單優先
-            orders.sort((a, b) => {
-                const aUrgent = isUrgent(a);
-                const bUrgent = isUrgent(b);
-                if (aUrgent && !bUrgent) return -1;
-                if (!aUrgent && bUrgent) return 1;
-                return (a.createTime || 0) - (b.createTime || 0);
-            });
-
-            container.innerHTML = orders.map(order => {
-                const elapsed = getElapsedTime(order.createTime);
-                const urgent = isUrgent(order);
-                
-                return `
-                    <div class="order-card ${getStatusClass(order.status)} ${urgent ? 'urgent priority-high' : ''} 
-                                p-4 rounded-lg shadow-sm border">
-                        <div class="flex justify-between items-start mb-3">
-                            <div>
-                                <h3 class="font-bold text-lg">📋 ${order.number}</h3>
-                                <div class="flex items-center space-x-2 mt-1">
-                                    <span class="text-sm font-medium">🪑 桌 ${order.tableNumber}</span>
-                                    <span class="time-badge text-xs px-2 py-1 rounded-full ${urgent ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-700'}">
-                                        ${elapsed}分鐘前
-                                    </span>
-                                    ${urgent ? '<span class="text-xs bg-red-500 text-white px-2 py-1 rounded-full">🚨 緊急</span>' : ''}
-                                </div>
-                            </div>
-                            <div class="text-right">
-                                <div class="font-bold text-green-600">NT$ ${order.total}</div>
-                                ${renderActionButtons(order)}
-                            </div>
-                        </div>
-                        
-                        <div class="space-y-2">
-                            ${order.items.map(item => `
-                                <div class="flex justify-between text-sm bg-white bg-opacity-50 p-2 rounded">
-                                    <span class="font-medium">${item.name} × ${item.quantity}</span>
-                                    <span>NT$ ${item.price * item.quantity}</span>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function getStatusClass(status) {
-            switch (status) {
-                case '點餐中': return 'status-new';
-                case '準備中': return 'status-preparing';
-                case '已送達': return 'status-ready';
-                default: return 'status-delivered';
-            }
-        }
-
-        function renderActionButtons(order) {
-            switch (order.status) {
-                case '點餐中':
-                    return `
-                        <button onclick="updateOrderStatus('${order.id}', '準備中')" 
-                                class="mt-2 bg-blue-500 text-white px-3 py-1 rounded text-xs font-semibold">
-                            🔥 開始準備
-                        </button>
-                    `;
-                case '準備中':
-                    return `
-                        <button onclick="updateOrderStatus('${order.id}', '已送達')" 
-                                class="mt-2 bg-green-500 text-white px-3 py-1 rounded text-xs font-semibold">
-                            ✅ 完成
-                        </button>
-                    `;
-                case '已送達':
-                    return `
-                        <button onclick="markAsDelivered('${order.id}')" 
-                                class="mt-2 bg-gray-500 text-white px-3 py-1 rounded text-xs font-semibold">
-                            📦 已送達
-                        </button>
-                    `;
-                default:
-                    return '';
-            }
-        }
-
-        // === 訂單操作 ===
-        async function updateOrderStatus(orderId, newStatus) {
-            try {
-                await callNotionAPI(`/pages/${orderId}`, 'PATCH', {
-                    properties: {
-                        '狀態': { select: { name: newStatus } }
-                    }
-                });
-
-                updateStatus(`訂單狀態已更新為: ${newStatus}`);
-                await refreshData();
-                
-            } catch (error) {
-                updateStatus(`更新失敗: ${error.message}`);
-                alert(`❌ 更新失敗：${error.message}`);
-            }
-        }
-
-        async function markAsDelivered(orderId) {
-            try {
-                await callNotionAPI(`/pages/${orderId}`, 'PATCH', {
-                    properties: {
-                        '狀態': { select: { name: '已送達' } }
-                    }
-                });
-
-                updateStatus('訂單已標記為已送達');
-                await refreshData();
-                
-            } catch (error) {
-                updateStatus(`標記失敗: ${error.message}`);
-                alert(`❌ 標記失敗：${error.message}`);
-            }
-        }
-
         // === 設定管理 ===
         function showSettings() {
-            document.getElementById('refreshInterval').value = settings.refreshInterval;
-            document.getElementById('soundEnabled').checked = settings.soundEnabled;
-            document.getElementById('urgentThreshold').value = settings.urgentThreshold;
+            document.getElementById('refresh-interval').value = settings.refreshInterval;
+            document.getElementById('sound-enabled').checked = settings.soundEnabled;
+            document.getElementById('urgent-threshold').value = settings.urgentThreshold;
             
-            document.getElementById('settingsPanel').classList.remove('hidden');
-            document.getElementById('settingsPanel').classList.add('flex');
+            dom.settingsPanel.classList.remove('hidden');
+            dom.settingsPanel.classList.add('flex');
         }
 
         function hideSettings() {
-            document.getElementById('settingsPanel').classList.add('hidden');
-            document.getElementById('settingsPanel').classList.remove('flex');
+            dom.settingsPanel.classList.add('hidden');
+            dom.settingsPanel.classList.remove('flex');
         }
 
         function saveSettings() {
-            settings.refreshInterval = parseInt(document.getElementById('refreshInterval').value);
-            settings.soundEnabled = document.getElementById('soundEnabled').checked;
-            settings.urgentThreshold = parseInt(document.getElementById('urgentThreshold').value);
+            settings.refreshInterval = parseInt(document.getElementById('refresh-interval').value);
+            settings.soundEnabled = document.getElementById('sound-enabled').checked;
+            settings.urgentThreshold = parseInt(document.getElementById('urgent-threshold').value);
             
-            // 重設自動刷新
-            setupAutoRefresh();
-            
-            // 儲存到本地存儲
-            localStorage.setItem('kds-settings', JSON.stringify(settings));
+            startAutoRefresh();
+            localStorage.setItem('kds-tablet-settings', JSON.stringify(settings));
             
             hideSettings();
-            updateStatus('設定已儲存');
+            updateStatus(true);
         }
 
         function loadSettings() {
             try {
-                const saved = localStorage.getItem('kds-settings');
+                const saved = localStorage.getItem('kds-tablet-settings');
                 if (saved) {
                     settings = { ...settings, ...JSON.parse(saved) };
                 }
@@ -675,103 +1001,106 @@
             }
         }
 
-        // === 自動刷新 ===
-        function setupAutoRefresh() {
-            if (refreshTimer) {
-                clearInterval(refreshTimer);
-                refreshTimer = null;
-            }
-
-            if (settings.refreshInterval > 0) {
-                refreshTimer = setInterval(refreshData, settings.refreshInterval);
-            }
-        }
-
-        // === 資料刷新 ===
-        async function refreshData() {
-            try {
-                await loadOrders();
-                updateOrderCounts();
-                updateStats();
-                renderOrders();
-                
-                // 隱藏載入狀態
-                document.getElementById('newOrdersLoading').classList.add('hidden');
-                document.getElementById('newOrdersError').classList.add('hidden');
-                
-            } catch (error) {
-                console.error('刷新失敗:', error);
-                if (currentTab === 'new') {
-                    document.getElementById('newOrdersLoading').classList.add('hidden');
-                    document.getElementById('newOrdersError').classList.remove('hidden');
-                }
-            }
-        }
-
-        // === 事件監聽 ===
-        function setupEventListeners() {
-            // 標籤切換
-            document.getElementById('tabNew').addEventListener('click', () => switchTab('new'));
-            document.getElementById('tabPreparing').addEventListener('click', () => switchTab('preparing'));
-            document.getElementById('tabReady').addEventListener('click', () => switchTab('ready'));
-
-            // 統計面板切換
-            document.getElementById('statsToggle').addEventListener('click', () => {
-                const content = document.getElementById('statsContent');
-                const icon = document.getElementById('statsIcon');
-                content.classList.toggle('hidden');
-                icon.textContent = content.classList.contains('hidden') ? '▼' : '▲';
-            });
-
-            // 按鈕事件
-            document.getElementById('refreshBtn').addEventListener('click', refreshData);
-            document.getElementById('settingsBtn').addEventListener('click', showSettings);
+        // === 模態框功能 ===
+        function showOrderDetail(order) {
+            const props = order.properties;
             
-            // 設定面板
-            document.getElementById('saveSettings').addEventListener('click', saveSettings);
-            document.getElementById('closeSettings').addEventListener('click', hideSettings);
-            
-            // 背景點擊關閉
-            document.getElementById('settingsPanel').addEventListener('click', (e) => {
-                if (e.target.id === 'settingsPanel') hideSettings();
-            });
+            const orderNumber = props['訂單編號']?.title?.[0]?.text?.content || order.id.substring(0, 8);
+            const tableNumber = props['桌號']?.rich_text?.[0]?.text?.content || 'N/A';
+            const status = props['狀態']?.select?.name || '準備中';
+            const createdTime = props['建立時間']?.date?.start || order.created_time;
+            const orderItems = order.items || [];
+            const customerNote = order.customerNote || '';
+            const totalAmount = props['總金額']?.number || 0;
 
-            // 請求通知權限
-            if ('Notification' in window && Notification.permission === 'default') {
-                Notification.requestPermission();
+            let itemsDetailHtml = '';
+            if (orderItems && Array.isArray(orderItems)) {
+                itemsDetailHtml = orderItems.map(item => `
+                    <tr class="border-b">
+                        <td class="py-2 px-4">${item.name || '未知項目'}</td>
+                        <td class="py-2 px-4 text-center">${item.quantity || 1}</td>
+                        <td class="py-2 px-4 text-right">$${(item.price || 0) * (item.quantity || 1)}</td>
+                        <td class="py-2 px-4 text-sm text-gray-600">${item.note || '-'}</td>
+                    </tr>
+                `).join('');
             }
+
+            dom.modalContent.innerHTML = `
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">訂單編號</label>
+                            <p class="text-lg font-semibold">#${orderNumber}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">桌號</label>
+                            <p class="text-lg font-semibold">${tableNumber}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">狀態</label>
+                            <p class="text-lg font-semibold text-${status === '準備中' ? 'yellow' : status === '進行中' ? 'red' : 'green'}-600">${status}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">下單時間</label>
+                            <p class="text-lg">${new Date(createdTime).toLocaleString('zh-TW')}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">總金額</label>
+                            <p class="text-lg font-semibold text-green-600">$${totalAmount}</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">訂單內容</label>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full bg-gray-50 rounded-lg">
+                                <thead class="bg-gray-100">
+                                    <tr>
+                                        <th class="py-2 px-4 text-left">品項</th>
+                                        <th class="py-2 px-4 text-center">數量</th>
+                                        <th class="py-2 px-4 text-right">小計</th>
+                                        <th class="py-2 px-4 text-left">備註</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${itemsDetailHtml}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    ${customerNote ? `
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">客戶備註</label>
+                            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-3">
+                                <p class="text-yellow-800">${customerNote}</p>
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+
+            dom.orderModal.classList.remove('hidden');
         }
 
-        // === 初始化 ===
-        async function initSystem() {
-            updateStatus('系統初始化中...');
-            try {
-                loadSettings();
-                setupEventListeners();
-                setupAutoRefresh();
-                await refreshData();
-                updateStatus('系統已就緒');
-            } catch (error) {
-                updateStatus(`初始化失敗: ${error.message}`);
-                document.getElementById('newOrdersError').classList.remove('hidden');
-            }
+        function closeModal() {
+            dom.orderModal.classList.add('hidden');
         }
-
-        document.addEventListener('DOMContentLoaded', initSystem);
 
         // === 頁面可見性處理 ===
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) {
-                // 頁面隱藏時暫停自動刷新
-                if (refreshTimer) {
-                    clearInterval(refreshTimer);
+                if (autoRefreshTimer) {
+                    clearInterval(autoRefreshTimer);
                 }
             } else {
-                // 頁面顯示時恢復自動刷新並立即刷新一次
-                setupAutoRefresh();
-                refreshData();
+                startAutoRefresh();
+                fetchOrders();
             }
         });
+
+        // 定時更新等待時間
+        setInterval(updateTimers, 60000);
     </script>
 </body>
 </html>
