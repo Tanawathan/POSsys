@@ -37,6 +37,16 @@ exports.handler = async (event, context) => {
         console.log('Headers:', event.headers);
         console.log('Body:', event.body);
 
+        // 驗證 Basic Authentication (如果設定了)
+        if (!verifyBasicAuth(event.headers)) {
+            console.error('❌ Basic Authentication 驗證失敗');
+            return {
+                statusCode: 401,
+                headers,
+                body: JSON.stringify({ error: 'Unauthorized' })
+            };
+        }
+
         // 驗證 Webhook 簽名 (生產環境必需)
         const signature = event.headers['x-uber-signature'];
         if (!verifyWebhookSignature(event.body, signature)) {
@@ -116,6 +126,34 @@ exports.handler = async (event, context) => {
         };
     }
 };
+
+/**
+ * 驗證 Basic Authentication
+ */
+function verifyBasicAuth(headers) {
+    // 如果沒有設定 Basic Auth，則跳過驗證
+    if (!process.env.UBER_EATS_WEBHOOK_USERNAME || !process.env.UBER_EATS_WEBHOOK_PASSWORD) {
+        console.warn('⚠️ 跳過 Basic Auth 驗證 (未設定認證資訊)');
+        return true;
+    }
+
+    const authHeader = headers.authorization || headers.Authorization;
+    if (!authHeader || !authHeader.startsWith('Basic ')) {
+        console.error('❌ 缺少 Basic Authentication 標頭');
+        return false;
+    }
+
+    try {
+        const credentials = Buffer.from(authHeader.split(' ')[1], 'base64').toString('utf-8');
+        const [username, password] = credentials.split(':');
+        
+        return username === process.env.UBER_EATS_WEBHOOK_USERNAME && 
+               password === process.env.UBER_EATS_WEBHOOK_PASSWORD;
+    } catch (error) {
+        console.error('❌ Basic Auth 解析失敗:', error);
+        return false;
+    }
+}
 
 /**
  * 驗證 Webhook 簽名
